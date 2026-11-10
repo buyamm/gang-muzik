@@ -8,5 +8,5 @@ export default defineConfig({
       "@shared": fileURLToPath(new URL("./shared", import.meta.url)),
     },
   },
-  test: { include: ["src/**/*.test.ts", "shared/**/*.test.ts"] },
+  test: { include: ["src/**/*.test.ts", "shared/**/*.test.ts", "studio/**/*.test.ts"] },
 });
