@@ -170,7 +170,7 @@ export function BookView({
           </div>
         </div>
         {label && (
-          <div className="pt-2 text-center font-mono text-xs text-stage-lyric tabular-nums">
+          <div className="pt-2 text-center text-xs font-medium text-stage-lyric tabular-nums">
             {i + 1} / {pages.length}
           </div>
         )}
@@ -229,7 +229,7 @@ export function BookView({
                 {renderPaper(i, false, itemH)}
               </div>
             </div>
-            <div className="text-center font-mono text-[11px] leading-5 text-stage-lyric tabular-nums">{i + 1}</div>
+            <div className="text-center text-[11px] leading-5 font-medium text-stage-lyric tabular-nums">{i + 1}</div>
           </div>
         ))}
       </div>

@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { LogoMark } from "@/components/brand/Staff";
 import { api } from "@studio/lib/api";
 import { useMe } from "@studio/hooks/useMe";
 
@@ -56,10 +57,9 @@ export function Login() {
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
-      <div className="w-full max-w-sm rounded-2xl border bg-card p-7 text-center shadow-sm">
-        <h1 className="font-display text-3xl font-bold">
-          Gang <span className="text-primary">Studio</span>
-        </h1>
+      <div className="w-full max-w-sm rounded-2xl border bg-card p-7 text-center shadow-[0_24px_60px_-30px_oklch(0.24_0.05_272/0.35)]">
+        <LogoMark className="mx-auto mb-4 size-12" />
+        <h1 className="font-display text-3xl font-extrabold">Gang Muzik Studio</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Đăng sheet nhạc, cảm âm, hợp âm, tab. Bài của bạn sẽ hiện trên thư viện sau khi được duyệt.
         </p>
@@ -84,7 +84,7 @@ export function Login() {
 
         {data?.devLogin && (
           <form onSubmit={devLogin} className="mt-6 space-y-2 border-t pt-5 text-left">
-            <div className="text-xs font-semibold text-amber-600 dark:text-amber-400">Đăng nhập thử (chỉ có khi chạy local)</div>
+            <div className="text-xs font-semibold text-note-re">Đăng nhập thử (chỉ có khi chạy local)</div>
             <Input type="email" placeholder="email@vi-du.test" value={devEmail} onChange={(e) => setDevEmail(e.target.value)} required />
             <Button type="submit" variant="secondary" className="w-full">
               Đăng nhập thử

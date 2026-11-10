@@ -8,93 +8,98 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Theme "Brass Stage" — biến màu theo chuẩn shadcn/tweakcn.
- * Muốn đổi theme: chọn trên https://tweakcn.com rồi
- *   npx shadcn@latest add https://tweakcn.com/r/themes/<theme>.json
+ * Theme "Khuông nhạc đêm" — mực xanh đêm + giấy lạnh, nhấn bằng màu nốt Đô.
+ * Biến màu theo chuẩn shadcn/tweakcn (đổi theme:
+ *   npx shadcn@latest add https://tweakcn.com/r/themes/<theme>.json)
  */
 :root {
-  --radius: 0.75rem;
-  --background: oklch(0.985 0.008 85);
-  --foreground: oklch(0.2 0.02 60);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.02 60);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.02 60);
-  --primary: oklch(0.62 0.14 70);
-  --primary-foreground: oklch(0.18 0.03 60);
-  --secondary: oklch(0.94 0.02 80);
-  --secondary-foreground: oklch(0.25 0.03 60);
-  --muted: oklch(0.95 0.01 80);
-  --muted-foreground: oklch(0.5 0.02 60);
-  --accent: oklch(0.93 0.04 75);
-  --accent-foreground: oklch(0.25 0.03 60);
-  --destructive: oklch(0.58 0.22 27);
-  --border: oklch(0.89 0.015 75);
-  --input: oklch(0.89 0.015 75);
-  --ring: oklch(0.62 0.14 70);
-  --stage-bg: oklch(0.98 0.01 85);
-  --stage-fg: oklch(0.18 0.02 60);
-  --stage-lyric: oklch(0.5 0.02 60);
+  --radius: 0.625rem;
+  --background: oklch(0.972 0.006 265);
+  --foreground: oklch(0.24 0.05 272);
+  --card: oklch(0.995 0.002 265);
+  --card-foreground: oklch(0.24 0.05 272);
+  --popover: oklch(0.995 0.002 265);
+  --popover-foreground: oklch(0.24 0.05 272);
+  --primary: oklch(0.58 0.2 17);
+  --primary-foreground: oklch(0.99 0.005 17);
+  --secondary: oklch(0.93 0.014 268);
+  --secondary-foreground: oklch(0.28 0.05 272);
+  --muted: oklch(0.94 0.01 268);
+  --muted-foreground: oklch(0.5 0.035 272);
+  --accent: oklch(0.925 0.022 268);
+  --accent-foreground: oklch(0.24 0.05 272);
+  --destructive: oklch(0.55 0.21 27);
+  --border: oklch(0.88 0.016 268);
+  --input: oklch(0.86 0.02 268);
+  --ring: oklch(0.58 0.2 17);
+  --staff: oklch(0.24 0.05 272 / 13%);
+  --stage-bg: oklch(0.975 0.006 265);
+  --stage-fg: oklch(0.22 0.05 272);
+  --stage-lyric: oklch(0.48 0.035 272);
   --stage-paper: oklch(1 0 0);
-  --note-do: oklch(0.55 0.2 25);
-  --note-re: oklch(0.58 0.15 55);
+  --note-do: oklch(0.55 0.2 22);
+  --note-re: oklch(0.6 0.16 52);
   --note-mi: oklch(0.6 0.14 100);
   --note-fa: oklch(0.55 0.15 150);
-  --note-sol: oklch(0.52 0.13 220);
-  --note-la: oklch(0.5 0.17 268);
+  --note-sol: oklch(0.53 0.13 220);
+  --note-la: oklch(0.5 0.18 270);
   --note-si: oklch(0.52 0.2 325);
 }
 
 .dark {
-  --background: oklch(0.16 0.012 60);
-  --foreground: oklch(0.94 0.015 80);
-  --card: oklch(0.2 0.014 60);
-  --card-foreground: oklch(0.94 0.015 80);
-  --popover: oklch(0.21 0.014 60);
-  --popover-foreground: oklch(0.94 0.015 80);
-  --primary: oklch(0.78 0.14 75);
-  --primary-foreground: oklch(0.18 0.03 60);
-  --secondary: oklch(0.26 0.016 60);
-  --secondary-foreground: oklch(0.94 0.015 80);
-  --muted: oklch(0.25 0.014 60);
-  --muted-foreground: oklch(0.68 0.02 70);
-  --accent: oklch(0.3 0.03 70);
-  --accent-foreground: oklch(0.95 0.02 80);
-  --destructive: oklch(0.65 0.2 25);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.78 0.14 75);
-  --stage-bg: oklch(0.13 0.01 60);
-  --stage-fg: oklch(0.96 0.015 85);
-  --stage-lyric: oklch(0.66 0.02 70);
-  --stage-paper: oklch(0.19 0.012 60);
-  --note-do: oklch(0.74 0.17 25);
-  --note-re: oklch(0.8 0.15 60);
+  --background: oklch(0.185 0.035 272);
+  --foreground: oklch(0.95 0.012 265);
+  --card: oklch(0.225 0.04 272);
+  --card-foreground: oklch(0.95 0.012 265);
+  --popover: oklch(0.235 0.042 272);
+  --popover-foreground: oklch(0.95 0.012 265);
+  --primary: oklch(0.7 0.18 17);
+  --primary-foreground: oklch(0.17 0.035 272);
+  --secondary: oklch(0.27 0.045 272);
+  --secondary-foreground: oklch(0.95 0.012 265);
+  --muted: oklch(0.255 0.04 272);
+  --muted-foreground: oklch(0.73 0.03 268);
+  --accent: oklch(0.29 0.05 272);
+  --accent-foreground: oklch(0.96 0.01 265);
+  --destructive: oklch(0.66 0.2 25);
+  --border: oklch(0.85 0.04 268 / 12%);
+  --input: oklch(0.85 0.04 268 / 16%);
+  --ring: oklch(0.7 0.18 17);
+  --staff: oklch(0.9 0.03 268 / 12%);
+  --stage-bg: oklch(0.16 0.032 272);
+  --stage-fg: oklch(0.96 0.01 265);
+  --stage-lyric: oklch(0.72 0.03 268);
+  --stage-paper: oklch(0.21 0.038 272);
+  --note-do: oklch(0.74 0.17 22);
+  --note-re: oklch(0.8 0.15 58);
   --note-mi: oklch(0.88 0.15 98);
   --note-fa: oklch(0.8 0.15 150);
   --note-sol: oklch(0.8 0.12 215);
-  --note-la: oklch(0.76 0.14 268);
-  --note-si: oklch(0.76 0.16 322);
+  --note-la: oklch(0.77 0.14 272);
+  --note-si: oklch(0.77 0.16 322);
 }
 
 /* Stage "giấy" sáng — dùng khi đọc ngoài trời / sheet nền trắng */
 .stage-light {
-  --stage-bg: oklch(0.975 0.012 85);
-  --stage-fg: oklch(0.18 0.02 60);
-  --stage-lyric: oklch(0.48 0.02 60);
+  --stage-bg: oklch(0.975 0.006 265);
+  --stage-fg: oklch(0.22 0.05 272);
+  --stage-lyric: oklch(0.48 0.035 272);
   --stage-paper: oklch(1 0 0);
-  --note-do: oklch(0.55 0.2 25);
-  --note-re: oklch(0.58 0.15 55);
+  --primary: oklch(0.58 0.2 17);
+  --primary-foreground: oklch(0.99 0.005 17);
+  --note-do: oklch(0.55 0.2 22);
+  --note-re: oklch(0.6 0.16 52);
   --note-mi: oklch(0.6 0.14 100);
   --note-fa: oklch(0.55 0.15 150);
-  --note-sol: oklch(0.52 0.13 220);
-  --note-la: oklch(0.5 0.17 268);
+  --note-sol: oklch(0.53 0.13 220);
+  --note-la: oklch(0.5 0.18 270);
   --note-si: oklch(0.52 0.2 325);
 }
 
 @theme inline {
   --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --font-display: "Bricolage Grotesque", "Be Vietnam Pro", ui-sans-serif, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -117,6 +122,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-staff: var(--staff);
   --color-stage-bg: var(--stage-bg);
   --color-stage-fg: var(--stage-fg);
   --color-stage-lyric: var(--stage-lyric);
@@ -142,5 +148,44 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-sans);
+  }
+  ::selection {
+    background: color-mix(in oklch, var(--primary) 28%, transparent);
+  }
+}
+
+/* tiêu đề: Bricolage hẹp lại một chút cho chắc, opsz tự theo cỡ chữ */
+.font-display {
+  font-variation-settings: "wdth" 88;
+  letter-spacing: -0.015em;
+}
+
+/* khuông nhạc 5 dòng — nền trang trí cho tiêu đề */
+.staff-lines {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--staff) 0 1px,
+    transparent 1px var(--staff-gap, 14px)
+  );
+  background-size: 100% calc(var(--staff-gap, 14px) * 4 + 1px);
+  background-repeat: no-repeat;
+}
+
+@keyframes note-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-18px) scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.note-drop {
+  animation: note-drop 520ms cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .note-drop {
+    animation: none;
   }
 }

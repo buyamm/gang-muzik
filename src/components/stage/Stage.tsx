@@ -334,7 +334,7 @@ export function Stage({
       )}
     >
       {/* thanh tiến độ trên cùng */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-30 h-1 bg-stage-fg/10">
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-30 h-[3px] bg-stage-fg/8">
         {isScroll ? (
           <div className="h-full origin-left bg-primary" style={{ transform: `scaleX(${progress})` }} />
         ) : (
@@ -351,10 +351,10 @@ export function Stage({
             </Link>
           </Button>
           <div className="min-w-0 flex-1">
-            <h1 className="truncate font-display text-lg leading-tight font-bold">{song.title}</h1>
+            <h1 className="truncate font-display text-xl leading-tight font-bold">{song.title}</h1>
             {song.artist && <p className="truncate text-xs text-stage-lyric">{song.artist}</p>}
           </div>
-          <div className="flex shrink-0 rounded-lg bg-stage-fg/10 p-0.5 text-sm font-medium" role="radiogroup" aria-label="Chế độ xem">
+          <div className="flex shrink-0 rounded-full bg-stage-fg/8 p-1 text-sm font-medium" role="radiogroup" aria-label="Chế độ xem">
             {(["scroll", "pages"] as const).map((m) => (
               <button
                 key={m}
@@ -363,8 +363,8 @@ export function Stage({
                 onClick={() => switchMode(m)}
                 title={m === "scroll" ? "Tự cuộn liên tục" : "Xem như quyển sách, lật trang"}
                 className={cn(
-                  "rounded-md px-3 py-1.5 transition-colors",
-                  prefs.mode === m ? "bg-primary text-primary-foreground" : "text-stage-fg/70 hover:text-stage-fg",
+                  "rounded-full px-3.5 py-1 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                  prefs.mode === m ? "bg-stage-fg text-stage-bg" : "text-stage-fg/70 hover:text-stage-fg",
                 )}
               >
                 {m === "scroll" ? "Cuộn" : "Sách"}
@@ -445,7 +445,7 @@ export function Stage({
                 togglePlay();
               }}
               aria-label={playing ? "Dừng" : "Chạy"}
-              className="flex size-10 items-center justify-center rounded-full bg-stage-fg/10 text-stage-fg backdrop-blur hover:bg-stage-fg/20"
+              className="flex size-10 items-center justify-center rounded-full bg-stage-fg/10 text-stage-fg backdrop-blur hover:bg-stage-fg/20 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
               {playing || countdown !== null ? <Pause className="size-4" /> : <Play className="size-4 translate-x-px" />}
             </button>
@@ -455,7 +455,7 @@ export function Stage({
                 e.stopPropagation();
                 setBars(false);
               }}
-              className="flex h-10 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-lg shadow-black/20"
+              className="flex h-10 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_6px_20px_-8px_var(--primary)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
             >
               <Eye className="size-4" /> Hiện điều khiển
             </button>
@@ -484,13 +484,13 @@ export function Stage({
 
           <div className="mx-auto flex max-w-4xl items-center gap-2 sm:gap-3">
             {/* thời lượng bài => tốc độ */}
-            <div className="flex items-center gap-1 rounded-xl bg-stage-fg/10 p-1" title="Thời lượng cả bài — quyết định tốc độ cuộn / lật">
+            <div className="flex items-center gap-1 rounded-full bg-stage-fg/8 p-1" title="Thời lượng cả bài — quyết định tốc độ cuộn / lật">
               <IconBtn label="Nhanh hơn (bớt 5 giây)" onClick={() => adjustDuration(-5)} className="size-8 sm:size-9">
                 <Minus />
               </IconBtn>
               <div className="w-12 text-center leading-tight sm:w-14">
-                <div className="font-mono text-base font-semibold tabular-nums">{formatDuration(prefs.durationSec)}</div>
-                <div className="text-[10px] whitespace-nowrap text-stage-lyric">thời lượng</div>
+                <div className="font-display text-lg leading-none font-bold tabular-nums">{formatDuration(prefs.durationSec)}</div>
+                <div className="mt-0.5 text-[11px] whitespace-nowrap text-stage-lyric">thời lượng</div>
               </div>
               <IconBtn label="Chậm hơn (thêm 5 giây)" onClick={() => adjustDuration(5)} className="size-8 sm:size-9">
                 <Plus />
@@ -516,7 +516,7 @@ export function Stage({
                 aria-label={playing ? "Dừng" : isScroll ? "Bắt đầu tự cuộn" : "Bắt đầu tự lật"}
                 title={playing ? "Dừng" : isScroll ? "Bắt đầu tự cuộn" : "Bắt đầu tự lật trang"}
                 onClick={togglePlay}
-                className="size-14 rounded-full shadow-lg shadow-primary/30 sm:size-16 [&_svg:not([class*='size-'])]:size-7"
+                className="size-14 rounded-full shadow-[0_6px_20px_-6px_var(--primary)] sm:size-16 [&_svg:not([class*='size-'])]:size-7"
               >
                 {playing || countdown !== null ? <Pause /> : <Play className="translate-x-0.5" />}
               </AnimatedButton>
@@ -531,10 +531,10 @@ export function Stage({
 
             <div className="min-w-14 shrink-0 text-right text-sm">
               {isScroll ? (
-                <span className="font-mono tabular-nums text-stage-lyric">{Math.round(progress * 100)}%</span>
+                <span className="font-display text-lg font-bold tabular-nums text-stage-lyric">{Math.round(progress * 100)}%</span>
               ) : (
                 <div className="flex flex-col items-end gap-1">
-                  <span className="font-mono whitespace-nowrap tabular-nums">
+                  <span className="font-display text-lg leading-none font-bold whitespace-nowrap tabular-nums">
                     {allMode ? `${pageCount} trang` : first + 1}
                     {allMode ? "" : `${cols > 1 && pageCount > 1 ? `–${Math.min(first + cols, pageCount)}` : ""} / ${pageCount}`}
                   </span>

@@ -216,7 +216,7 @@ function SortableItem({ page, index, onRemove }: { page: PageImage; index: numbe
       >
         <GripVertical className="size-5" />
       </button>
-      <span className="w-6 text-center font-mono text-sm text-muted-foreground">{index + 1}</span>
+      <span className="w-6 text-center font-display text-sm font-bold text-muted-foreground tabular-nums">{index + 1}</span>
       <img src={page.url} alt="" className="h-16 w-24 rounded bg-white object-cover object-top" />
       <span className="flex-1 text-xs text-muted-foreground">
         {page.width}×{page.height}

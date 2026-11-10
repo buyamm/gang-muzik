@@ -1,12 +1,12 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "motion/react";
-import { FileImage, Music2, PenLine, Search, Type } from "lucide-react";
-import type { SongKind } from "@shared/types";
+import { FileImage, PenLine, Search, Type } from "lucide-react";
+import type { SongKind, SongSummary } from "@shared/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { LogoMark, SongMotif } from "@/components/brand/Staff";
 import { api } from "@/lib/api";
 import { STUDIO_URL } from "@/lib/links";
 import { cn } from "@/lib/utils";
@@ -41,48 +41,58 @@ export function Library() {
   return (
     <div className="min-h-full">
       <title>Gang Muzik · Thư viện</title>
-      <header className="mx-auto max-w-5xl px-4 pt-10 pb-6 sm:px-6 sm:pt-14">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-              <Music2 className="size-3.5" /> guitar · piano · sáo · sax · violin · mọi nhạc cụ
-            </div>
-            <h1 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">
-              Gang <span className="text-primary">Muzik</span>
-            </h1>
-            <p className="mt-2 max-w-md text-muted-foreground">
-              Sheet nhạc, cảm âm, hợp âm, tab — tự cuộn, tự lật trang hoặc lật bằng pedal. Hai tay cứ việc chơi.
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-1">
-            <Button asChild variant="outline" title="Đăng nhập bằng Google để gửi bài của bạn">
-              <a href={STUDIO_URL}>
-                <PenLine /> <span className="hidden sm:inline">Đóng góp bài</span>
-              </a>
-            </Button>
-            <ThemeToggle />
-          </div>
+
+      {/* tiêu đề gọn: chỉ để nhận ra trang, nhường chỗ cho danh sách bài */}
+      <header className="mx-auto max-w-6xl px-4 pt-4 sm:px-6">
+        <div className="flex items-center gap-2">
+          <LogoMark className="size-7" />
+          <span className="flex-1 font-display text-base font-bold">Gang Muzik</span>
+          <Button asChild variant="ghost" size="sm" title="Đăng nhập bằng Google để gửi bài của bạn">
+            <a href={STUDIO_URL}>
+              <PenLine /> <span className="hidden sm:inline">Đóng góp bài</span>
+            </a>
+          </Button>
+          <ThemeToggle />
         </div>
 
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="mt-6 sm:mt-10">
+          <div>
+            <div className="staff-lines relative flex h-[calc(var(--staff-gap)*4+1px)] items-center [--staff-gap:10px] sm:[--staff-gap:13px]">
+              <h1 className="font-display text-[2.6rem] leading-[0.9] font-extrabold tracking-tight [font-variation-settings:'wdth'_78] sm:text-[3.7rem]">
+                Chọn bài, bấm chạy
+              </h1>
+            </div>
+            <p className="mt-4 max-w-[36rem] text-pretty text-muted-foreground sm:text-lg">
+              Sheet nhạc, cảm âm, hợp âm và tab tự cuộn hoặc tự lật trang. Có pedal thì lật bằng chân.
+            </p>
+          </div>
+        </div>
+      </header>
+
+      {/* thanh tìm kiếm dính trên cùng khi cuộn danh sách */}
+      <div className="sticky top-0 z-10 mt-6 border-b bg-background/85 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-3 sm:px-6">
           <div className="relative flex-1">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Tìm bài, ca sĩ, nhạc cụ…"
-              className="h-11 pl-9"
+              placeholder="Tìm bài, ca sĩ hoặc nhạc cụ"
+              aria-label="Tìm bài"
+              className="h-12 rounded-full bg-card pl-12 text-base md:text-base"
               type="search"
             />
           </div>
-          <div className="flex gap-1 rounded-lg bg-muted p-1">
+          <div className="flex gap-1 rounded-full border bg-card p-1" role="radiogroup" aria-label="Lọc theo dạng bài">
             {FILTERS.map((f) => (
               <button
                 key={f.value}
+                role="radio"
+                aria-checked={filter === f.value}
                 onClick={() => setFilter(f.value)}
                 className={cn(
-                  "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors sm:flex-none",
-                  filter === f.value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                  "flex-1 rounded-full px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:flex-none sm:px-4",
+                  filter === f.value ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 {f.label}
@@ -90,69 +100,98 @@ export function Library() {
             ))}
           </div>
         </div>
-      </header>
+      </div>
 
-      <main className="mx-auto max-w-5xl px-4 pb-16 sm:px-6">
+      <main className="mx-auto max-w-6xl px-4 pt-6 pb-20 sm:px-6">
         {songs.isPending ? (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-28 animate-pulse rounded-xl bg-muted" />
-            ))}
-          </div>
-        ) : songs.isError ? (
-          <p className="py-16 text-center text-destructive">Không tải được thư viện: {songs.error.message}</p>
-        ) : list.length === 0 ? (
-          <div className="rounded-2xl border border-dashed py-16 text-center">
-            <p className="font-display text-xl font-semibold">
-              {songs.data.length ? "Không có bài nào khớp" : "Thư viện còn trống"}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Có bài muốn chia sẻ? Bấm “Đóng góp bài” để gửi.
-            </p>
-          </div>
-        ) : (
-          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {list.map((s, i) => (
-              <motion.li
-                key={s.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: Math.min(i * 0.03, 0.3) }}
-                className="group relative"
-              >
-                <Link
-                  to={`/s/${s.id}`}
-                  className="flex h-full flex-col rounded-xl border bg-card p-4 transition-colors hover:border-primary/50 hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                >
-                  <span className="mb-3 inline-flex w-fit items-center gap-1.5 rounded-md bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">
-                    {s.kind === "text" ? <Type className="size-3" /> : <FileImage className="size-3" />}
-                    {s.kind === "text" ? "Dạng chữ" : `${s.pageCount} ảnh`}
-                  </span>
-                  <span className="font-display text-lg leading-snug font-semibold text-balance">{s.title}</span>
-                  <span className="mt-1 text-sm text-muted-foreground">
-                    {[s.artist, s.instrument].filter(Boolean).join(" · ") || " "}
-                  </span>
-                </Link>
-              </motion.li>
+              <li key={i} className="h-44 animate-pulse rounded-2xl bg-muted" />
             ))}
           </ul>
+        ) : songs.isError ? (
+          <p className="py-16 text-center text-destructive">Không tải được thư viện: {songs.error.message}. Tải lại trang để thử lần nữa.</p>
+        ) : list.length === 0 ? (
+          <div className="rounded-2xl border border-dashed py-16 text-center">
+            <p className="font-display text-2xl font-bold">{songs.data.length ? "Không có bài nào khớp" : "Thư viện còn trống"}</p>
+            <p className="mt-2 text-muted-foreground">
+              {songs.data.length ? "Thử từ khoá ngắn hơn, hoặc gửi bài bạn đang tìm." : "Gửi bài đầu tiên để mở hàng."}
+            </p>
+            <Button asChild className="mt-6 rounded-full">
+              <a href={STUDIO_URL}>
+                <PenLine /> Đóng góp bài
+              </a>
+            </Button>
+          </div>
+        ) : (
+          <>
+            <h2 className="mb-4 flex items-baseline gap-3 font-display text-2xl font-bold">
+              {query || filter !== "all" ? "Kết quả" : "Thư viện"}
+              <span className="text-base font-medium text-muted-foreground tabular-nums">
+                {list.length === songs.data.length ? `${list.length} bài` : `${list.length} / ${songs.data.length} bài`}
+              </span>
+            </h2>
+            <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {list.map((s) => (
+                <SongCard key={s.id} song={s} />
+              ))}
+            </ul>
+          </>
         )}
       </main>
 
-      <footer className="mx-auto flex max-w-5xl items-center justify-between gap-4 border-t px-4 py-6 text-xs text-muted-foreground sm:px-6">
-        <span>Mẹo: pedal Bluetooth hoặc phím ← → Space để điều khiển khi đang chơi.</span>
-        <span className="flex shrink-0 gap-3">
-          <Link to="/privacy" className="underline-offset-4 hover:underline">
-            Quyền riêng tư
-          </Link>
-          <Link to="/terms" className="underline-offset-4 hover:underline">
-            Điều khoản
-          </Link>
-          <a href={STUDIO_URL} className="underline-offset-4 hover:underline">
-            Studio
-          </a>
-        </span>
+      <footer className="border-t">
+        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-6 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <span>
+            Khi đang chơi: pedal Bluetooth hoặc phím <Kbd>←</Kbd> <Kbd>→</Kbd> <Kbd>Space</Kbd>
+          </span>
+          <span className="flex shrink-0 gap-4">
+            <Link to="/privacy" className="underline-offset-4 hover:text-foreground hover:underline">
+              Quyền riêng tư
+            </Link>
+            <Link to="/terms" className="underline-offset-4 hover:text-foreground hover:underline">
+              Điều khoản
+            </Link>
+            <a href={STUDIO_URL} className="underline-offset-4 hover:text-foreground hover:underline">
+              Studio
+            </a>
+          </span>
+        </div>
       </footer>
     </div>
+  );
+}
+
+function SongCard({ song: s }: { song: SongSummary }) {
+  return (
+    <li>
+      <Link
+        to={`/s/${s.id}`}
+        className="group flex h-full flex-col overflow-hidden rounded-2xl border bg-card transition-[border-color,transform] hover:-translate-y-0.5 hover:border-foreground/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none motion-reduce:hover:translate-y-0"
+      >
+        <div className="border-b bg-muted/50 px-4 pt-4 pb-1 sm:pt-5">
+          <SongMotif seed={s.id} />
+        </div>
+        <div className="flex flex-1 flex-col p-4 pt-3.5">
+          <span className="font-display text-[1.4rem] leading-tight font-bold text-balance">{s.title}</span>
+          {s.artist && <span className="mt-1 truncate text-sm text-muted-foreground">{s.artist}</span>}
+          <span className="mt-auto flex items-center gap-2 pt-3 text-sm sm:pt-4 text-muted-foreground">
+            {s.instrument && <span className="truncate rounded-full border px-2.5 py-0.5 text-foreground/80">{s.instrument}</span>}
+            <span className="ml-auto flex shrink-0 items-center gap-1.5" title={s.kind === "text" ? "Bài dạng chữ" : "Bài dạng ảnh"}>
+              {s.kind === "text" ? <Type className="size-4" /> : <FileImage className="size-4" />}
+              {s.kind === "text" ? "Chữ" : `${s.pageCount} ảnh`}
+            </span>
+          </span>
+        </div>
+      </Link>
+    </li>
+  );
+}
+
+function Kbd({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd className="mx-0.5 inline-flex min-w-6 justify-center rounded border border-b-2 bg-card px-1.5 py-px font-sans text-xs text-foreground">
+      {children}
+    </kbd>
   );
 }
