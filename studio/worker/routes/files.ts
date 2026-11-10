@@ -18,7 +18,7 @@ export const files = new Hono<StudioEnv>().get("/*", async (c) => {
   const headers = new Headers();
   obj.writeHttpMetadata(headers);
   headers.set("etag", obj.httpEtag);
-  // riêng tư: không cho CDN / proxy dùng chung lưu lại ảnh bài chưa duyệt
-  headers.set("cache-control", "private, max-age=3600");
+  // riêng tư + luôn hỏi lại server (kèm etag → 304): đăng xuất xong không xem lại được từ cache
+  headers.set("cache-control", "private, no-cache");
   return new Response(obj.body, { headers });
 });
