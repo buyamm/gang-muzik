@@ -7,6 +7,10 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { api } from "@studio/lib/api";
 import { useMe } from "@studio/hooks/useMe";
 
+const PUBLIC_URL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname)
+  ? "http://localhost:5173"
+  : "https://gang-muzik.lytruong.workers.dev";
+
 const ERRORS: Record<string, string> = {
   cancelled: "Bạn đã huỷ đăng nhập.",
   state: "Phiên đăng nhập hết hạn, thử lại nhé.",
@@ -66,6 +70,17 @@ export function Login() {
           </a>
         </Button>
         {data && !data.googleReady && <p className="mt-2 text-xs text-muted-foreground">(Chưa cấu hình Google Client ID)</p>}
+        <p className="mt-4 text-xs text-muted-foreground">
+          Khi đăng nhập, bạn đồng ý với{" "}
+          <a href={`${PUBLIC_URL}/terms`} className="underline underline-offset-2">
+            Điều khoản
+          </a>{" "}
+          và{" "}
+          <a href={`${PUBLIC_URL}/privacy`} className="underline underline-offset-2">
+            Chính sách quyền riêng tư
+          </a>
+          . Chúng tôi chỉ nhận tên, email và ảnh đại diện Google của bạn.
+        </p>
 
         {data?.devLogin && (
           <form onSubmit={devLogin} className="mt-6 space-y-2 border-t pt-5 text-left">

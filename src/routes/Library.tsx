@@ -141,9 +141,17 @@ export function Library() {
 
       <footer className="mx-auto flex max-w-5xl items-center justify-between gap-4 border-t px-4 py-6 text-xs text-muted-foreground sm:px-6">
         <span>Mẹo: pedal Bluetooth hoặc phím ← → Space để điều khiển khi đang chơi.</span>
-        <a href={STUDIO_URL} className="shrink-0 underline-offset-4 hover:underline">
-          Studio
-        </a>
+        <span className="flex shrink-0 gap-3">
+          <Link to="/privacy" className="underline-offset-4 hover:underline">
+            Quyền riêng tư
+          </Link>
+          <Link to="/terms" className="underline-offset-4 hover:underline">
+            Điều khoản
+          </Link>
+          <a href={STUDIO_URL} className="underline-offset-4 hover:underline">
+            Studio
+          </a>
+        </span>
       </footer>
     </div>
   );
