@@ -20,7 +20,14 @@ npx wrangler secret put ADMIN_PIN          # mã PIN quản trị
 npx wrangler secret put JWT_SECRET         # chuỗi ngẫu nhiên dài, vd: openssl rand -hex 32
 npm run deploy
 ```
-Các lần sau chỉ cần `npm run deploy`.
+## Release lên production
+Mỗi lần release được gắn tag `vX.Y.Z` trên git:
+```bash
+npm run release            # sửa lỗi nhỏ: 0.2.0 -> 0.2.1
+npm run release -- minor   # tính năng mới: 0.2.1 -> 0.3.0
+```
+Script `scripts/release.sh` sẽ: kiểm tra đang ở `main` và đã đồng bộ → quét secret trong các commit chưa release →
+typecheck + test + build → tăng version và tạo tag → `wrangler deploy` (lỗi thì tự huỷ tag) → push commit và tag.
 
 ## Điều khiển khi chơi
 | | Chế độ Cuộn | Chế độ Sách |

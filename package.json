@@ -12,7 +12,8 @@
     "db:migrate:local": "wrangler d1 migrations apply gang-muzik --local",
     "db:migrate:remote": "wrangler d1 migrations apply gang-muzik --remote",
     "deploy": "npm run build && wrangler deploy",
-    "cf-typegen": "wrangler types worker/worker-configuration.d.ts"
+    "cf-typegen": "wrangler types worker/worker-configuration.d.ts",
+    "release": "bash scripts/release.sh"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

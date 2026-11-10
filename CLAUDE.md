@@ -22,7 +22,8 @@ Web xem sheet nhạc / cảm âm rảnh tay (tự cuộn, tự lật trang, peda
 - `npm run dev` — Vite + Worker + D1/R2 local; quản trị tại `/admin` (PIN dev trong `.dev.vars`)
 - `npm run db:migrate:local` — chạy migration local (lần đầu)
 - `npm test` · `npm run typecheck` · `npm run build`
-- `npm run deploy` — build + `wrangler deploy`
+- `npm run release [-- minor|major]` — release production có tag git (luôn dùng lệnh này, không deploy tay)
+- `npm run deploy` — build + `wrangler deploy` (không tạo tag)
 - Sau khi đổi `wrangler.jsonc`: `npm run cf-typegen`
 
 ## Quy ước
