@@ -1,0 +1,10 @@
+{
+  "name": "Gang Muzik",
+  "short_name": "Gang Muzik",
+  "description": "Sheet nhạc, cảm âm, hợp âm, tab tự cuộn, lật trang bằng pedal — cho mọi nhạc cụ",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1613",
+  "theme_color": "#1a1613",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
