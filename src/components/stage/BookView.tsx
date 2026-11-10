@@ -1,10 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import type { Song } from "@shared/types";
-import { autoColumns, paginateBook } from "@/lib/stage/math";
+import { autoColumns, fitGrid, paginateBook } from "@/lib/stage/math";
 import { StageContent } from "./StageContent";
 
-export type ColumnsPref = "auto" | 1 | 2 | 3 | 4;
+/** "all" = thu nhỏ để hiện tất cả các trang trên một màn hình */
+export type ColumnsPref = "auto" | 1 | 2 | 3 | 4 | "all";
 export type TurnBy = "spread" | "page";
 
 /** lề trên của khu sách (thanh điều khiển đã nằm ngoài, không che trang) */
@@ -65,17 +66,22 @@ export function BookView({
   }, []);
 
   const narrow = size.w < 640;
-  const cols = columns === "auto" ? autoColumns(size.w, size.h) : columns;
+  const fitAll = columns === "all";
+  const cols = fitAll ? 1 : columns === "auto" ? autoColumns(size.w, size.h) : columns;
   // chỗ cho số trang bên dưới tờ giấy
   const padBottom = 38;
   const padX = cols > 1 ? 28 : narrow ? 12 : 24;
   const gap = cols > 1 ? 24 : 0;
   const paperPadX = narrow ? 18 : 30;
   const paperPadY = narrow ? 22 : 32;
-  const colW = Math.max(200, Math.floor((size.w - padX * 2 - gap * (cols - 1)) / cols));
-  const paperH = Math.max(180, size.h - PAD_TOP - padBottom);
-  const pageH = paperH - paperPadY * 2;
+  // chế độ "tất cả": mỗi trang có cỡ tự nhiên như một trang đọc thoải mái, rồi cả lưới được thu nhỏ cho vừa
+  const colW = fitAll
+    ? Math.min(640, Math.max(280, size.w - padX * 2))
+    : Math.max(200, Math.floor((size.w - padX * 2 - gap * (cols - 1)) / cols));
   const innerW = colW - paperPadX * 2;
+  // chế độ "tất cả": trang cao ít nhất theo tỉ lệ A4 để mỗi ảnh sheet nằm trọn một ô, không bị cắt đôi
+  const paperH = Math.max(180, size.h - PAD_TOP - padBottom, fitAll ? Math.round(innerW * 1.45) + paperPadY * 2 : 0);
+  const pageH = paperH - paperPadY * 2;
 
   // đo nội dung ở đúng chiều rộng cột để chia trang
   useLayoutEffect(() => {
@@ -97,8 +103,8 @@ export function BookView({
   }, [innerW, pageH, size.h, song, scale]);
 
   useEffect(() => {
-    if (pages.length) onLayout({ pageCount: pages.length, cols });
-  }, [pages.length, cols, onLayout]);
+    if (pages.length) onLayout({ pageCount: pages.length, cols: fitAll ? pages.length : cols });
+  }, [pages.length, cols, fitAll, onLayout]);
 
   // phát hiện lần lật trang để chạy hiệu ứng
   const prev = useRef({ first, cols });
@@ -150,12 +156,12 @@ export function BookView({
   const W = size.w;
   const half = W / 2;
 
-  const renderPaper = (i: number) =>
+  const renderPaper = (i: number, label = true, h = paperH) =>
     i < pages.length ? (
       <>
         <div
           className="overflow-hidden rounded-lg bg-stage-paper shadow-[0_1px_3px_rgb(0_0_0/0.12),0_10px_30px_-10px_rgb(0_0_0/0.3)]"
-          style={{ padding: `${paperPadY}px ${paperPadX}px`, height: paperH }}
+          style={{ padding: `${paperPadY}px ${paperPadX}px`, height: h }}
         >
           <div className="overflow-hidden" style={{ height: pages[i].height }}>
             <div style={{ transform: `translateY(${-pages[i].start}px)` }}>
@@ -163,9 +169,11 @@ export function BookView({
             </div>
           </div>
         </div>
-        <div className="pt-2 text-center font-mono text-xs text-stage-lyric tabular-nums">
-          {i + 1} / {pages.length}
-        </div>
+        {label && (
+          <div className="pt-2 text-center font-mono text-xs text-stage-lyric tabular-nums">
+            {i + 1} / {pages.length}
+          </div>
+        )}
       </>
     ) : (
       <div
@@ -186,6 +194,47 @@ export function BookView({
       ))}
     </div>
   );
+
+  /** lưới tất cả các trang, thu nhỏ vừa một màn hình */
+  const allPages = () => {
+    const GRID_PAD = 16;
+    const GRID_GAP = 14;
+    const LABEL_H = 20;
+    // tờ giấy chỉ cao vừa nội dung dài nhất — bỏ khoảng trắng thừa để chữ to hơn
+    const itemH = Math.min(paperH, Math.max(...pages.map((p) => p.height)) + paperPadY * 2);
+    const g = fitGrid(
+      pages.length,
+      colW,
+      itemH,
+      size.w - GRID_PAD * 2,
+      size.h - GRID_PAD * 2,
+      GRID_GAP,
+      LABEL_H,
+    );
+    const cellW = colW * g.scale;
+    const cellH = itemH * g.scale;
+    return (
+      <div
+        className="grid h-full content-center justify-center"
+        style={{
+          padding: GRID_PAD,
+          gap: GRID_GAP,
+          gridTemplateColumns: `repeat(${g.cols}, ${cellW}px)`,
+        }}
+      >
+        {pages.map((_, i) => (
+          <div key={i} className="flex flex-col">
+            <div style={{ width: cellW, height: cellH }} className="overflow-hidden">
+              <div style={{ width: colW, transform: `scale(${g.scale})`, transformOrigin: "top left" }}>
+                {renderPaper(i, false, itemH)}
+              </div>
+            </div>
+            <div className="text-center font-mono text-[11px] leading-5 text-stage-lyric tabular-nums">{i + 1}</div>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   const flipping = turn?.by === "spread" ? turn : null;
   const sliding = turn?.by === "page" ? turn : null;
@@ -209,7 +258,9 @@ export function BookView({
         <StageContent song={song} scale={scale} colored={colored} fit />
       </div>
 
-      {ready && (
+      {ready && fitAll && allPages()}
+
+      {ready && !fitAll && (
         <>
           {/* mặt sách hiện tại (nằm dưới cùng) */}
           <motion.div

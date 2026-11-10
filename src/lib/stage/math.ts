@@ -79,3 +79,29 @@ export function autoColumns(width: number, height: number): number {
   const portrait = height > width * 1.1;
   return Math.max(1, Math.min(portrait ? 2 : 3, byWidth));
 }
+
+/**
+ * Xếp `n` trang (mỗi trang itemW×itemH, có thêm nhãn cao labelH bên dưới) thành lưới
+ * vừa khít khung availW×availH, chọn số hàng/cột cho tỉ lệ thu nhỏ lớn nhất (≤ 1).
+ */
+export function fitGrid(
+  n: number,
+  itemW: number,
+  itemH: number,
+  availW: number,
+  availH: number,
+  gap = 12,
+  labelH = 0,
+): { rows: number; cols: number; scale: number } {
+  let best = { rows: 1, cols: Math.max(1, n), scale: 0 };
+  if (n <= 0 || itemW <= 0 || itemH <= 0) return { ...best, scale: 1 };
+  for (let rows = 1; rows <= n; rows++) {
+    const cols = Math.ceil(n / rows);
+    if ((rows - 1) * cols >= n) continue; // hàng cuối trống hoàn toàn
+    const sw = (availW - gap * (cols - 1)) / (cols * itemW);
+    const sh = (availH - gap * (rows - 1) - labelH * rows) / (rows * itemH);
+    const scale = Math.min(1, sw, sh);
+    if (scale > best.scale) best = { rows, cols, scale };
+  }
+  return { ...best, scale: Math.max(0.05, best.scale) };
+}

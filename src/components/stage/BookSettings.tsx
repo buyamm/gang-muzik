@@ -1,9 +1,9 @@
-import { BookOpen } from "lucide-react";
+import { BookOpen, LayoutGrid } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import type { ColumnsPref, TurnBy } from "./BookView";
 
-const COLUMN_OPTIONS: ColumnsPref[] = ["auto", 1, 2, 3, 4];
+const COLUMN_OPTIONS: ColumnsPref[] = ["auto", 1, 2, 3, 4, "all"];
 
 function Choice({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -36,7 +36,8 @@ export function BookSettings({
   onTurnBy: (t: TurnBy) => void;
   onOpenChange?: (open: boolean) => void;
 }) {
-  const shown = columns === "auto" ? autoCols : columns;
+  const fitAll = columns === "all";
+  const shown = columns === "auto" || fitAll ? autoCols : columns;
   return (
     <Popover onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
@@ -58,14 +59,25 @@ export function BookSettings({
             </div>
           </div>
           <div className="flex gap-1">
-            {COLUMN_OPTIONS.map((c) => (
+            {COLUMN_OPTIONS.filter((c) => c !== "all").map((c) => (
               <Choice key={c} active={columns === c} onClick={() => onColumns(c)}>
-                {c === "auto" ? `Tự động (${autoCols})` : c}
+                {c === "auto" ? `Tự động (${fitAll ? "" : autoCols})`.replace(" ()", "") : c}
               </Choice>
             ))}
           </div>
+          <Choice active={fitAll} onClick={() => onColumns(fitAll ? "auto" : "all")}>
+            <span className="flex items-center justify-center gap-1.5">
+              <LayoutGrid className="size-4" /> Tất cả trên 1 màn hình
+            </span>
+          </Choice>
+          {fitAll && (
+            <p className="text-xs text-muted-foreground">
+              Thu nhỏ để thấy cả bài cùng lúc, không cần lật. Bài dài thì chữ sẽ nhỏ — dùng nút phóng to (🔍+) nếu cần, hoặc
+              chọn lại số trang ở trên để quay về kiểu lật sách.
+            </p>
+          )}
         </div>
-        <div className="space-y-2">
+        <div className={cn("space-y-2", fitAll && "pointer-events-none opacity-40")} aria-disabled={fitAll}>
           <div>
             <div className="text-sm font-semibold">Mỗi lần lật (pedal, lăn chuột, vuốt)</div>
           </div>

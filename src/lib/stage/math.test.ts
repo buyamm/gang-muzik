@@ -65,3 +65,22 @@ describe("autoColumns", () => {
     expect(autoColumns(820, 1180)).toBe(1);
   });
 });
+
+import { fitGrid } from "./math";
+
+describe("fitGrid", () => {
+  it("1 trang vừa khung thì giữ nguyên cỡ", () => {
+    expect(fitGrid(1, 500, 700, 1200, 800)).toEqual({ rows: 1, cols: 1, scale: 1 });
+  });
+  it("màn hình ngang: ưu tiên xếp nhiều cột", () => {
+    const g = fitGrid(4, 600, 800, 1600, 800, 0);
+    expect(g).toEqual({ rows: 1, cols: 4, scale: 0.6666666666666666 });
+  });
+  it("màn hình dọc nhiều trang: xếp nhiều hàng", () => {
+    const g = fitGrid(6, 600, 800, 800, 1600, 0);
+    expect(g.rows).toBeGreaterThan(1);
+    expect(g.rows * g.cols).toBeGreaterThanOrEqual(6);
+    expect(g.cols * 600 * g.scale).toBeLessThanOrEqual(800 + 1e-6);
+    expect(g.rows * 800 * g.scale).toBeLessThanOrEqual(1600 + 1e-6);
+  });
+});

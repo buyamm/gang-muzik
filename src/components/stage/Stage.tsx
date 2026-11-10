@@ -119,6 +119,8 @@ export function Stage({
   const stepSize = prefs.turnBy === "page" ? 1 : cols;
   const maxFirst = prefs.turnBy === "page" ? Math.max(0, pageCount - cols) : Math.floor((pageCount - 1) / cols) * cols;
   const hasText = !!song.textContent.trim();
+  /** chế độ sách hiện tất cả trang trên một màn hình — không có gì để lật */
+  const allMode = !isScroll && prefs.columns === "all";
 
   const setBars = (hidden: boolean) => {
     setBarsHidden(hidden);
@@ -146,6 +148,7 @@ export function Stage({
   }, [isScroll, first, maxFirst]);
 
   const togglePlay = useCallback(() => {
+    if (allMode) return;
     if (countdown !== null) return setCountdown(null);
     if (playing) return setPlaying(false);
     if (atEnd()) {
@@ -154,7 +157,7 @@ export function Stage({
     }
     if (countdownSec > 0) setCountdown(countdownSec);
     else setPlaying(true);
-  }, [countdown, playing, atEnd, isScroll, countdownSec]);
+  }, [allMode, countdown, playing, atEnd, isScroll, countdownSec]);
 
   // ---------- chế độ CUỘN ----------
   useEffect(() => {
@@ -460,7 +463,20 @@ export function Stage({
       {!barsHidden && (
         <footer className="relative z-20 shrink-0 border-t border-stage-fg/10 bg-stage-bg px-3 pt-2.5 pb-[max(env(safe-area-inset-bottom),0.625rem)]">
           {/* công cụ trên điện thoại / tablet dọc */}
-          <div className="mb-2 flex items-center justify-center gap-0.5 md:hidden">{tools}</div>
+          <div className="mb-2 flex items-center justify-center gap-0.5 md:hidden">
+            {tools}
+            {!isScroll && (
+              <span className="ml-1 sm:hidden">
+                <BookSettings
+                  columns={prefs.columns}
+                  autoCols={cols}
+                  turnBy={prefs.turnBy}
+                  onColumns={(c) => update({ columns: c })}
+                  onTurnBy={(t) => update({ turnBy: t })}
+                />
+              </span>
+            )}
+          </div>
 
           <div className="mx-auto flex max-w-4xl items-center gap-2 sm:gap-3">
             {/* thời lượng bài => tốc độ */}
@@ -478,6 +494,13 @@ export function Stage({
             </div>
 
             <div className="flex flex-1 items-center justify-center gap-1 sm:gap-2">
+              {allMode ? (
+                <span className="text-center text-sm leading-tight text-stage-lyric">
+                  <span className="sm:hidden">Cả bài trên 1 màn hình</span>
+                  <span className="hidden sm:inline">Đang hiện tất cả các trang — không cần lật</span>
+                </span>
+              ) : (
+              <>
               <IconBtn
                 label={isScroll ? "Tua lại một đoạn" : "Trang trước"}
                 onClick={() => (isScroll ? scrollBack() : goPrev())}
@@ -498,6 +521,8 @@ export function Stage({
                   <ChevronRight className="size-6" />
                 </IconBtn>
               )}
+              </>
+              )}
             </div>
 
             <div className="min-w-14 shrink-0 text-right text-sm">
@@ -506,8 +531,8 @@ export function Stage({
               ) : (
                 <div className="flex flex-col items-end gap-1">
                   <span className="font-mono whitespace-nowrap tabular-nums">
-                    {first + 1}
-                    {cols > 1 && pageCount > 1 ? `–${Math.min(first + cols, pageCount)}` : ""} / {pageCount}
+                    {allMode ? `${pageCount} trang` : first + 1}
+                    {allMode ? "" : `${cols > 1 && pageCount > 1 ? `–${Math.min(first + cols, pageCount)}` : ""} / ${pageCount}`}
                   </span>
                   <div className="hidden sm:block">
                     <BookSettings
@@ -527,7 +552,9 @@ export function Stage({
           <p className="mt-2 hidden text-center text-[11px] text-stage-lyric lg:block">
             {isScroll
               ? `Chạm vào bản nhạc hoặc bấm Space để chạy / dừng · ${prevKey} tua lại · lăn chuột để cuộn tay`
-              : `Lật trang: ${nextKey} / ${prevKey}, lăn chuột, vuốt hoặc chạm mép phải / trái · Space: tự lật`}
+              : allMode
+                ? "Đang hiện cả bài trên một màn hình · đổi lại trong “Kiểu sách”"
+                : `Lật trang: ${nextKey} / ${prevKey}, lăn chuột, vuốt hoặc chạm mép phải / trái · Space: tự lật`}
           </p>
         </footer>
       )}
