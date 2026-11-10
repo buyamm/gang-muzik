@@ -1,0 +1,8 @@
+# Copy thành studio/.dev.vars để chạy Studio local (file .dev.vars không được commit).
+GOOGLE_CLIENT_SECRET=<client-secret-cua-google>
+ADMIN_EMAILS=<email-admin@vi-du.test>
+COOKIE_SECRET=<chuoi-ngau-nhien-dai-vd-openssl-rand-hex-32>
+# Chỉ dùng local: cho phép đăng nhập giả để test không cần Google. KHÔNG BAO GIỜ đặt trên production.
+DEV_AUTH=1
+GOOGLE_CLIENT_ID=
+PUBLIC_SITE_URL=http://localhost:5173

@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.studio-worker.tsbuildinfo",
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "noUnusedLocals": true,
+    "types": [],
+    "paths": { "@shared/*": ["./shared/*"] }
+  },
+  "include": ["studio/worker", "shared/types.ts", "shared/permissions.ts", "shared/server"],
+  "exclude": ["studio/worker/**/*.test.ts"]
+}
