@@ -2,14 +2,16 @@ import { Link } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useSeo } from "@/lib/seo";
+import { LEGAL_SEO } from "@shared/seo";
 
 const UPDATED = "10/11/2026";
 const CONTACT = "https://github.com/buyamm/gang-muzik/issues";
 
-function Shell({ title, children }: { title: string; children: React.ReactNode }) {
+function Shell({ title, page, children }: { title: string; page: keyof typeof LEGAL_SEO; children: React.ReactNode }) {
+  useSeo(LEGAL_SEO[page]);
   return (
     <div className="min-h-full">
-      <title>{`${title} · Gang Muzik`}</title>
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
         <div className="mb-6 flex items-center gap-2">
           <Button asChild variant="ghost" size="icon">
@@ -37,7 +39,7 @@ const ContactLink = () => (
 
 export function Privacy() {
   return (
-    <Shell title="Chính sách quyền riêng tư">
+    <Shell title="Chính sách quyền riêng tư" page="privacy">
       <p>
         Gang Muzik gồm <b>thư viện công khai</b> (xem sheet nhạc, cảm âm, hợp âm, tab) và <b>Studio</b> (nơi đăng nhập để đóng góp bài).
         Trang này giải thích chúng tôi thu thập gì và dùng vào việc gì.
@@ -101,7 +103,7 @@ export function Privacy() {
 
 export function Terms() {
   return (
-    <Shell title="Điều khoản sử dụng">
+    <Shell title="Điều khoản sử dụng" page="terms">
       <section>
         <h2>1. Dịch vụ</h2>
         <p>

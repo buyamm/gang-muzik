@@ -17,5 +17,5 @@
     "types": ["vite/client"],
     "paths": { "@/*": ["./src/*"], "@studio/*": ["./studio/src/*"], "@shared/*": ["./shared/*"] }
   },
-  "include": ["src", "studio/src", "shared/types.ts", "shared/permissions.ts", "shared/instruments.ts"]
+  "include": ["src", "studio/src", "shared/types.ts", "shared/permissions.ts", "shared/instruments.ts", "shared/seo.ts"]
 }
