@@ -87,14 +87,19 @@ export const auth = new Hono<StudioEnv>()
   })
 
   // đăng nhập giả CHỈ khi chạy local với DEV_AUTH=1 — để test không cần Google
-  .post("/auth/dev", zValidator("json", z.object({ email: z.email(), name: z.string().max(100).optional() })), async (c) => {
-    if (c.env.DEV_AUTH !== "1" || !isLocal(c)) return c.json({ error: "Not found" }, 404);
+  .post(
+    "/auth/dev",
+    // chặn ngay từ đầu nếu không phải local + DEV_AUTH=1 (trước cả bước đọc dữ liệu)
+    async (c, next) => (c.env.DEV_AUTH === "1" && isLocal(c) ? next() : c.json({ error: "Not found" }, 404)),
+    zValidator("json", z.object({ email: z.email(), name: z.string().max(100).optional() })),
+    async (c) => {
     const { email, name } = c.req.valid("json");
     const user = await upsertUser(c, { sub: `dev:${email.toLowerCase()}`, email: email.toLowerCase(), name: name ?? email, picture: "" });
     if (!user || user.status === "banned") return c.json({ error: "Tài khoản đã bị khoá" }, 403);
     await createSession(c, user.id);
     return c.json({ user: toUser(user) });
-  })
+  },
+  )
 
   .post("/auth/logout", async (c) => {
     await destroySession(c);

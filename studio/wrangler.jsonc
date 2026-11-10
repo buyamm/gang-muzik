@@ -9,6 +9,8 @@
     "run_worker_first": ["/api/*"]
   },
   "observability": { "enabled": true },
+  "workers_dev": true,
+  "preview_urls": false,
   // dùng CHUNG database + storage với site công khai
   "d1_databases": [
     {
