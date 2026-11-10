@@ -13,5 +13,5 @@
     "types": [],
     "paths": { "@shared/*": ["./shared/*"] }
   },
-  "include": ["worker", "shared/types.ts", "shared/permissions.ts", "shared/instruments.ts", "shared/server"]
+  "include": ["worker", "shared/types.ts", "shared/permissions.ts", "shared/instruments.ts", "shared/seo.ts", "shared/server"]
 }

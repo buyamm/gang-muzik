@@ -11,6 +11,8 @@ import { LogoMark, SongMotif } from "@/components/brand/Staff";
 import { api } from "@/lib/api";
 import { STUDIO_URL } from "@/lib/links";
 import { cn } from "@/lib/utils";
+import { useSeo } from "@/lib/seo";
+import { homeSeo } from "@shared/seo";
 
 const FILTERS: { value: SongKind | "all"; label: string }[] = [
   { value: "all", label: "Tất cả" },
@@ -68,11 +70,10 @@ export function Library() {
 
   const list = instrument ? (groups.find((g) => g.id === instrument)?.songs ?? []) : base;
   const searching = !!query.trim() || filter !== "all";
+  useSeo(homeSeo(instrument === "none" ? null : instrument));
 
   return (
     <div className="min-h-full">
-      <title>Gang Muzik · Thư viện</title>
-
       {/* tiêu đề gọn: chỉ để nhận ra trang, nhường chỗ cho danh sách bài */}
       <header className="mx-auto max-w-6xl px-4 pt-4 sm:px-6">
         <div className="flex items-center gap-2">

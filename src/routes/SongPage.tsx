@@ -3,10 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Stage } from "@/components/stage/Stage";
 import { api } from "@/lib/api";
 import { NotFound } from "./NotFound";
+import { useSeo } from "@/lib/seo";
+import { songSeo } from "@shared/seo";
 
 export function SongPage() {
   const { id = "" } = useParams();
   const q = useQuery({ queryKey: ["song", id], queryFn: () => api.getSong(id) });
+  useSeo(q.data ? songSeo(q.data) : null);
 
   if (q.isPending)
     return (
@@ -17,9 +20,6 @@ export function SongPage() {
   if (q.isError || !q.data) return <NotFound message={q.error?.message ?? "Không tìm thấy bài"} />;
 
   return (
-    <>
-      <title>{`${q.data.title} · Gang Muzik`}</title>
-      <Stage key={q.data.id} song={q.data} />
-    </>
+<Stage key={q.data.id} song={q.data} />
   );
 }
