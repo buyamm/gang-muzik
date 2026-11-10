@@ -73,12 +73,16 @@ function defaultsFor(song: Song): ViewPrefs {
 
 export function Stage({
   song,
-  isAdmin,
+  canSaveDefaults = false,
   onSaveDefaults,
+  backTo = "/",
 }: {
   song: Song;
-  isAdmin: boolean;
+  /** Studio: chủ bài / admin lưu cài đặt hiện tại làm mặc định */
+  canSaveDefaults?: boolean;
   onSaveDefaults?: (s: SongSettings) => Promise<unknown>;
+  /** Studio: nút quay lại trỏ về trình sửa thay vì thư viện */
+  backTo?: string;
 }) {
   const prefKey = `gm:song:${song.id}`;
   const defaults = useMemo(() => defaultsFor(song), [song]);
@@ -311,7 +315,7 @@ export function Stage({
           {fs.isFull ? <Minimize /> : <Maximize />}
         </IconBtn>
       )}
-      {isAdmin && onSaveDefaults && (
+      {canSaveDefaults && onSaveDefaults && (
         <IconBtn label="Lưu cài đặt làm mặc định cho bài" onClick={saveDefaults}>
           <Save />
         </IconBtn>
@@ -342,7 +346,7 @@ export function Stage({
       {!barsHidden && (
         <header className="relative z-20 flex shrink-0 items-center gap-2 border-b border-stage-fg/10 bg-stage-bg px-2 pt-[max(env(safe-area-inset-top),0.5rem)] pb-2 sm:px-3">
           <Button asChild variant="ghost" size="icon" className="shrink-0 text-stage-fg hover:bg-stage-fg/10">
-            <Link to="/" aria-label="Về thư viện" title="Về thư viện">
+            <Link to={backTo} aria-label="Quay lại" title="Quay lại">
               <ArrowLeft />
             </Link>
           </Button>

@@ -2,14 +2,13 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "motion/react";
-import { FileImage, LockKeyhole, LogOut, Music2, Pencil, Plus, Search, Type } from "lucide-react";
+import { FileImage, Music2, PenLine, Search, Type } from "lucide-react";
 import type { SongKind } from "@shared/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { LoginDialog } from "@/components/LoginDialog";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { useAdmin } from "@/hooks/useAdmin";
 import { api } from "@/lib/api";
+import { STUDIO_URL } from "@/lib/links";
 import { cn } from "@/lib/utils";
 
 const FILTERS: { value: SongKind | "all"; label: string }[] = [
@@ -26,8 +25,6 @@ const strip = (s: string) =>
     .toLowerCase();
 
 export function Library() {
-  const { isAdmin, logout } = useAdmin();
-  const [loginOpen, setLoginOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<SongKind | "all">("all");
   const songs = useQuery({ queryKey: ["songs"], queryFn: api.listSongs });
@@ -58,22 +55,11 @@ export function Library() {
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            {isAdmin ? (
-              <>
-                <Button asChild>
-                  <Link to="/admin/new">
-                    <Plus /> <span className="hidden sm:inline">Bài mới</span>
-                  </Link>
-                </Button>
-                <Button variant="ghost" size="icon" aria-label="Đăng xuất" title="Đăng xuất" onClick={() => logout.mutate()}>
-                  <LogOut />
-                </Button>
-              </>
-            ) : (
-              <Button variant="ghost" size="icon" aria-label="Đăng nhập quản trị" title="Quản trị" onClick={() => setLoginOpen(true)}>
-                <LockKeyhole />
-              </Button>
-            )}
+            <Button asChild variant="outline" title="Đăng nhập bằng Google để gửi bài của bạn">
+              <a href={STUDIO_URL}>
+                <PenLine /> <span className="hidden sm:inline">Đóng góp bài</span>
+              </a>
+            </Button>
             <ThemeToggle />
           </div>
         </div>
@@ -121,7 +107,7 @@ export function Library() {
               {songs.data.length ? "Không có bài nào khớp" : "Thư viện còn trống"}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              {isAdmin ? "Bấm “Bài mới” để dán cảm âm / hợp âm / tab hoặc tải ảnh sheet lên." : "Quay lại sau nhé!"}
+              Có bài muốn chia sẻ? Bấm “Đóng góp bài” để gửi.
             </p>
           </div>
         ) : (
@@ -147,18 +133,6 @@ export function Library() {
                     {[s.artist, s.instrument].filter(Boolean).join(" · ") || " "}
                   </span>
                 </Link>
-                {isAdmin && (
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="icon-sm"
-                    className="absolute top-3 right-3 opacity-70 group-hover:opacity-100"
-                  >
-                    <Link to={`/admin/songs/${s.id}`} aria-label={`Sửa ${s.title}`}>
-                      <Pencil />
-                    </Link>
-                  </Button>
-                )}
               </motion.li>
             ))}
           </ul>
@@ -167,13 +141,10 @@ export function Library() {
 
       <footer className="mx-auto flex max-w-5xl items-center justify-between gap-4 border-t px-4 py-6 text-xs text-muted-foreground sm:px-6">
         <span>Mẹo: pedal Bluetooth hoặc phím ← → Space để điều khiển khi đang chơi.</span>
-        {!isAdmin && (
-          <button className="shrink-0 underline-offset-4 hover:underline" onClick={() => setLoginOpen(true)}>
-            Quản trị
-          </button>
-        )}
+        <a href={STUDIO_URL} className="shrink-0 underline-offset-4 hover:underline">
+          Studio
+        </a>
       </footer>
-      <LoginDialog open={loginOpen} onOpenChange={setLoginOpen} />
     </div>
   );
 }

@@ -15,7 +15,7 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "types": ["vite/client"],
-    "paths": { "@/*": ["./src/*"], "@shared/*": ["./shared/*"] }
+    "paths": { "@/*": ["./src/*"], "@studio/*": ["./studio/src/*"], "@shared/*": ["./shared/*"] }
   },
-  "include": ["src", "shared"]
+  "include": ["src", "studio/src", "shared/types.ts", "shared/permissions.ts"]
 }
