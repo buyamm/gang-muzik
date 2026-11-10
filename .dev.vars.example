@@ -1,0 +1,4 @@
+# Copy thành .dev.vars để chạy local (file .dev.vars không được commit).
+# Production: đặt bằng `npx wrangler secret put ADMIN_PIN` và `npx wrangler secret put JWT_SECRET`.
+ADMIN_PIN=<ma-pin-cua-ban>
+JWT_SECRET=<chuoi-ngau-nhien-dai-vd-openssl-rand-hex-32>

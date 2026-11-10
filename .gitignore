@@ -1,0 +1,14 @@
+node_modules
+dist
+.wrangler
+*.local
+.DS_Store
+
+# secrets — không bao giờ commit
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.env
+.env.*
+*.pem
+*.key
