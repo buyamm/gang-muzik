@@ -48,6 +48,13 @@ function headTags(m: SeoMeta, origin: string, jsonLd: unknown[]) {
   return tags.filter(Boolean).join("\n    ");
 }
 
+/**
+ * Nội dung tĩnh cho bot không chạy JS. Ẩn về mặt hiển thị (vẫn nằm trong HTML, trình đọc màn hình
+ * vẫn đọc được) để người dùng không thấy bản thô nháy lên trước khi React thay thế #root.
+ */
+const MAIN_OPEN =
+  '<main style="position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0">';
+
 async function render(c: Context<AppEnv>, m: SeoMeta, opts: { jsonLd?: unknown[]; body?: string; status?: 200 | 404 } = {}) {
   const origin = new URL(c.req.url).origin;
   const shell = await c.env.ASSETS.fetch(new URL("/", c.req.url));
@@ -79,7 +86,7 @@ export const seo = new Hono<AppEnv>()
     const m = homeSeo(c.req.query("instrument"));
     const songs = await approvedSongs(c.env.DB);
     const body =
-      `<main><h1>${esc(m.title)}</h1><p>${esc(m.description)}</p><ul>` +
+      `${MAIN_OPEN}<h1>${esc(m.title)}</h1><p>${esc(m.description)}</p><ul>` +
       songs
         .map((s) => `<li><a href="/s/${esc(s.id)}">${esc(s.title)}${s.artist ? ` — ${esc(s.artist)}` : ""}</a></li>`)
         .join("") +
@@ -95,7 +102,7 @@ export const seo = new Hono<AppEnv>()
     const origin = new URL(c.req.url).origin;
     const inst = song.instruments.map(instrumentLabel).join(", ");
     const body =
-      `<main><h1>${esc(song.title)}</h1>` +
+      `${MAIN_OPEN}<h1>${esc(song.title)}</h1>` +
       (song.artist ? `<p>${esc(song.artist)}</p>` : "") +
       (inst ? `<p>Nhạc cụ: ${esc(inst)}</p>` : "") +
       (song.kind === "text" && song.textContent ? `<pre>${esc(song.textContent.slice(0, 20000))}</pre>` : "") +
