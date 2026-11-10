@@ -46,7 +46,8 @@ export interface SongSummary {
   id: string;
   title: string;
   artist: string;
-  instrument: string;
+  /** id trong shared/instruments.ts, có thể nhiều nhạc cụ */
+  instruments: string[];
   kind: SongKind;
   updatedAt: number;
   pageCount: number;
@@ -66,7 +67,7 @@ export interface Song extends Omit<SongSummary, "pageCount"> {
 export interface SongInput {
   title: string;
   artist?: string;
-  instrument?: string;
+  instruments?: string[];
   kind: SongKind;
   textContent?: string;
   settings?: SongSettings;

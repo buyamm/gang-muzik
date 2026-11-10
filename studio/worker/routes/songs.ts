@@ -3,6 +3,7 @@ import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import type { User } from "@shared/types";
 import { LIMITS, canDelete, canEdit, canSubmit, canView, isAdmin, type SongRef } from "@shared/permissions";
+import { serializeInstruments } from "@shared/instruments";
 import { OWNER_JOIN, OWNER_SELECT, getSongRow, loadSong, toPage, toSummary, type OwnerCols, type PageRow, type SongRow } from "@shared/server/db";
 import { IMAGE_TYPES, MAX_IMAGE_BYTES, songSchema } from "@shared/server/validation";
 import type { StudioEnv } from "../env";
@@ -68,10 +69,10 @@ export const songs = new Hono<StudioEnv>()
     const id = crypto.randomUUID();
     const now = Date.now();
     await c.env.DB.prepare(
-      `INSERT INTO songs (id, title, artist, instrument, kind, text_content, settings_json, created_at, updated_at, owner_id, status)
+      `INSERT INTO songs (id, title, artist, instruments, kind, text_content, settings_json, created_at, updated_at, owner_id, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
     )
-      .bind(id, b.title, b.artist ?? "", b.instrument ?? "", b.kind, b.textContent ?? "", JSON.stringify(b.settings ?? {}), now, now, u.id)
+      .bind(id, b.title, b.artist ?? "", serializeInstruments(b.instruments), b.kind, b.textContent ?? "", JSON.stringify(b.settings ?? {}), now, now, u.id)
       .run();
     return c.json(await loadSong(c.env.DB, id, true), 201);
   })
@@ -82,9 +83,9 @@ export const songs = new Hono<StudioEnv>()
     if (g.res) return g.res;
     const b = c.req.valid("json");
     await c.env.DB.prepare(
-      "UPDATE songs SET title = ?, artist = ?, instrument = ?, kind = ?, text_content = ?, settings_json = ?, updated_at = ? WHERE id = ?",
+      "UPDATE songs SET title = ?, artist = ?, instruments = ?, kind = ?, text_content = ?, settings_json = ?, updated_at = ? WHERE id = ?",
     )
-      .bind(b.title, b.artist ?? "", b.instrument ?? "", b.kind, b.textContent ?? "", JSON.stringify(b.settings ?? {}), Date.now(), id)
+      .bind(b.title, b.artist ?? "", serializeInstruments(b.instruments), b.kind, b.textContent ?? "", JSON.stringify(b.settings ?? {}), Date.now(), id)
       .run();
     return c.json(await loadSong(c.env.DB, id, true));
   })

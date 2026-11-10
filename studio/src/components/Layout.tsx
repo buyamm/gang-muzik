@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, Inbox, LibraryBig, LogOut, Music2, Users as UsersIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { LogoMark } from "@/components/brand/Staff";
 import { cn } from "@/lib/utils";
 import { api } from "@studio/lib/api";
 import { useMe } from "@studio/hooks/useMe";
@@ -42,10 +43,11 @@ export function Layout() {
     <div className="min-h-full">
       <header className="sticky top-0 z-20 border-b bg-background/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5 sm:px-6">
-          <NavLink to="/" className="font-display text-lg font-bold whitespace-nowrap">
-            Gang <span className="text-primary">Studio</span>
+          <NavLink to="/" className="flex items-center gap-2 font-display text-lg font-bold whitespace-nowrap">
+            <LogoMark className="size-7" />
+            <span className="hidden xl:inline">Gang Muzik Studio</span>
           </NavLink>
-          <nav className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
+          <nav className="flex min-w-0 flex-1 gap-1 overflow-x-auto [scrollbar-width:none]">
             {nav.map((n) => (
               <NavLink
                 key={n.to}
@@ -53,13 +55,13 @@ export function Layout() {
                 end={n.end}
                 className={({ isActive }) =>
                   cn(
-                    "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
-                    isActive ? "bg-primary/15 text-foreground" : "text-muted-foreground hover:text-foreground",
+                    "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
+                    isActive ? "bg-foreground text-background" : "text-muted-foreground hover:bg-accent hover:text-foreground",
                   )
                 }
               >
                 <n.icon className="size-4" />
-                <span className="hidden sm:inline">{n.label}</span>
+                <span className="hidden md:inline">{n.label}</span>
                 {!!("badge" in n && n.badge) && (
                   <span className="rounded-full bg-primary px-1.5 text-[11px] font-bold text-primary-foreground">{n.badge}</span>
                 )}
@@ -81,7 +83,7 @@ export function Layout() {
                   {(user.name || user.email)[0]?.toUpperCase()}
                 </div>
               )}
-              <div className="hidden leading-tight md:block">
+              <div className="hidden leading-tight lg:block">
                 <div className="max-w-40 truncate text-sm font-medium">{user.name || user.email}</div>
                 <div className="text-[11px] text-muted-foreground">{isAdmin ? "Quản trị viên" : "Người đóng góp"}</div>
               </div>

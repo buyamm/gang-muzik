@@ -1,3 +1,4 @@
+import { parseInstruments } from "../instruments";
 import type { PageImage, Song, SongSettings, SongStatus, SongSummary } from "@shared/types";
 
 export interface SongRow {
@@ -5,6 +6,7 @@ export interface SongRow {
   title: string;
   artist: string;
   instrument: string;
+  instruments: string;
   kind: "sheet" | "text";
   text_content: string;
   settings_json: string;
@@ -65,7 +67,7 @@ export function toSong(r: SongRow & OwnerCols, pages: PageRow[], withMeta = fals
     id: r.id,
     title: r.title,
     artist: r.artist,
-    instrument: r.instrument,
+    instruments: parseInstruments(r.instruments),
     kind: r.kind,
     textContent: r.text_content,
     settings: parseSettings(r.settings_json),
@@ -81,7 +83,7 @@ export function toSummary(r: SongRow & OwnerCols & { page_count: number }, withM
     id: r.id,
     title: r.title,
     artist: r.artist,
-    instrument: r.instrument,
+    instruments: parseInstruments(r.instruments),
     kind: r.kind,
     updatedAt: r.updated_at,
     pageCount: r.page_count,
