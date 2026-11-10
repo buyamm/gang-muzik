@@ -71,5 +71,5 @@ export const api = {
 };
 
 export function songToInput(s: Song): SongInput {
-  return { title: s.title, artist: s.artist, instrument: s.instrument, kind: s.kind, textContent: s.textContent, settings: s.settings };
+  return { title: s.title, artist: s.artist, instruments: s.instruments, kind: s.kind, textContent: s.textContent, settings: s.settings };
 }

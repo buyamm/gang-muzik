@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { INSTRUMENT_IDS } from "../instruments";
 
 export const settingsSchema = z
   .object({
@@ -14,7 +15,12 @@ export const settingsSchema = z
 export const songSchema = z.object({
   title: z.string().trim().min(1).max(200),
   artist: z.string().trim().max(200).optional(),
-  instrument: z.string().trim().max(100).optional(),
+  /** id trong shared/instruments.ts; rỗng = chưa phân loại */
+  instruments: z
+    .array(z.enum(INSTRUMENT_IDS))
+    .max(INSTRUMENT_IDS.length)
+    .transform((a) => [...new Set(a)])
+    .optional(),
   kind: z.enum(["sheet", "text"]),
   textContent: z.string().max(100_000).optional(),
   settings: settingsSchema.optional(),

@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { FileImage, PenLine, Search, Type } from "lucide-react";
 import type { SongKind, SongSummary } from "@shared/types";
+import { INSTRUMENTS, instrumentLabel, normalizeInstrument, type InstrumentId } from "@shared/instruments";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -28,15 +29,45 @@ export function Library() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<SongKind | "all">("all");
   const songs = useQuery({ queryKey: ["songs"], queryFn: api.listSongs });
+  // nhạc cụ đang chọn nằm trên URL (?instrument=guitar) để chia sẻ link được
+  const [params, setParams] = useSearchParams();
+  const raw = params.get("instrument");
+  const instrument: InstrumentId | "none" | null = raw === "none" ? "none" : raw ? normalizeInstrument(raw) || null : null;
+  const pickInstrument = (id: InstrumentId | "none" | null) =>
+    setParams(
+      (p) => {
+        if (id) p.set("instrument", id);
+        else p.delete("instrument");
+        return p;
+      },
+      { replace: true },
+    );
 
-  const list = useMemo(() => {
+  /** lọc theo chữ + dạng bài (chưa lọc nhạc cụ) — dùng để đếm số bài mỗi nhạc cụ */
+  const base = useMemo(() => {
     const q = strip(query.trim());
     return (songs.data ?? []).filter(
       (s) =>
         (filter === "all" || s.kind === filter) &&
-        (!q || strip(`${s.title} ${s.artist} ${s.instrument}`).includes(q)),
+        (!q || strip(`${s.title} ${s.artist} ${s.instruments.map(instrumentLabel).join(" ")}`).includes(q)),
     );
   }, [songs.data, query, filter]);
+
+  const groups = useMemo(() => {
+    const by = new Map<InstrumentId | "none", SongSummary[]>();
+    // bài nhiều nhạc cụ hiện ở mọi mục tương ứng
+    for (const s of base) {
+      const ids: (InstrumentId | "none")[] = s.instruments.length ? (s.instruments as InstrumentId[]) : ["none"];
+      for (const id of ids) by.set(id, [...(by.get(id) ?? []), s]);
+    }
+    const order: (InstrumentId | "none")[] = [...INSTRUMENTS.map((i) => i.id), "none"];
+    return order
+      .filter((id) => by.has(id))
+      .map((id) => ({ id, label: id === "none" ? "Chưa phân loại" : instrumentLabel(id), songs: by.get(id)! }));
+  }, [base]);
+
+  const list = instrument ? (groups.find((g) => g.id === instrument)?.songs ?? []) : base;
+  const searching = !!query.trim() || filter !== "all";
 
   return (
     <div className="min-h-full">
@@ -111,7 +142,7 @@ export function Library() {
           </ul>
         ) : songs.isError ? (
           <p className="py-16 text-center text-destructive">Không tải được thư viện: {songs.error.message}. Tải lại trang để thử lần nữa.</p>
-        ) : list.length === 0 ? (
+        ) : base.length === 0 ? (
           <div className="rounded-2xl border border-dashed py-16 text-center">
             <p className="font-display text-2xl font-bold">{songs.data.length ? "Không có bài nào khớp" : "Thư viện còn trống"}</p>
             <p className="mt-2 text-muted-foreground">
@@ -125,17 +156,19 @@ export function Library() {
           </div>
         ) : (
           <>
-            <h2 className="mb-4 flex items-baseline gap-3 font-display text-2xl font-bold">
-              {query || filter !== "all" ? "Kết quả" : "Thư viện"}
-              <span className="text-base font-medium text-muted-foreground tabular-nums">
-                {list.length === songs.data.length ? `${list.length} bài` : `${list.length} / ${songs.data.length} bài`}
-              </span>
-            </h2>
-            <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {list.map((s) => (
-                <SongCard key={s.id} song={s} />
-              ))}
-            </ul>
+            <InstrumentTabs groups={groups} total={base.length} value={instrument} onChange={pickInstrument} />
+            {instrument || searching ? (
+              <SongSection
+                title={instrument ? (groups.find((g) => g.id === instrument)?.label ?? instrumentLabel(instrument)) : "Kết quả"}
+                songs={list}
+              />
+            ) : (
+              <div className="space-y-12">
+                {groups.map((g) => (
+                  <SongSection key={g.id} title={g.label} songs={g.songs} onMore={() => pickInstrument(g.id)} />
+                ))}
+              </div>
+            )}
           </>
         )}
       </main>
@@ -162,6 +195,73 @@ export function Library() {
   );
 }
 
+function InstrumentTabs({
+  groups,
+  total,
+  value,
+  onChange,
+}: {
+  groups: { id: InstrumentId | "none"; label: string; songs: SongSummary[] }[];
+  total: number;
+  value: InstrumentId | "none" | null;
+  onChange: (id: InstrumentId | "none" | null) => void;
+}) {
+  const tabs = [{ id: null, label: "Tất cả nhạc cụ", count: total }, ...groups.map((g) => ({ id: g.id, label: g.label, count: g.songs.length }))];
+  return (
+    <nav aria-label="Nhạc cụ" className="-mx-4 mb-8 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0">
+      <ul className="flex w-max gap-2">
+        {tabs.map((t) => {
+          const active = value === t.id;
+          return (
+            <li key={t.id ?? "all"}>
+              <button
+                type="button"
+                aria-pressed={active}
+                onClick={() => onChange(active ? null : t.id)}
+                className={cn(
+                  "flex items-baseline gap-2 rounded-full border px-4 py-2 font-display text-base font-bold whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                  active ? "border-primary bg-primary text-primary-foreground" : "bg-card hover:border-foreground/40",
+                )}
+              >
+                {t.label}
+                <span className={cn("font-sans text-xs font-medium tabular-nums", active ? "opacity-80" : "text-muted-foreground")}>{t.count}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
+
+/** Một mục nhạc cụ. Ở trang tổng chỉ hiện 6 bài đầu, có nút xem hết. */
+function SongSection({ title, songs, onMore }: { title: string; songs: SongSummary[]; onMore?: () => void }) {
+  const LIMIT = 6;
+  const shown = onMore ? songs.slice(0, LIMIT) : songs;
+  return (
+    <section>
+      <div className="mb-4 flex items-baseline gap-3">
+        <h2 className="font-display text-2xl font-bold">{title}</h2>
+        <span className="text-base font-medium text-muted-foreground tabular-nums">{songs.length} bài</span>
+        {onMore && songs.length > LIMIT && (
+          <button type="button" onClick={onMore} className="ml-auto text-sm font-medium text-primary underline-offset-4 hover:underline">
+            Xem cả {songs.length} bài
+          </button>
+        )}
+      </div>
+      {shown.length ? (
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {shown.map((s) => (
+            <SongCard key={s.id} song={s} />
+          ))}
+        </ul>
+      ) : (
+        <p className="rounded-2xl border border-dashed py-10 text-center text-muted-foreground">Chưa có bài nào cho nhạc cụ này khớp bộ lọc.</p>
+      )}
+    </section>
+  );
+}
+
 function SongCard({ song: s }: { song: SongSummary }) {
   return (
     <li>
@@ -176,7 +276,16 @@ function SongCard({ song: s }: { song: SongSummary }) {
           <span className="font-display text-[1.4rem] leading-tight font-bold text-balance">{s.title}</span>
           {s.artist && <span className="mt-1 truncate text-sm text-muted-foreground">{s.artist}</span>}
           <span className="mt-auto flex items-center gap-2 pt-3 text-sm sm:pt-4 text-muted-foreground">
-            {s.instrument && <span className="truncate rounded-full border px-2.5 py-0.5 text-foreground/80">{s.instrument}</span>}
+            {s.instruments.slice(0, 2).map((i) => (
+              <span key={i} className="truncate rounded-full border px-2.5 py-0.5 text-foreground/80">
+                {instrumentLabel(i)}
+              </span>
+            ))}
+            {s.instruments.length > 2 && (
+              <span className="shrink-0 text-xs" title={s.instruments.slice(2).map(instrumentLabel).join(", ")}>
+                +{s.instruments.length - 2}
+              </span>
+            )}
             <span className="ml-auto flex shrink-0 items-center gap-1.5" title={s.kind === "text" ? "Bài dạng chữ" : "Bài dạng ảnh"}>
               {s.kind === "text" ? <Type className="size-4" /> : <FileImage className="size-4" />}
               {s.kind === "text" ? "Chữ" : `${s.pageCount} ảnh`}

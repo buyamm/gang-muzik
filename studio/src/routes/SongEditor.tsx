@@ -13,6 +13,7 @@ import { ImageUploader } from "@studio/components/ImageUploader";
 import { StatusBadge } from "@studio/components/StatusBadge";
 import { TextNotation } from "@/components/stage/TextNotation";
 import { canDelete, canEdit, canSubmit, type SongRef } from "@shared/permissions";
+import { INSTRUMENTS, parseInstruments, type InstrumentId } from "@shared/instruments";
 import { useMe } from "@studio/hooks/useMe";
 import { api } from "@studio/lib/api";
 import { formatDuration, parseDuration } from "@/lib/stage/math";
@@ -35,7 +36,7 @@ const SAMPLE = EXAMPLES["Cảm âm"];
 interface Form {
   title: string;
   artist: string;
-  instrument: string;
+  instruments: InstrumentId[];
   kind: SongKind;
   textContent: string;
   mode: ViewMode;
@@ -46,7 +47,7 @@ interface Form {
 const emptyForm: Form = {
   title: "",
   artist: "",
-  instrument: "",
+  instruments: [],
   kind: "text",
   textContent: "",
   mode: "scroll",
@@ -58,7 +59,7 @@ function fromSong(s: Song): Form {
   return {
     title: s.title,
     artist: s.artist,
-    instrument: s.instrument,
+    instruments: parseInstruments(s.instruments.join(",")),
     kind: s.kind,
     textContent: s.textContent,
     mode: s.settings.mode ?? "scroll",
@@ -94,6 +95,8 @@ export function SongEditor() {
   const submittable = !!ref && canSubmit(actor, ref);
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
+  const toggleInstrument = (i: InstrumentId) =>
+    set("instruments", form.instruments.includes(i) ? form.instruments.filter((x) => x !== i) : [...form.instruments, i]);
 
   const durationSec = form.duration.trim() ? parseDuration(form.duration) : undefined;
   const durationInvalid = durationSec === null || (durationSec !== undefined && (durationSec < 5 || durationSec > 3600));
@@ -101,7 +104,7 @@ export function SongEditor() {
   const toInput = (): SongInput => ({
     title: form.title.trim(),
     artist: form.artist.trim(),
-    instrument: form.instrument.trim(),
+    instruments: form.instruments,
     kind: form.kind,
     textContent: form.textContent,
     settings: {
@@ -283,20 +286,32 @@ export function SongEditor() {
             <Label htmlFor="title">Tên bài *</Label>
             <Input id="title" value={form.title} onChange={(e) => set("title", e.target.value)} required maxLength={200} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="artist">Ca sĩ / tác giả</Label>
-              <Input id="artist" value={form.artist} onChange={(e) => set("artist", e.target.value)} maxLength={200} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="instrument">Nhạc cụ</Label>
-              <Input
-                id="instrument"
-                value={form.instrument}
-                onChange={(e) => set("instrument", e.target.value)}
-                placeholder="Guitar, Piano, Sáo C…"
-                maxLength={100}
-              />
+          <div className="space-y-2">
+            <Label htmlFor="artist">Ca sĩ / tác giả</Label>
+            <Input id="artist" value={form.artist} onChange={(e) => set("artist", e.target.value)} maxLength={200} />
+          </div>
+          <div className="space-y-2">
+            <Label id="instrument-label">Nhạc cụ</Label>
+            <p className="text-xs text-muted-foreground">Chọn được nhiều nhạc cụ. Bài sẽ hiện trong từng mục tương ứng ở thư viện.</p>
+            <div className="flex flex-wrap gap-1.5" role="group" aria-labelledby="instrument-label">
+              {INSTRUMENTS.map((i) => {
+                const on = form.instruments.includes(i.id);
+                return (
+                  <button
+                    key={i.id}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => toggleInstrument(i.id)}
+                    className={cn(
+                      "flex items-center gap-1 rounded-full border px-3 py-1 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                      on ? "border-foreground bg-foreground text-background" : "text-muted-foreground hover:border-foreground/40 hover:text-foreground",
+                    )}
+                  >
+                    {on && <Check className="-ml-0.5 size-3.5" />}
+                    {i.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

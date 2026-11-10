@@ -13,6 +13,6 @@
     "types": [],
     "paths": { "@shared/*": ["./shared/*"] }
   },
-  "include": ["studio/worker", "shared/types.ts", "shared/permissions.ts", "shared/server"],
+  "include": ["studio/worker", "shared/types.ts", "shared/permissions.ts", "shared/instruments.ts", "shared/server"],
   "exclude": ["studio/worker/**/*.test.ts"]
 }

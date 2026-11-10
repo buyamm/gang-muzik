@@ -47,7 +47,7 @@ export function Layout() {
             <LogoMark className="size-7" />
             <span className="hidden xl:inline">Gang Muzik Studio</span>
           </NavLink>
-          <nav className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
+          <nav className="flex min-w-0 flex-1 gap-1 overflow-x-auto [scrollbar-width:none]">
             {nav.map((n) => (
               <NavLink
                 key={n.to}
