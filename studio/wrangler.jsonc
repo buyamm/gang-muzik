@@ -21,7 +21,7 @@
   "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "gang-muzik-files" }],
   "vars": {
     // Client ID của Google OAuth là thông tin công khai (không phải secret)
-    "GOOGLE_CLIENT_ID": "",
+    "GOOGLE_CLIENT_ID": "712636095030-eiv9r9h0t9ctr37drpd0opivegk7doeg.apps.googleusercontent.com",
     "PUBLIC_SITE_URL": "https://gang-muzik.lytruong.workers.dev"
   }
   // Secrets (đặt bằng `npx wrangler secret put <TÊN> -c studio/wrangler.jsonc`):
