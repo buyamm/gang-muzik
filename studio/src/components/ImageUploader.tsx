@@ -8,7 +8,7 @@ import { GripVertical, ImagePlus, Loader2, Trash2 } from "lucide-react";
 import type { PageImage } from "@shared/types";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { api } from "@/lib/api";
+import { api } from "@studio/lib/api";
 import { cn } from "@/lib/utils";
 
 const MAX_EDGE = 3200; // đủ nét cho màn hình retina / tablet 2x

@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* quét class ở cả site công khai lẫn Studio (dùng chung component) */
+@source "./";
+@source "../studio/src";
+
 @custom-variant dark (&:is(.dark *));
 
 /*

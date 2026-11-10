@@ -5,15 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && vite build -c vite.studio.config.ts",
     "preview": "npm run build && vite preview",
     "typecheck": "tsc -b",
     "test": "vitest run",
     "db:migrate:local": "wrangler d1 migrations apply gang-muzik --local",
     "db:migrate:remote": "wrangler d1 migrations apply gang-muzik --remote",
     "deploy": "npm run build && wrangler deploy",
-    "cf-typegen": "wrangler types worker/worker-configuration.d.ts",
-    "release": "bash scripts/release.sh"
+    "cf-typegen": "wrangler types worker/worker-configuration.d.ts && cd studio && wrangler types worker/worker-configuration.d.ts",
+    "release": "bash scripts/release.sh",
+    "dev:studio": "vite -c vite.studio.config.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

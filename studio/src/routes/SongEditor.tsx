@@ -2,19 +2,19 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, ExternalLink, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, Eye, Lock, Send, Trash2, Undo2, X } from "lucide-react";
 import type { PageImage, Song, SongInput, SongKind, ViewMode } from "@shared/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
-import { ImageUploader } from "@/components/admin/ImageUploader";
+import { ImageUploader } from "@studio/components/ImageUploader";
+import { StatusBadge } from "@studio/components/StatusBadge";
 import { TextNotation } from "@/components/stage/TextNotation";
-import { LoginDialog } from "@/components/LoginDialog";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { useAdmin } from "@/hooks/useAdmin";
-import { api } from "@/lib/api";
+import { canDelete, canEdit, canSubmit, type SongRef } from "@shared/permissions";
+import { useMe } from "@studio/hooks/useMe";
+import { api } from "@studio/lib/api";
 import { formatDuration, parseDuration } from "@/lib/stage/math";
 import { cn } from "@/lib/utils";
 
@@ -72,8 +72,9 @@ export function SongEditor() {
   const isNew = !id;
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { isAdmin } = useAdmin();
-  const [loginOpen, setLoginOpen] = useState(false);
+  const { user, isAdmin } = useMe();
+  const [reviewNote, setReviewNote] = useState("");
+  const [busy, setBusy] = useState(false);
   const [form, setForm] = useState<Form>(emptyForm);
   const [pages, setPages] = useState<PageImage[]>([]);
   const [saving, setSaving] = useState(false);
@@ -85,6 +86,12 @@ export function SongEditor() {
       setPages(song.data.pages);
     }
   }, [song.data]);
+
+  const actor = user!;
+  const ref: SongRef | null = song.data ? { ownerId: song.data.owner?.id ?? null, status: song.data.status ?? "draft" } : null;
+  const editable = isNew || (!!ref && canEdit(actor, ref));
+  const deletable = !!ref && canDelete(actor, ref);
+  const submittable = !!ref && canSubmit(actor, ref);
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -114,7 +121,7 @@ export function SongEditor() {
       qc.setQueryData(["song", saved.id], saved);
       qc.invalidateQueries({ queryKey: ["songs"] });
       toast.success(isNew ? "Đã tạo bài" : "Đã lưu");
-      if (isNew) navigate(`/admin/songs/${saved.id}`, { replace: true });
+      if (isNew) navigate(`/songs/${saved.id}`, { replace: true });
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -143,50 +150,135 @@ export function SongEditor() {
     }
   };
 
-  if (!isAdmin) {
-    return (
-      <div className="flex min-h-full flex-col items-center justify-center gap-4 p-6 text-center">
-        <p className="text-muted-foreground">Cần đăng nhập quản trị để chỉnh sửa.</p>
-        <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <Link to="/">Về thư viện</Link>
-          </Button>
-          <Button onClick={() => setLoginOpen(true)}>Đăng nhập</Button>
-        </div>
-        <LoginDialog open={loginOpen} onOpenChange={setLoginOpen} />
-      </div>
-    );
-  }
+  /** lưu (nếu được sửa) rồi gửi duyệt */
+  const submit = async () => {
+    if (!id) return;
+    setBusy(true);
+    try {
+      if (editable) await api.updateSong(id, toInput());
+      const s = await api.submitSong(id);
+      qc.setQueryData(["song", id], s);
+      qc.invalidateQueries({ queryKey: ["songs"] });
+      toast.success("Đã gửi duyệt — bài sẽ lên thư viện khi quản trị viên duyệt");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const review = async (decision: "approve" | "reject" | "unpublish") => {
+    if (!id) return;
+    if (decision === "reject" && !reviewNote.trim()) return toast.error("Ghi lý do từ chối để người đăng biết cần sửa gì");
+    if (decision === "unpublish" && !window.confirm("Gỡ bài khỏi thư viện công khai (chuyển về Nháp)?")) return;
+    setBusy(true);
+    try {
+      const s = await api.reviewSong(id, decision, reviewNote.trim() || undefined);
+      qc.setQueryData(["song", id], s);
+      qc.invalidateQueries({ queryKey: ["songs"] });
+      setReviewNote("");
+      toast.success(decision === "approve" ? "Đã duyệt — bài đã lên thư viện" : decision === "reject" ? "Đã từ chối" : "Đã gỡ khỏi thư viện");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (id && song.isPending) return <div className="p-10 text-center text-muted-foreground">Đang tải…</div>;
   if (id && song.isError) return <div className="p-10 text-center text-destructive">{song.error.message}</div>;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-      <title>{isNew ? "Bài mới · Gang Muzik" : `Sửa ${form.title} · Gang Muzik`}</title>
-      <div className="mb-6 flex items-center gap-2">
+    <div>
+      <title>{isNew ? "Bài mới · Gang Muzik Studio" : `${form.title} · Gang Muzik Studio`}</title>
+      <div className="mb-5 flex flex-wrap items-center gap-2">
         <Button asChild variant="ghost" size="icon">
-          <Link to="/" aria-label="Về thư viện">
+          <Link to="/" aria-label="Quay lại">
             <ArrowLeft />
           </Link>
         </Button>
-        <h1 className="flex-1 font-display text-2xl font-bold">{isNew ? "Bài mới" : "Sửa bài"}</h1>
+        <h1 className="font-display text-2xl font-bold">{isNew ? "Bài mới" : editable ? "Sửa bài" : "Xem bài"}</h1>
+        {song.data?.status && <StatusBadge status={song.data.status} />}
+        <div className="flex-1" />
         {!isNew && (
           <>
             <Button asChild variant="outline" size="sm">
-              <Link to={`/s/${id}`}>
-                <ExternalLink /> Mở xem
+              <Link to={`/songs/${id}/preview`}>
+                <Eye /> Xem thử
               </Link>
             </Button>
-            <Button variant="ghost" size="icon" aria-label="Xoá bài" onClick={remove}>
-              <Trash2 className="text-destructive" />
-            </Button>
+            {deletable && (
+              <Button variant="ghost" size="icon" aria-label="Xoá bài" title="Xoá bài" onClick={remove}>
+                <Trash2 className="text-destructive" />
+              </Button>
+            )}
           </>
         )}
-        <ThemeToggle />
       </div>
 
+      {/* trạng thái duyệt */}
+      {song.data && (
+        <div className="mb-6 space-y-3 rounded-xl border bg-card p-4">
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <span className="flex-1">
+              {song.data.status === "draft" && "Bài đang là Nháp — chỉ bạn và quản trị viên thấy. Xong thì bấm Gửi duyệt."}
+              {song.data.status === "pending" && "Đang chờ quản trị viên duyệt. Bạn vẫn có thể sửa trong lúc chờ."}
+              {song.data.status === "approved" && (isAdmin ? "Bài đang hiện trên thư viện công khai." : "Bài đã được duyệt và đang hiện trên thư viện. Muốn sửa, hãy liên hệ quản trị viên.")}
+              {song.data.status === "rejected" && "Bài bị từ chối. Sửa theo góp ý rồi Gửi duyệt lại."}
+              {song.data.owner && isAdmin && (
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  Người đăng: {song.data.owner.name || song.data.owner.email} ({song.data.owner.email})
+                </span>
+              )}
+            </span>
+            {submittable && (
+              <Button onClick={submit} disabled={busy || !form.title.trim() || durationInvalid}>
+                <Send /> Gửi duyệt
+              </Button>
+            )}
+            {!editable && <Lock className="size-4 text-muted-foreground" aria-label="Đã khoá" />}
+          </div>
+          {song.data.reviewNote && song.data.status !== "approved" && (
+            <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-300">
+              <b>Góp ý của quản trị viên:</b> {song.data.reviewNote}
+            </p>
+          )}
+          {isAdmin && (
+            <div className="space-y-2 border-t pt-3">
+              <div className="text-sm font-semibold">Duyệt bài (quản trị viên)</div>
+              {song.data.status !== "approved" && (
+                <Textarea
+                  value={reviewNote}
+                  onChange={(e) => setReviewNote(e.target.value)}
+                  rows={2}
+                  maxLength={1000}
+                  placeholder="Lý do / góp ý (bắt buộc khi từ chối)"
+                />
+              )}
+              <div className="flex flex-wrap gap-2">
+                {song.data.status !== "approved" && (
+                  <>
+                    <Button size="sm" onClick={() => review("approve")} disabled={busy} className="bg-emerald-600 text-white hover:bg-emerald-600/90">
+                      <Check /> Duyệt & đăng lên thư viện
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => review("reject")} disabled={busy} className="text-destructive">
+                      <X /> Từ chối
+                    </Button>
+                  </>
+                )}
+                {song.data.status === "approved" && (
+                  <Button size="sm" variant="outline" onClick={() => review("unpublish")} disabled={busy}>
+                    <Undo2 /> Gỡ khỏi thư viện
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       <form onSubmit={save} className="grid gap-6 lg:grid-cols-2">
-        <div className="space-y-5">
+        <fieldset disabled={!editable} className="min-w-0 space-y-5 disabled:opacity-70">
           <div className="space-y-2">
             <Label htmlFor="title">Tên bài *</Label>
             <Input id="title" value={form.title} onChange={(e) => set("title", e.target.value)} required maxLength={200} />
@@ -296,17 +388,27 @@ export function SongEditor() {
             </div>
           )}
 
-          <Button type="submit" size="lg" className="w-full" disabled={saving || !form.title.trim() || durationInvalid}>
-            {saving ? "Đang lưu…" : isNew ? (form.kind === "sheet" ? "Tạo bài rồi tải ảnh" : "Tạo bài") : "Lưu thay đổi"}
-          </Button>
-        </div>
+          {editable && (
+            <Button type="submit" size="lg" className="w-full" disabled={saving || !form.title.trim() || durationInvalid}>
+              {saving ? "Đang lưu…" : isNew ? (form.kind === "sheet" ? "Tạo bài rồi tải ảnh" : "Tạo bài nháp") : "Lưu thay đổi"}
+            </Button>
+          )}
+        </fieldset>
 
         <div className="space-y-3">
           {form.kind === "sheet" ? (
             id ? (
               <>
-                <Label>Ảnh theo thứ tự (kéo để sắp xếp)</Label>
-                <ImageUploader songId={id} pages={pages} onChange={onPagesChange} />
+                <Label>Ảnh theo thứ tự{editable ? " (kéo để sắp xếp)" : ""}</Label>
+                {editable ? (
+                  <ImageUploader songId={id} pages={pages} onChange={onPagesChange} />
+                ) : (
+                  <div className="grid grid-cols-3 gap-2">
+                    {pages.map((p) => (
+                      <img key={p.id} src={p.url} alt="" className="rounded border bg-white" />
+                    ))}
+                  </div>
+                )}
               </>
             ) : (
               <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">

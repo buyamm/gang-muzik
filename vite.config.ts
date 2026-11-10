@@ -5,7 +5,7 @@ import { cloudflare } from "@cloudflare/vite-plugin";
 import { fileURLToPath } from "node:url";
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), cloudflare()],
+  plugins: [react(), tailwindcss(), cloudflare({ persistState: { path: fileURLToPath(new URL("./.wrangler/state", import.meta.url)) } })],
   build: { chunkSizeWarningLimit: 800 },
   resolve: {
     alias: {
