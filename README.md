@@ -1,33 +1,50 @@
 # Gang Muzik 🎷
 
-Thư viện sheet nhạc, cảm âm, hợp âm, tab **rảnh tay** cho mọi nhạc cụ: tự cuộn theo thời lượng bài, chế độ sách tự lật trang, điều khiển bằng pedal Bluetooth / phím / lăn chuột. Admin upload, bạn bè chỉ cần link để xem.
+Thư viện sheet nhạc, cảm âm, hợp âm, tab **rảnh tay** cho mọi nhạc cụ: tự cuộn theo thời lượng bài, chế độ sách tự lật trang, điều khiển bằng pedal Bluetooth / phím / lăn chuột.
+
+Gồm **2 site dùng chung một database (D1) + kho ảnh (R2)**:
+
+| Site | Dành cho | Địa chỉ |
+|---|---|---|
+| Thư viện (công khai, chỉ đọc) | Mọi người xem & chơi nhạc | https://gang-muzik.lytruong.workers.dev |
+| Studio (CMS) | Đăng nhập Google để đóng góp bài; quản trị viên duyệt bài, quản lý người dùng | https://gang-muzik-studio.lytruong.workers.dev |
+
+Quy trình bài: **Nháp → Chờ duyệt → Đã duyệt** (hiện trên thư viện) hoặc **Bị từ chối** (kèm góp ý). Chỉ email trong secret `ADMIN_EMAILS` là quản trị viên.
 
 ## Chạy local
 ```bash
 npm install
-cp .dev.vars.example .dev.vars   # rồi điền ADMIN_PIN, JWT_SECRET cho bản local
+cp studio/.dev.vars.example studio/.dev.vars   # điền giá trị; DEV_AUTH=1 cho phép đăng nhập thử không cần Google
 npm run db:migrate:local
-npm run dev            # http://localhost:5173 — quản trị: /admin
+npm run dev          # thư viện  → http://localhost:5173
+npm run dev:studio   # Studio    → http://localhost:5174
 ```
 
-## Deploy lên Cloudflare (một lần)
+## Cấu hình một lần trên Cloudflare
 ```bash
 npx wrangler login
-npx wrangler d1 create gang-muzik          # chép database_id vào wrangler.jsonc
+npx wrangler d1 create gang-muzik               # chép database_id vào wrangler.jsonc và studio/wrangler.jsonc
 npx wrangler r2 bucket create gang-muzik-files
 npm run db:migrate:remote
-npx wrangler secret put ADMIN_PIN          # mã PIN quản trị
-npx wrangler secret put JWT_SECRET         # chuỗi ngẫu nhiên dài, vd: openssl rand -hex 32
-npm run deploy
 ```
+Đăng nhập Google cho Studio: tạo OAuth client (Web) trên Google Cloud Console với redirect URI
+`https://gang-muzik-studio.lytruong.workers.dev/api/auth/google/callback` (và `http://localhost:5174/...` để dev),
+điền `GOOGLE_CLIENT_ID` trong `studio/wrangler.jsonc`, rồi đặt secret:
+```bash
+cd studio
+npx wrangler secret put GOOGLE_CLIENT_SECRET
+npx wrangler secret put ADMIN_EMAILS      # email quản trị viên
+npx wrangler secret put COOKIE_SECRET     # chuỗi ngẫu nhiên dài: openssl rand -hex 32
+```
+
 ## Release lên production
 Mỗi lần release được gắn tag `vX.Y.Z` trên git:
 ```bash
-npm run release            # sửa lỗi nhỏ: 0.2.0 -> 0.2.1
-npm run release -- minor   # tính năng mới: 0.2.1 -> 0.3.0
+npm run release            # sửa lỗi nhỏ: 0.3.0 -> 0.3.1
+npm run release -- minor   # tính năng mới: 0.3.1 -> 0.4.0
 ```
-Script `scripts/release.sh` sẽ: kiểm tra đang ở `main` và đã đồng bộ → quét secret trong các commit chưa release →
-typecheck + test + build → tăng version và tạo tag → `wrangler deploy` (lỗi thì tự huỷ tag) → push commit và tag.
+`scripts/release.sh`: kiểm tra `main` sạch & đồng bộ → quét secret → typecheck + test + build 2 site → chặn nếu cấu hình production có `DEV_AUTH` →
+tăng version + tag → migration D1 → deploy thư viện → deploy Studio (lỗi thì tự huỷ tag) → push commit + tag.
 
 ## Điều khiển khi chơi
 | | Chế độ Cuộn | Chế độ Sách |
