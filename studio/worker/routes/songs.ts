@@ -69,10 +69,10 @@ export const songs = new Hono<StudioEnv>()
     const id = crypto.randomUUID();
     const now = Date.now();
     await c.env.DB.prepare(
-      `INSERT INTO songs (id, title, artist, instruments, kind, text_content, settings_json, created_at, updated_at, owner_id, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
+      `INSERT INTO songs (id, title, artist, instruments, kind, text_content, note, settings_json, created_at, updated_at, owner_id, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
     )
-      .bind(id, b.title, b.artist ?? "", serializeInstruments(b.instruments), b.kind, b.textContent ?? "", JSON.stringify(b.settings ?? {}), now, now, u.id)
+      .bind(id, b.title, b.artist ?? "", serializeInstruments(b.instruments), b.kind, b.textContent ?? "", b.note ?? "", JSON.stringify(b.settings ?? {}), now, now, u.id)
       .run();
     return c.json(await loadSong(c.env.DB, id, true), 201);
   })
@@ -83,9 +83,9 @@ export const songs = new Hono<StudioEnv>()
     if (g.res) return g.res;
     const b = c.req.valid("json");
     await c.env.DB.prepare(
-      "UPDATE songs SET title = ?, artist = ?, instruments = ?, kind = ?, text_content = ?, settings_json = ?, updated_at = ? WHERE id = ?",
+      "UPDATE songs SET title = ?, artist = ?, instruments = ?, kind = ?, text_content = ?, note = ?, settings_json = ?, updated_at = ? WHERE id = ?",
     )
-      .bind(b.title, b.artist ?? "", serializeInstruments(b.instruments), b.kind, b.textContent ?? "", JSON.stringify(b.settings ?? {}), Date.now(), id)
+      .bind(b.title, b.artist ?? "", serializeInstruments(b.instruments), b.kind, b.textContent ?? "", b.note ?? "", JSON.stringify(b.settings ?? {}), Date.now(), id)
       .run();
     return c.json(await loadSong(c.env.DB, id, true));
   })

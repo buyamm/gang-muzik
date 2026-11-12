@@ -1,5 +1,6 @@
 import { memo } from "react";
 import type { Song } from "@shared/types";
+import { NotesBox, type NotesData } from "./SongNotes";
 import { TextNotation } from "./TextNotation";
 
 /** nội dung bài (ảnh sheet + nhạc dạng chữ). `scale` phóng to/thu nhỏ. */
@@ -8,15 +9,19 @@ export const StageContent = memo(function StageContent({
   scale,
   colored,
   fit = false,
+  notes,
 }: {
   song: Song;
   scale: number;
   colored: boolean;
   /** true: chiếm trọn chiều rộng khung (chế độ sách) */
   fit?: boolean;
+  /** ghi chú hiện trên đầu bài (null = ẩn) */
+  notes?: NotesData | null;
 }) {
   return (
     <div className="text-stage-fg" style={{ fontSize: `${scale * 1.25}rem` }}>
+      {notes && <NotesBox notes={notes} fit={fit} />}
       {song.pages.length > 0 && (
         <div className="mx-auto flex flex-col gap-2" style={fit ? undefined : { maxWidth: `${Math.round(scale * 900)}px` }}>
           {song.pages.map((p, i) => (

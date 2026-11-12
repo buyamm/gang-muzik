@@ -39,6 +39,7 @@ interface Form {
   instruments: InstrumentId[];
   kind: SongKind;
   textContent: string;
+  note: string;
   mode: ViewMode;
   duration: string;
   fontScale: number;
@@ -50,6 +51,7 @@ const emptyForm: Form = {
   instruments: [],
   kind: "text",
   textContent: "",
+  note: "",
   mode: "scroll",
   duration: "",
   fontScale: 1,
@@ -62,6 +64,7 @@ function fromSong(s: Song): Form {
     instruments: parseInstruments(s.instruments.join(",")),
     kind: s.kind,
     textContent: s.textContent,
+    note: s.note ?? "",
     mode: s.settings.mode ?? "scroll",
     duration: s.settings.durationSec ? formatDuration(s.settings.durationSec) : "",
     fontScale: s.settings.fontScale ?? 1,
@@ -107,6 +110,7 @@ export function SongEditor() {
     instruments: form.instruments,
     kind: form.kind,
     textContent: form.textContent,
+    note: form.note.trim(),
     settings: {
       ...(song.data?.settings ?? {}),
       mode: form.mode,
@@ -313,6 +317,19 @@ export function SongEditor() {
                 );
               })}
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="note">Ghi chú cho người chơi</Label>
+            <p className="text-xs text-muted-foreground">Hiện trên đầu bài cho mọi người xem — vd tone, capo, nhịp, đoạn cần chú ý.</p>
+            <Textarea
+              id="note"
+              value={form.note}
+              onChange={(e) => set("note", e.target.value)}
+              maxLength={2000}
+              rows={3}
+              placeholder="Tone Am · capo 2 · điệp khúc đánh mạnh hơn…"
+            />
           </div>
 
           <div className="space-y-2">
