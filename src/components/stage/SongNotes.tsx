@@ -62,35 +62,35 @@ export function NotesBox({ notes, fit }: { notes: NotesData; fit?: boolean }) {
           notes.onToggle();
         }}
         className={cn(
-          "group flex w-full items-start gap-2 border-l-2 border-primary/60 py-0.5 pr-1 pl-2.5 text-left text-sm leading-snug text-stage-lyric",
-          "transition-colors hover:text-stage-fg focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+          "group flex w-full items-start gap-2 rounded-lg border border-stage-note/45 bg-stage-note/15 px-3 py-2 text-left text-sm leading-snug font-medium text-stage-fg",
+          "transition-colors hover:border-stage-note/70 hover:bg-stage-note/22 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
         )}
       >
-        <StickyNote className="mt-[0.2em] size-3.5 shrink-0 opacity-70" aria-hidden />
+        <StickyNote className="mt-[0.15em] size-4 shrink-0 text-stage-note" aria-hidden />
         {expanded ? (
           <span className="min-w-0 flex-1 space-y-1">
-            {author && <span className="block break-words whitespace-pre-line text-stage-fg/85">{author}</span>}
+            {author && <span className="block break-words whitespace-pre-line text-stage-fg">{author}</span>}
             {personal && (
               <span className="block break-words whitespace-pre-line">
-                <span className="font-semibold text-primary">Của bạn: </span>
-                <span className="text-stage-fg/85">{personal}</span>
+                <span className="font-semibold text-stage-note">Của bạn: </span>
+                <span className="text-stage-fg">{personal}</span>
               </span>
             )}
           </span>
         ) : (
           <span className="min-w-0 flex-1 truncate">
-            {author && <span className="text-stage-fg/85">{oneLine(author)}</span>}
-            {author && personal && <span className="mx-1.5 opacity-50">|</span>}
+            {author && <span className="text-stage-fg">{oneLine(author)}</span>}
+            {author && personal && <span className="mx-2 text-stage-note/70">•</span>}
             {personal && (
               <>
-                <span className="font-semibold text-primary">Của bạn: </span>
-                <span className="text-stage-fg/85">{oneLine(personal)}</span>
+                <span className="font-semibold text-stage-note">Của bạn: </span>
+                <span className="text-stage-fg">{oneLine(personal)}</span>
               </>
             )}
           </span>
         )}
         <ChevronDown
-          className={cn("mt-[0.2em] size-3.5 shrink-0 opacity-50 transition-transform group-hover:opacity-100", expanded && "rotate-180")}
+          className={cn("mt-[0.15em] size-4 shrink-0 text-stage-note/75 transition-transform group-hover:text-stage-note", expanded && "rotate-180")}
           aria-hidden
         />
       </button>
