@@ -119,31 +119,51 @@ export function SongEditor() {
     },
   });
 
+  /** gửi duyệt xong: tab mới mở trang xem bài, tab này về danh sách bài của tôi */
+  const showSubmitted = (tab: Window | null, songId: string) => {
+    const url = `/songs/${songId}/preview`;
+    if (tab) {
+      tab.opener = null;
+      tab.location.replace(url);
+      navigate("/", { replace: true });
+    } else {
+      // trình duyệt chặn tab mới → xem bài ngay tại tab này
+      navigate(url, { replace: true });
+    }
+  };
+
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim() || durationInvalid) return;
+    // bài dạng chữ mới: tạo + gửi duyệt luôn, không qua bước nháp
+    const direct = isNew && form.kind === "text";
+    if (direct && !form.textContent.trim()) return;
     setSaving(true);
-    // bài mới: mở sẵn tab trống ngay trong lúc bấm (mở sau khi chờ API sẽ bị trình duyệt chặn popup)
-    const tab = isNew ? window.open("", "_blank") : null;
+    // mở sẵn tab trống ngay trong lúc bấm (mở sau khi chờ API sẽ bị trình duyệt chặn popup)
+    const tab = direct ? window.open("", "_blank") : null;
+    let createdId: string | null = null;
     try {
       const saved = isNew ? await api.createSong(toInput()) : await api.updateSong(id!, toInput());
+      createdId = isNew ? saved.id : null;
       qc.setQueryData(["song", saved.id], saved);
       qc.invalidateQueries({ queryKey: ["songs"] });
-      toast.success(isNew ? "Đã tạo bài" : "Đã lưu");
-      if (isNew) {
-        // tab mới mở bài vừa tạo; tab này quay về danh sách bài của tôi
-        if (tab) {
-          tab.opener = null;
-          tab.location.replace(`/songs/${saved.id}`);
-          navigate("/", { replace: true });
-        } else {
-          // trình duyệt chặn tab mới → mở bài ngay tại tab này như cũ
-          navigate(`/songs/${saved.id}`, { replace: true });
-        }
+      if (direct) {
+        const sent = await api.submitSong(saved.id);
+        qc.setQueryData(["song", saved.id], sent);
+        toast.success("Đã gửi duyệt — bài sẽ lên thư viện khi quản trị viên duyệt");
+        showSubmitted(tab, saved.id);
+      } else if (isNew) {
+        // bài dạng ảnh: cần có bài trước mới tải ảnh lên được
+        toast.success("Đã tạo bài — tải ảnh lên rồi bấm Gửi duyệt");
+        navigate(`/songs/${saved.id}`, { replace: true });
+      } else {
+        toast.success("Đã lưu");
       }
     } catch (err) {
       tab?.close();
       toast.error((err as Error).message);
+      // đã tạo được bài nhưng gửi duyệt lỗi → mở bài đó để gửi lại, tránh tạo trùng
+      if (createdId) navigate(`/songs/${createdId}`, { replace: true });
     } finally {
       setSaving(false);
     }
@@ -174,13 +194,16 @@ export function SongEditor() {
   const submit = async () => {
     if (!id) return;
     setBusy(true);
+    const tab = window.open("", "_blank");
     try {
       if (editable) await api.updateSong(id, toInput());
       const s = await api.submitSong(id);
       qc.setQueryData(["song", id], s);
       qc.invalidateQueries({ queryKey: ["songs"] });
       toast.success("Đã gửi duyệt — bài sẽ lên thư viện khi quản trị viên duyệt");
+      showSubmitted(tab, id);
     } catch (err) {
+      tab?.close();
       toast.error((err as Error).message);
     } finally {
       setBusy(false);
@@ -241,7 +264,7 @@ export function SongEditor() {
         <div className="mb-6 space-y-3 rounded-xl border bg-card p-4">
           <div className="flex flex-wrap items-center gap-3 text-sm">
             <span className="flex-1">
-              {song.data.status === "draft" && "Bài đang là Nháp — chỉ bạn và quản trị viên thấy. Xong thì bấm Gửi duyệt."}
+              {song.data.status === "draft" && "Bài chưa gửi duyệt — chỉ bạn và quản trị viên thấy. Xong thì bấm Gửi duyệt."}
               {song.data.status === "pending" && "Đang chờ quản trị viên duyệt. Bạn vẫn có thể sửa trong lúc chờ."}
               {song.data.status === "approved" && (isAdmin ? "Bài đang hiện trên thư viện công khai." : "Bài đã được duyệt và đang hiện trên thư viện. Muốn sửa, hãy liên hệ quản trị viên.")}
               {song.data.status === "rejected" && "Bài bị từ chối. Sửa theo góp ý rồi Gửi duyệt lại."}
@@ -434,8 +457,22 @@ export function SongEditor() {
           )}
 
           {editable && (
-            <Button type="submit" size="lg" className="w-full" disabled={saving || !form.title.trim() || durationInvalid}>
-              {saving ? "Đang lưu…" : isNew ? (form.kind === "sheet" ? "Tạo bài rồi tải ảnh" : "Tạo bài nháp") : "Lưu thay đổi"}
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full"
+              disabled={saving || !form.title.trim() || durationInvalid || (isNew && form.kind === "text" && !form.textContent.trim())}
+            >
+              {isNew && form.kind === "text" && <Send />}
+              {saving
+                ? isNew && form.kind === "text"
+                  ? "Đang gửi…"
+                  : "Đang lưu…"
+                : isNew
+                  ? form.kind === "sheet"
+                    ? "Tiếp tục: tải ảnh lên"
+                    : "Gửi duyệt"
+                  : "Lưu thay đổi"}
             </Button>
           )}
         </fieldset>
