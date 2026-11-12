@@ -123,13 +123,26 @@ export function SongEditor() {
     e.preventDefault();
     if (!form.title.trim() || durationInvalid) return;
     setSaving(true);
+    // bài mới: mở sẵn tab trống ngay trong lúc bấm (mở sau khi chờ API sẽ bị trình duyệt chặn popup)
+    const tab = isNew ? window.open("", "_blank") : null;
     try {
       const saved = isNew ? await api.createSong(toInput()) : await api.updateSong(id!, toInput());
       qc.setQueryData(["song", saved.id], saved);
       qc.invalidateQueries({ queryKey: ["songs"] });
       toast.success(isNew ? "Đã tạo bài" : "Đã lưu");
-      if (isNew) navigate(`/songs/${saved.id}`, { replace: true });
+      if (isNew) {
+        // tab mới mở bài vừa tạo; tab này quay về danh sách bài của tôi
+        if (tab) {
+          tab.opener = null;
+          tab.location.replace(`/songs/${saved.id}`);
+          navigate("/", { replace: true });
+        } else {
+          // trình duyệt chặn tab mới → mở bài ngay tại tab này như cũ
+          navigate(`/songs/${saved.id}`, { replace: true });
+        }
+      }
     } catch (err) {
+      tab?.close();
       toast.error((err as Error).message);
     } finally {
       setSaving(false);
