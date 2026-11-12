@@ -23,6 +23,7 @@ export const songSchema = z.object({
     .optional(),
   kind: z.enum(["sheet", "text"]),
   textContent: z.string().max(100_000).optional(),
+  note: z.string().trim().max(2000).optional(),
   settings: settingsSchema.optional(),
 });
 

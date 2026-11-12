@@ -18,6 +18,7 @@ import {
   Plus,
   RotateCcw,
   Save,
+  StickyNote,
   Sun,
   ZoomIn,
   ZoomOut,
@@ -36,6 +37,7 @@ import { cn } from "@/lib/utils";
 import { BookSettings } from "./BookSettings";
 import { BookView, type ColumnsPref } from "./BookView";
 import { KeyMapDialog } from "./KeyMapDialog";
+import { NotesDialog, usePersonalNote, type NotesData } from "./SongNotes";
 import { StageContent } from "./StageContent";
 
 interface ViewPrefs {
@@ -48,6 +50,8 @@ interface ViewPrefs {
   /** auto = theo giao diện chung của website */
   theme: "auto" | "dark" | "light";
   colored: boolean;
+  /** hiện khung ghi chú trên đầu bài */
+  showNotes: boolean;
 }
 
 const READ_LINE = 0.3;
@@ -68,6 +72,7 @@ function defaultsFor(song: Song): ViewPrefs {
     turnBy: "spread",
     theme: "auto",
     colored: true,
+    showNotes: true,
   };
 }
 
@@ -102,6 +107,19 @@ export function Stage({
   const [countdownSec, setCountdownSec] = useState(() => readPref("gm:countdown", { n: 3 }).n);
   const [keymap, setKeymap] = useState<KeyMap>(loadKeyMap);
   const [keyDialog, setKeyDialog] = useState(false);
+  const [noteDialog, setNoteDialog] = useState(false);
+  const [personalNote, setPersonalNote] = usePersonalNote(song.id);
+  const authorNote = song.note ?? "";
+  const hasNotes = !!(authorNote.trim() || personalNote);
+  const [notesExpanded, setNotesExpanded] = useState(false);
+  const toggleNotes = useCallback(() => setNotesExpanded((v) => !v), []);
+  const notes = useMemo<NotesData | null>(
+    () =>
+      prefs.showNotes && hasNotes
+        ? { author: authorNote, personal: personalNote, expanded: notesExpanded, onToggle: toggleNotes }
+        : null,
+    [prefs.showNotes, hasNotes, authorNote, personalNote, notesExpanded, toggleNotes],
+  );
   // chỉ ẩn thanh điều khiển khi người dùng chủ động bấm "Ẩn" — không tự ẩn/hiện
   const [barsHidden, setBarsHidden] = useState(() => readPref("gm:bars", { hidden: false }).hidden);
   const [first, setFirst] = useState(0); // trang sách đầu tiên đang hiện
@@ -254,7 +272,7 @@ export function Stage({
     },
     [togglePlay, isScroll, scrollBack, goNext, goPrev],
   );
-  usePedalKeys(onPedal, keymap, !keyDialog);
+  usePedalKeys(onPedal, keymap, !keyDialog && !noteDialog);
 
   // ---------- chạm ----------
   const onTap = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -306,6 +324,13 @@ export function Stage({
         onClick={() => update({ theme: stageTheme === "dark" ? "light" : "dark" })}
       >
         {stageTheme === "dark" ? <Sun /> : <Moon />}
+      </IconBtn>
+      <IconBtn
+        label={hasNotes ? "Ghi chú (đang có)" : "Ghi chú"}
+        active={hasNotes && prefs.showNotes}
+        onClick={() => setNoteDialog(true)}
+      >
+        <StickyNote />
       </IconBtn>
       <IconBtn label="Pedal & phím tắt" onClick={() => setKeyDialog(true)}>
         <Keyboard />
@@ -395,7 +420,7 @@ export function Stage({
               className="h-full overflow-y-auto overscroll-contain [scrollbar-width:thin]"
             >
               <div className="pt-8 pb-[70vh] sm:pt-10">
-                <StageContent song={song} scale={prefs.fontScale} colored={prefs.colored} />
+                <StageContent song={song} scale={prefs.fontScale} colored={prefs.colored} notes={notes} />
               </div>
             </div>
             {/* vạch đọc */}
@@ -418,6 +443,7 @@ export function Stage({
             turnBy={prefs.turnBy}
             onLayout={onBookLayout}
             onStep={onBookStep}
+            notes={notes}
           />
         )}
 
@@ -563,6 +589,15 @@ export function Stage({
         </footer>
       )}
 
+      <NotesDialog
+        open={noteDialog}
+        onOpenChange={setNoteDialog}
+        authorNote={authorNote}
+        personalNote={personalNote}
+        onSavePersonal={setPersonalNote}
+        visible={prefs.showNotes}
+        onVisible={(v) => update({ showNotes: v })}
+      />
       <KeyMapDialog
         open={keyDialog}
         onOpenChange={setKeyDialog}

@@ -9,6 +9,7 @@ export interface SongRow {
   instruments: string;
   kind: "sheet" | "text";
   text_content: string;
+  note: string;
   settings_json: string;
   created_at: number;
   updated_at: number;
@@ -70,6 +71,7 @@ export function toSong(r: SongRow & OwnerCols, pages: PageRow[], withMeta = fals
     instruments: parseInstruments(r.instruments),
     kind: r.kind,
     textContent: r.text_content,
+    note: r.note ?? "",
     settings: parseSettings(r.settings_json),
     createdAt: r.created_at,
     updatedAt: r.updated_at,

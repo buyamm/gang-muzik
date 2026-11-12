@@ -59,6 +59,8 @@ export interface SongSummary {
 
 export interface Song extends Omit<SongSummary, "pageCount"> {
   textContent: string;
+  /** ghi chú công khai của người đăng (tone, capo, cách chơi...) */
+  note: string;
   settings: SongSettings;
   createdAt: number;
   pages: PageImage[];
@@ -70,5 +72,6 @@ export interface SongInput {
   instruments?: string[];
   kind: SongKind;
   textContent?: string;
+  note?: string;
   settings?: SongSettings;
 }

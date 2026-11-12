@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import type { Song } from "@shared/types";
 import { autoColumns, fitGrid, paginateBook } from "@/lib/stage/math";
+import type { NotesData } from "./SongNotes";
 import { StageContent } from "./StageContent";
 
 /** "all" = thu nhỏ để hiện tất cả các trang trên một màn hình */
@@ -39,6 +40,7 @@ export function BookView({
   turnBy,
   onLayout,
   onStep,
+  notes,
 }: {
   song: Song;
   scale: number;
@@ -48,6 +50,7 @@ export function BookView({
   turnBy: TurnBy;
   onLayout: (l: { pageCount: number; cols: number }) => void;
   onStep: (dir: 1 | -1) => void;
+  notes?: NotesData | null;
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
@@ -100,7 +103,7 @@ export function BookView({
     const ro = new ResizeObserver(measure);
     ro.observe(m);
     return () => ro.disconnect();
-  }, [innerW, pageH, size.h, song, scale]);
+  }, [innerW, pageH, size.h, song, scale, notes]);
 
   useEffect(() => {
     if (pages.length) onLayout({ pageCount: pages.length, cols: fitAll ? pages.length : cols });
@@ -165,7 +168,7 @@ export function BookView({
         >
           <div className="overflow-hidden" style={{ height: pages[i].height }}>
             <div style={{ transform: `translateY(${-pages[i].start}px)` }}>
-              <StageContent song={song} scale={scale} colored={colored} fit />
+              <StageContent song={song} scale={scale} colored={colored} fit notes={notes} />
             </div>
           </div>
         </div>
@@ -255,7 +258,7 @@ export function BookView({
         className="pointer-events-none invisible absolute top-0 left-0"
         style={{ width: innerW }}
       >
-        <StageContent song={song} scale={scale} colored={colored} fit />
+        <StageContent song={song} scale={scale} colored={colored} fit notes={notes} />
       </div>
 
       {ready && fitAll && allPages()}
