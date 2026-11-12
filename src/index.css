@@ -37,6 +37,7 @@
   --stage-fg: oklch(0.22 0.05 272);
   --stage-lyric: oklch(0.48 0.035 272);
   --stage-paper: oklch(1 0 0);
+  --stage-note: oklch(0.62 0.15 72);
   --note-do: oklch(0.55 0.2 22);
   --note-re: oklch(0.6 0.16 52);
   --note-mi: oklch(0.6 0.14 100);
@@ -70,6 +71,7 @@
   --stage-fg: oklch(0.96 0.01 265);
   --stage-lyric: oklch(0.72 0.03 268);
   --stage-paper: oklch(0.21 0.038 272);
+  --stage-note: oklch(0.86 0.15 90);
   --note-do: oklch(0.74 0.17 22);
   --note-re: oklch(0.8 0.15 58);
   --note-mi: oklch(0.88 0.15 98);
@@ -85,6 +87,7 @@
   --stage-fg: oklch(0.22 0.05 272);
   --stage-lyric: oklch(0.48 0.035 272);
   --stage-paper: oklch(1 0 0);
+  --stage-note: oklch(0.62 0.15 72);
   --primary: oklch(0.58 0.2 17);
   --primary-foreground: oklch(0.99 0.005 17);
   --note-do: oklch(0.55 0.2 22);
@@ -127,6 +130,7 @@
   --color-stage-fg: var(--stage-fg);
   --color-stage-lyric: var(--stage-lyric);
   --color-stage-paper: var(--stage-paper);
+  --color-stage-note: var(--stage-note);
   --color-note-do: var(--note-do);
   --color-note-re: var(--note-re);
   --color-note-mi: var(--note-mi);
