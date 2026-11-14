@@ -263,37 +263,46 @@ function SongSection({ title, songs, onMore }: { title: string; songs: SongSumma
   );
 }
 
-function SongCard({ song: s }: { song: SongSummary }) {
+/** `preview`: Studio xem trước thẻ bài chưa đăng — không phải link */
+export function SongCard({ song: s, preview = false }: { song: SongSummary; preview?: boolean }) {
+  const cardClass =
+    "group flex h-full flex-col overflow-hidden rounded-2xl border bg-card transition-[border-color,transform] hover:-translate-y-0.5 hover:border-foreground/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none motion-reduce:hover:translate-y-0";
+  const body = (
+    <>
+      <div className="border-b bg-muted/50 px-4 pt-4 pb-1 sm:pt-5">
+        <SongMotif seed={s.id} />
+      </div>
+      <div className="flex flex-1 flex-col p-4 pt-3.5">
+        <span className="font-display text-[1.4rem] leading-tight font-bold text-balance">{s.title}</span>
+        {s.artist && <span className="mt-1 truncate text-sm text-muted-foreground">{s.artist}</span>}
+        <span className="mt-auto flex items-center gap-2 pt-3 text-sm sm:pt-4 text-muted-foreground">
+          {s.instruments.slice(0, 2).map((i) => (
+            <span key={i} className="truncate rounded-full border px-2.5 py-0.5 text-foreground/80">
+              {instrumentLabel(i)}
+            </span>
+          ))}
+          {s.instruments.length > 2 && (
+            <span className="shrink-0 text-xs" title={s.instruments.slice(2).map(instrumentLabel).join(", ")}>
+              +{s.instruments.length - 2}
+            </span>
+          )}
+          <span className="ml-auto flex shrink-0 items-center gap-1.5" title={s.kind === "text" ? "Bài dạng chữ" : "Bài dạng ảnh"}>
+            {s.kind === "text" ? <Type className="size-4" /> : <FileImage className="size-4" />}
+            {s.kind === "text" ? "Chữ" : `${s.pageCount} ảnh`}
+          </span>
+        </span>
+      </div>
+    </>
+  );
   return (
     <li>
-      <Link
-        to={`/s/${s.id}`}
-        className="group flex h-full flex-col overflow-hidden rounded-2xl border bg-card transition-[border-color,transform] hover:-translate-y-0.5 hover:border-foreground/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none motion-reduce:hover:translate-y-0"
-      >
-        <div className="border-b bg-muted/50 px-4 pt-4 pb-1 sm:pt-5">
-          <SongMotif seed={s.id} />
-        </div>
-        <div className="flex flex-1 flex-col p-4 pt-3.5">
-          <span className="font-display text-[1.4rem] leading-tight font-bold text-balance">{s.title}</span>
-          {s.artist && <span className="mt-1 truncate text-sm text-muted-foreground">{s.artist}</span>}
-          <span className="mt-auto flex items-center gap-2 pt-3 text-sm sm:pt-4 text-muted-foreground">
-            {s.instruments.slice(0, 2).map((i) => (
-              <span key={i} className="truncate rounded-full border px-2.5 py-0.5 text-foreground/80">
-                {instrumentLabel(i)}
-              </span>
-            ))}
-            {s.instruments.length > 2 && (
-              <span className="shrink-0 text-xs" title={s.instruments.slice(2).map(instrumentLabel).join(", ")}>
-                +{s.instruments.length - 2}
-              </span>
-            )}
-            <span className="ml-auto flex shrink-0 items-center gap-1.5" title={s.kind === "text" ? "Bài dạng chữ" : "Bài dạng ảnh"}>
-              {s.kind === "text" ? <Type className="size-4" /> : <FileImage className="size-4" />}
-              {s.kind === "text" ? "Chữ" : `${s.pageCount} ảnh`}
-            </span>
-          </span>
-        </div>
-      </Link>
+      {preview ? (
+        <div className={cardClass}>{body}</div>
+      ) : (
+        <Link to={`/s/${s.id}`} className={cardClass}>
+          {body}
+        </Link>
+      )}
     </li>
   );
 }
