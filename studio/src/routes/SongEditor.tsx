@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useNavigate, useParams } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -12,8 +13,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { ImageUploader } from "@studio/components/ImageUploader";
 import { StatusBadge } from "@studio/components/StatusBadge";
 import { TextNotation } from "@/components/stage/TextNotation";
+import { Stage } from "@/components/stage/Stage";
+import { SongCard } from "@/routes/Library";
 import { canDelete, canEdit, canSubmit, type SongRef } from "@shared/permissions";
-import { INSTRUMENTS, parseInstruments, type InstrumentId } from "@shared/instruments";
+import { INSTRUMENTS, instrumentLabel, parseInstruments, type InstrumentId } from "@shared/instruments";
 import { useMe } from "@studio/hooks/useMe";
 import { api } from "@studio/lib/api";
 import { formatDuration, parseDuration } from "@/lib/stage/math";
@@ -82,6 +85,7 @@ export function SongEditor() {
   const [form, setForm] = useState<Form>(emptyForm);
   const [pages, setPages] = useState<PageImage[]>([]);
   const [saving, setSaving] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
 
   const song = useQuery({ queryKey: ["song", id], queryFn: () => api.getSong(id!), enabled: !!id });
   useEffect(() => {
@@ -118,6 +122,41 @@ export function SongEditor() {
       durationSec: durationSec ?? undefined,
     },
   });
+
+  /** bài tạm dựng từ form (kể cả chưa lưu) để xem trước đúng như trang công khai */
+  const draftSong = useMemo<Song>(() => {
+    const input = toInput();
+    return {
+      id: id ?? "preview",
+      title: input.title || "Bài chưa đặt tên",
+      artist: input.artist ?? "",
+      instruments: form.instruments,
+      kind: form.kind,
+      textContent: form.kind === "text" ? form.textContent : "",
+      note: input.note ?? "",
+      settings: input.settings ?? {},
+      pages: form.kind === "sheet" ? pages : [],
+      createdAt: song.data?.createdAt ?? Date.now(),
+      updatedAt: song.data?.updatedAt ?? Date.now(),
+    };
+  }, [id, form, pages, song.data, durationSec]); // toInput() chỉ phụ thuộc form + song.data
+
+  const openPreview = () => {
+    if (form.kind === "sheet" && !pages.length)
+      return toast.error(isNew ? "Bài dạng ảnh: bấm “Tiếp tục: tải ảnh lên” rồi tải ảnh trước khi xem trước" : "Tải ít nhất một ảnh lên trước khi xem trước");
+    if (form.kind === "text" && !form.textContent.trim()) return toast.error("Nhập nội dung bài trước khi xem trước");
+    setPreviewing(true);
+  };
+
+  // khoá cuộn trang phía sau khi đang xem trước
+  useEffect(() => {
+    if (!previewing) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [previewing]);
 
   /** gửi duyệt xong: tab mới mở trang xem bài, tab này về danh sách bài của tôi */
   const showSubmitted = (tab: Window | null, songId: string) => {
@@ -243,19 +282,13 @@ export function SongEditor() {
         <h1 className="font-display text-2xl font-bold">{isNew ? "Bài mới" : editable ? "Sửa bài" : "Xem bài"}</h1>
         {song.data?.status && <StatusBadge status={song.data.status} />}
         <div className="flex-1" />
-        {!isNew && (
-          <>
-            <Button asChild variant="outline" size="sm">
-              <Link to={`/songs/${id}/preview`}>
-                <Eye /> Xem thử
-              </Link>
-            </Button>
-            {deletable && (
-              <Button variant="ghost" size="icon" aria-label="Xoá bài" title="Xoá bài" onClick={remove}>
-                <Trash2 className="text-destructive" />
-              </Button>
-            )}
-          </>
+        <Button type="button" variant="outline" size="sm" onClick={openPreview} title="Xem bài trông thế nào trên trang công khai (kể cả thay đổi chưa lưu)">
+          <Eye /> Xem trước
+        </Button>
+        {deletable && (
+          <Button variant="ghost" size="icon" aria-label="Xoá bài" title="Xoá bài" onClick={remove}>
+            <Trash2 className="text-destructive" />
+          </Button>
         )}
       </div>
 
@@ -478,6 +511,20 @@ export function SongEditor() {
         </fieldset>
 
         <div className="space-y-3">
+          <Label>Thẻ bài trên thư viện</Label>
+          <ul className="max-w-xs">
+            <SongCard preview song={{ ...draftSong, pageCount: pages.length }} />
+          </ul>
+          <p className="text-xs text-muted-foreground">
+            Hiện trong mục:{" "}
+            {form.instruments.length ? (
+              <b className="text-foreground">{form.instruments.map(instrumentLabel).join(", ")}</b>
+            ) : (
+              <>
+                <b className="text-foreground">Chưa phân loại</b> — chọn nhạc cụ để bài nằm đúng mục
+              </>
+            )}
+          </p>
           {form.kind === "sheet" ? (
             id ? (
               <>
@@ -511,6 +558,15 @@ export function SongEditor() {
           )}
         </div>
       </form>
+      {previewing &&
+        createPortal(
+          <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Xem trước bài">
+            <title>{`Xem trước: ${draftSong.title}`}</title>
+            {/* persist=false: không dùng cài đặt cũ đã lưu trên máy, luôn theo form; không có nút lưu mặc định */}
+            <Stage song={draftSong} persist={false} onBack={() => setPreviewing(false)} />
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

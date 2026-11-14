@@ -81,6 +81,8 @@ export function Stage({
   canSaveDefaults = false,
   onSaveDefaults,
   backTo = "/",
+  onBack,
+  persist = true,
 }: {
   song: Song;
   /** Studio: chủ bài / admin lưu cài đặt hiện tại làm mặc định */
@@ -88,18 +90,22 @@ export function Stage({
   onSaveDefaults?: (s: SongSettings) => Promise<unknown>;
   /** Studio: nút quay lại trỏ về trình sửa thay vì thư viện */
   backTo?: string;
+  /** Studio xem trước: nút quay lại gọi hàm này thay vì điều hướng */
+  onBack?: () => void;
+  /** false = không đọc/ghi cài đặt riêng của bài (gm:song:id) — xem trước bản chưa lưu luôn theo form */
+  persist?: boolean;
 }) {
   const prefKey = `gm:song:${song.id}`;
   const defaults = useMemo(() => defaultsFor(song), [song]);
-  const [prefs, setPrefs] = useState<ViewPrefs>(() => readPref(prefKey, defaults));
+  const [prefs, setPrefs] = useState<ViewPrefs>(() => (persist ? readPref(prefKey, defaults) : defaults));
   const update = useCallback(
     (patch: Partial<ViewPrefs>) =>
       setPrefs((p) => {
         const next = { ...p, ...patch };
-        writePref(prefKey, next);
+        if (persist) writePref(prefKey, next);
         return next;
       }),
-    [prefKey],
+    [prefKey, persist],
   );
 
   const [playing, setPlaying] = useState(false);
@@ -370,11 +376,17 @@ export function Stage({
       {/* ===== header (cố định, không tự ẩn) ===== */}
       {!barsHidden && (
         <header className="relative z-20 flex shrink-0 items-center gap-2 border-b border-stage-fg/10 bg-stage-bg px-2 pt-[max(env(safe-area-inset-top),0.5rem)] pb-2 sm:px-3">
-          <Button asChild variant="ghost" size="icon" className="shrink-0 text-stage-fg hover:bg-stage-fg/10">
-            <Link to={backTo} aria-label="Quay lại" title="Quay lại">
+          {onBack ? (
+            <Button variant="ghost" size="icon" className="shrink-0 text-stage-fg hover:bg-stage-fg/10" aria-label="Quay lại" title="Quay lại" onClick={onBack}>
               <ArrowLeft />
-            </Link>
-          </Button>
+            </Button>
+          ) : (
+            <Button asChild variant="ghost" size="icon" className="shrink-0 text-stage-fg hover:bg-stage-fg/10">
+              <Link to={backTo} aria-label="Quay lại" title="Quay lại">
+                <ArrowLeft />
+              </Link>
+            </Button>
+          )}
           <div className="min-w-0 flex-1">
             <h1 className="truncate font-display text-xl leading-tight font-bold">{song.title}</h1>
             {song.artist && <p className="truncate text-xs text-stage-lyric">{song.artist}</p>}
