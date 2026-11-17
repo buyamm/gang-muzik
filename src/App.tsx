@@ -12,7 +12,7 @@ export default function App() {
       <Route path="/s/:id" element={<SongPage />} />
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<Terms />} />
-      <Route path="/luyen-tap" element={<Practice />} />
+      <Route path="/practice" element={<Practice />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

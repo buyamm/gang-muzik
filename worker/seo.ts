@@ -113,7 +113,7 @@ export const seo = new Hono<AppEnv>()
   })
   .get("/privacy", (c) => render(c, LEGAL_SEO.privacy))
   .get("/terms", (c) => render(c, LEGAL_SEO.terms))
-  .get("/luyen-tap", (c) =>
+  .get("/practice", (c) =>
     render(c, PRACTICE_SEO, {
       body: `${MAIN_OPEN}<h1>${esc(PRACTICE_SEO.title)}</h1><p>${esc(PRACTICE_SEO.description)}</p></main>`,
     }),

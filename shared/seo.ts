@@ -71,7 +71,7 @@ export const PRACTICE_SEO = {
   title: `Luyện tập cùng gam · ${SITE_NAME}`,
   description:
     "Luyện âm giai, hợp âm rải và nốt dài cho saxophone, kèn, sáo… theo giọng Concert, Sib, Mib — có máy đếm nhịp, nốt tham chiếu và drone chủ âm.",
-  path: "/luyen-tap",
+  path: "/practice",
   type: "website",
 } satisfies SeoMeta;
 

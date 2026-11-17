@@ -1,4 +1,4 @@
-# Luyện tập cùng gam (`/luyen-tap`)
+# Luyện tập cùng gam (`/practice`)
 
 Trang luyện âm giai / nốt dài cho người chơi kèn (sax…), dùng lại module dịch giọng (PR #11) và âm thanh (PR #10).
 
@@ -29,7 +29,7 @@ Trang luyện âm giai / nốt dài cho người chơi kèn (sax…), dùng lạ
 - Phím: Space bắt đầu/dừng; dùng luôn sơ đồ pedal (`loadKeyMap`): "toggle" = bắt đầu/dừng.
 
 ## SEO
-- `PRACTICE_SEO` trong `shared/seo.ts`, route trong `worker/seo.ts`, sitemap, `run_worker_first` thêm `/luyen-tap`, `useSeo` phía client.
+- `PRACTICE_SEO` trong `shared/seo.ts`, route trong `worker/seo.ts`, sitemap, `run_worker_first` thêm `/practice`, `useSeo` phía client.
 - Link "Luyện tập" trên header thư viện.
 
 ## Kiểm tra

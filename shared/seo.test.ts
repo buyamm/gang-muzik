@@ -42,7 +42,7 @@ describe("seo", () => {
   });
 
   it("trang luyện tập có đường dẫn và mô tả không quá 160 ký tự", () => {
-    expect(PRACTICE_SEO.path).toBe("/luyen-tap");
+    expect(PRACTICE_SEO.path).toBe("/practice");
     expect(PRACTICE_SEO.description.length).toBeLessThanOrEqual(160);
   });
 });
