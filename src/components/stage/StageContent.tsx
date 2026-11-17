@@ -1,5 +1,6 @@
 import { memo } from "react";
 import type { Song } from "@shared/types";
+import type { TransposeSetting } from "@/lib/notation/transpose";
 import { NotesBox, type NotesData } from "./SongNotes";
 import { TextNotation } from "./TextNotation";
 
@@ -10,6 +11,7 @@ export const StageContent = memo(function StageContent({
   colored,
   fit = false,
   notes,
+  transpose,
 }: {
   song: Song;
   scale: number;
@@ -18,6 +20,8 @@ export const StageContent = memo(function StageContent({
   fit?: boolean;
   /** ghi chú hiện trên đầu bài (null = ẩn) */
   notes?: NotesData | null;
+  /** dịch giọng cho nhạc cụ (chỉ áp dụng nhạc dạng chữ) */
+  transpose?: TransposeSetting;
 }) {
   return (
     <div className="text-stage-fg" style={{ fontSize: `${scale * 1.25}rem` }}>
@@ -41,7 +45,7 @@ export const StageContent = memo(function StageContent({
       )}
       {song.textContent.trim() && (
         <div className={song.pages.length ? (fit ? "pt-6" : "pt-10") : ""}>
-          <TextNotation text={song.textContent} colored={colored} compact={fit} />
+          <TextNotation text={song.textContent} colored={colored} compact={fit} transpose={transpose} />
         </div>
       )}
     </div>

@@ -34,12 +34,14 @@ import { useWakeLock } from "@/hooks/useWakeLock";
 import { formatDuration, speedFromDuration } from "@/lib/stage/math";
 import { readPref, removePref, writePref } from "@/lib/prefs";
 import { cn } from "@/lib/utils";
+import { normalizeTranspose, NO_TRANSPOSE, type TransposeSetting } from "@/lib/notation/transpose";
 import { BookSettings } from "./BookSettings";
 import { BookView, type ColumnsPref } from "./BookView";
 import { KeyMapDialog } from "./KeyMapDialog";
 import { DEFAULT_BPM, MetronomePanel, useStageAudio } from "./MetronomePanel";
 import { NotesDialog, usePersonalNote, type NotesData } from "./SongNotes";
 import { StageContent } from "./StageContent";
+import { TransposeSettings } from "./TransposeSettings";
 
 interface ViewPrefs {
   mode: ViewMode;
@@ -53,10 +55,15 @@ interface ViewPrefs {
   colored: boolean;
   /** hiện khung ghi chú trên đầu bài */
   showNotes: boolean;
+  /** dịch giọng cho nhạc cụ (Bb, Eb...) — chỉ áp dụng nhạc dạng chữ */
+  transpose: TransposeSetting;
   /** máy đếm nhịp: nhịp độ + số phách mỗi ô nhịp */
   bpm: number;
   beatsPerBar: number;
 }
+
+/** giọng kèn chọn gần nhất — bài mới mở lần đầu dùng luôn giọng này */
+const TRANSPOSE_KEY = "gm:transpose";
 
 const READ_LINE = 0.3;
 
@@ -77,6 +84,7 @@ function defaultsFor(song: Song): ViewPrefs {
     theme: "auto",
     colored: true,
     showNotes: true,
+    transpose: normalizeTranspose(readPref<Partial<TransposeSetting>>(TRANSPOSE_KEY, NO_TRANSPOSE)),
     bpm: s.bpm ?? DEFAULT_BPM,
     beatsPerBar: 4,
   };
@@ -120,6 +128,13 @@ export function Stage({
   const [keymap, setKeymap] = useState<KeyMap>(loadKeyMap);
   const [keyDialog, setKeyDialog] = useState(false);
   const [noteDialog, setNoteDialog] = useState(false);
+  const [transposeOpen, setTransposeOpen] = useState(false);
+  // bản lưu cũ có thể thiếu / sai — luôn chuẩn hoá trước khi dùng
+  const transpose = useMemo(() => normalizeTranspose(prefs.transpose), [prefs.transpose]);
+  const changeTranspose = (t: TransposeSetting) => {
+    update({ transpose: t });
+    writePref(TRANSPOSE_KEY, t);
+  };
   const [audioOpen, setAudioOpen] = useState(false);
   const [personalNote, setPersonalNote] = usePersonalNote(song.id);
   const authorNote = song.note ?? "";
@@ -287,7 +302,7 @@ export function Stage({
     },
     [togglePlay, isScroll, scrollBack, goNext, goPrev],
   );
-  usePedalKeys(onPedal, keymap, !keyDialog && !noteDialog && !audioOpen);
+  usePedalKeys(onPedal, keymap, !keyDialog && !noteDialog && !transposeOpen && !audioOpen);
 
   // ---------- chạm ----------
   const onTap = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -335,6 +350,7 @@ export function Stage({
           <Palette />
         </IconBtn>
       )}
+      {hasText && <TransposeSettings value={transpose} onChange={changeTranspose} onOpenChange={setTransposeOpen} />}
       <IconBtn
         label={stageTheme === "dark" ? "Nền sáng" : "Nền tối"}
         onClick={() => update({ theme: stageTheme === "dark" ? "light" : "dark" })}
@@ -443,7 +459,7 @@ export function Stage({
               className="h-full overflow-y-auto overscroll-contain [scrollbar-width:thin]"
             >
               <div className="pt-8 pb-[70vh] sm:pt-10">
-                <StageContent song={song} scale={prefs.fontScale} colored={prefs.colored} notes={notes} />
+                <StageContent song={song} scale={prefs.fontScale} colored={prefs.colored} notes={notes} transpose={transpose} />
               </div>
             </div>
             {/* vạch đọc */}
@@ -467,6 +483,7 @@ export function Stage({
             onLayout={onBookLayout}
             onStep={onBookStep}
             notes={notes}
+            transpose={transpose}
           />
         )}
 
