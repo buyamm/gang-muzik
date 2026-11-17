@@ -38,6 +38,7 @@ import { normalizeTranspose, NO_TRANSPOSE, type TransposeSetting } from "@/lib/n
 import { BookSettings } from "./BookSettings";
 import { BookView, type ColumnsPref } from "./BookView";
 import { KeyMapDialog } from "./KeyMapDialog";
+import { DEFAULT_BPM, MetronomePanel, useStageAudio } from "./MetronomePanel";
 import { NotesDialog, usePersonalNote, type NotesData } from "./SongNotes";
 import { StageContent } from "./StageContent";
 import { TransposeSettings } from "./TransposeSettings";
@@ -56,6 +57,9 @@ interface ViewPrefs {
   showNotes: boolean;
   /** dịch giọng cho nhạc cụ (Bb, Eb...) — chỉ áp dụng nhạc dạng chữ */
   transpose: TransposeSetting;
+  /** máy đếm nhịp: nhịp độ + số phách mỗi ô nhịp */
+  bpm: number;
+  beatsPerBar: number;
 }
 
 /** giọng kèn chọn gần nhất — bài mới mở lần đầu dùng luôn giọng này */
@@ -81,6 +85,8 @@ function defaultsFor(song: Song): ViewPrefs {
     colored: true,
     showNotes: true,
     transpose: normalizeTranspose(readPref<Partial<TransposeSetting>>(TRANSPOSE_KEY, NO_TRANSPOSE)),
+    bpm: s.bpm ?? DEFAULT_BPM,
+    beatsPerBar: 4,
   };
 }
 
@@ -129,6 +135,7 @@ export function Stage({
     update({ transpose: t });
     writePref(TRANSPOSE_KEY, t);
   };
+  const [audioOpen, setAudioOpen] = useState(false);
   const [personalNote, setPersonalNote] = usePersonalNote(song.id);
   const authorNote = song.note ?? "";
   const hasNotes = !!(authorNote.trim() || personalNote);
@@ -151,6 +158,8 @@ export function Stage({
   const turnBarRef = useRef<HTMLDivElement>(null);
   const durationRef = useRef(prefs.durationSec);
   durationRef.current = prefs.durationSec;
+
+  const audio = useStageAudio({ bpm: prefs.bpm, beatsPerBar: prefs.beatsPerBar, onChange: update, countdown });
 
   const fs = useFullscreen();
   useWakeLock(true);
@@ -293,7 +302,7 @@ export function Stage({
     },
     [togglePlay, isScroll, scrollBack, goNext, goPrev],
   );
-  usePedalKeys(onPedal, keymap, !keyDialog && !noteDialog && !transposeOpen);
+  usePedalKeys(onPedal, keymap, !keyDialog && !noteDialog && !transposeOpen && !audioOpen);
 
   // ---------- chạm ----------
   const onTap = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -319,6 +328,7 @@ export function Stage({
       mode: prefs.mode,
       durationSec: prefs.durationSec,
       fontScale: prefs.fontScale,
+      bpm: prefs.bpm,
     });
     removePref(prefKey);
   };
@@ -354,6 +364,7 @@ export function Stage({
       >
         <StickyNote />
       </IconBtn>
+      <MetronomePanel audio={audio} onOpenChange={setAudioOpen} />
       <IconBtn label="Pedal & phím tắt" onClick={() => setKeyDialog(true)}>
         <Keyboard />
       </IconBtn>
