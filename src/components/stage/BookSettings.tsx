@@ -5,7 +5,7 @@ import type { ColumnsPref, TurnBy } from "./BookView";
 
 const COLUMN_OPTIONS: ColumnsPref[] = ["auto", 1, 2, 3, 4, "all"];
 
-function Choice({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+export function Choice({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
       type="button"

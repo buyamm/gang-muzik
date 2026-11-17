@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import type { Song } from "@shared/types";
+import type { TransposeSetting } from "@/lib/notation/transpose";
 import { autoColumns, fitGrid, paginateBook } from "@/lib/stage/math";
 import type { NotesData } from "./SongNotes";
 import { StageContent } from "./StageContent";
@@ -41,6 +42,7 @@ export function BookView({
   onLayout,
   onStep,
   notes,
+  transpose,
 }: {
   song: Song;
   scale: number;
@@ -51,6 +53,7 @@ export function BookView({
   onLayout: (l: { pageCount: number; cols: number }) => void;
   onStep: (dir: 1 | -1) => void;
   notes?: NotesData | null;
+  transpose?: TransposeSetting;
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
@@ -103,7 +106,7 @@ export function BookView({
     const ro = new ResizeObserver(measure);
     ro.observe(m);
     return () => ro.disconnect();
-  }, [innerW, pageH, size.h, song, scale, notes]);
+  }, [innerW, pageH, size.h, song, scale, notes, transpose]);
 
   useEffect(() => {
     if (pages.length) onLayout({ pageCount: pages.length, cols: fitAll ? pages.length : cols });
@@ -168,7 +171,7 @@ export function BookView({
         >
           <div className="overflow-hidden" style={{ height: pages[i].height }}>
             <div style={{ transform: `translateY(${-pages[i].start}px)` }}>
-              <StageContent song={song} scale={scale} colored={colored} fit notes={notes} />
+              <StageContent song={song} scale={scale} colored={colored} fit notes={notes} transpose={transpose} />
             </div>
           </div>
         </div>
@@ -258,7 +261,7 @@ export function BookView({
         className="pointer-events-none invisible absolute top-0 left-0"
         style={{ width: innerW }}
       >
-        <StageContent song={song} scale={scale} colored={colored} fit notes={notes} />
+        <StageContent song={song} scale={scale} colored={colored} fit notes={notes} transpose={transpose} />
       </div>
 
       {ready && fitAll && allPages()}
