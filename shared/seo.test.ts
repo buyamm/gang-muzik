@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { homeSeo, songSeo, songJsonLd, truncate } from "./seo";
+import { homeSeo, PRACTICE_SEO, songSeo, songJsonLd, truncate } from "./seo";
 
 const song = {
   id: "abc",
@@ -39,5 +39,10 @@ describe("seo", () => {
     expect(comp.url).toBe("https://x.test/s/abc");
     expect(comp.dateModified).toBe("1970-01-02T00:00:00.000Z");
     expect(crumbs.itemListElement[1].item).toBe("https://x.test/s/abc");
+  });
+
+  it("trang luyện tập có đường dẫn và mô tả không quá 160 ký tự", () => {
+    expect(PRACTICE_SEO.path).toBe("/luyen-tap");
+    expect(PRACTICE_SEO.description.length).toBeLessThanOrEqual(160);
   });
 });

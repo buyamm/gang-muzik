@@ -67,6 +67,14 @@ export const LEGAL_SEO = {
   terms: { title: `Điều khoản sử dụng · ${SITE_NAME}`, description: "Điều khoản khi dùng và đóng góp bài cho Gang Muzik.", path: "/terms" },
 } satisfies Record<string, SeoMeta>;
 
+export const PRACTICE_SEO = {
+  title: `Luyện tập cùng gam · ${SITE_NAME}`,
+  description:
+    "Luyện âm giai, hợp âm rải và nốt dài cho saxophone, kèn, sáo… theo giọng Concert, Sib, Mib — có máy đếm nhịp, nốt tham chiếu và drone chủ âm.",
+  path: "/luyen-tap",
+  type: "website",
+} satisfies SeoMeta;
+
 export const notFoundSeo = (path: string): SeoMeta => ({
   title: `Không tìm thấy · ${SITE_NAME}`,
   description: DEFAULT_DESCRIPTION,

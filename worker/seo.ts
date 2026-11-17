@@ -4,6 +4,7 @@ import { getPages, getSongRow, toSong, type SongRow } from "@shared/server/db";
 import {
   INSTRUMENT_PATHS,
   LEGAL_SEO,
+  PRACTICE_SEO,
   SITE_NAME,
   homeSeo,
   notFoundSeo,
@@ -112,6 +113,11 @@ export const seo = new Hono<AppEnv>()
   })
   .get("/privacy", (c) => render(c, LEGAL_SEO.privacy))
   .get("/terms", (c) => render(c, LEGAL_SEO.terms))
+  .get("/luyen-tap", (c) =>
+    render(c, PRACTICE_SEO, {
+      body: `${MAIN_OPEN}<h1>${esc(PRACTICE_SEO.title)}</h1><p>${esc(PRACTICE_SEO.description)}</p></main>`,
+    }),
+  )
   .get("/robots.txt", (c) => {
     const origin = new URL(c.req.url).origin;
     return c.text(`User-agent: *\nAllow: /\nDisallow: /api/\n\nSitemap: ${origin}/sitemap.xml\n`, 200, {
@@ -130,6 +136,7 @@ export const seo = new Hono<AppEnv>()
         url("/", latest),
         ...INSTRUMENT_PATHS.map((p) => url(p)),
         ...songs.map((s) => url(`/s/${s.id}`, s.updated_at)),
+        url(PRACTICE_SEO.path),
         url(LEGAL_SEO.privacy.path),
         url(LEGAL_SEO.terms.path),
       ].join("") +
