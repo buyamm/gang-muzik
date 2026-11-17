@@ -15,6 +15,7 @@ import {
   scaleTitle,
   type ScaleOptions,
 } from "./scales";
+import { normalizePractice, PRACTICE_DEFAULTS } from "./settings";
 
 const C: TransposeSetting = NO_TRANSPOSE;
 const EB: TransposeSetting = { semitones: 9, octave: 0, spelling: "auto" };
@@ -161,5 +162,18 @@ describe("practice/scales", () => {
       expect(f).toBeGreaterThanOrEqual(90);
       expect(f).toBeLessThanOrEqual(330);
     }
+  });
+});
+
+describe("practice/settings", () => {
+  it("chuẩn hoá cài đặt lưu sai kiểu về mặc định", () => {
+    expect(normalizePractice(null)).toEqual(PRACTICE_DEFAULTS);
+    const n = normalizePractice({ tonic: 14, type: "xyz" as never, bpm: 9999, hold: 3 as never, octaves: 2, toneVolume: 5 });
+    expect(n.tonic).toBe(2);
+    expect(n.type).toBe("major");
+    expect(n.bpm).toBe(400);
+    expect(n.hold).toBe(4);
+    expect(n.octaves).toBe(2);
+    expect(n.toneVolume).toBe(1);
   });
 });
