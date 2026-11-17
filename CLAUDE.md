@@ -29,7 +29,8 @@ Web xem sheet nhạc / cảm âm rảnh tay (tự cuộn, tự lật trang, peda
 - Sau khi đổi `wrangler.jsonc`: `npm run cf-typegen`
 
 ## Quy ước
-- Tiếng Việt cho mọi chuỗi UI.
+- Tiếng Việt cho mọi chuỗi UI (chữ người dùng nhìn thấy).
+- **Code viết bằng tiếng Anh:** tên biến/hàm/type/component, tên file, route/URL (vd `/practice`, không `/luyen-tap`), key localStorage, tên cột/API, comment và commit message. Code cũ còn comment tiếng Việt thì sửa dần khi đụng tới, không cần viết lại hàng loạt.
 - localStorage chỉ qua `src/lib/prefs.ts` (không throw).
 - Không thêm thư viện state; dùng TanStack Query cho dữ liệu server.
 
