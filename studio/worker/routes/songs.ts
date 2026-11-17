@@ -5,7 +5,8 @@ import type { User } from "@shared/types";
 import { LIMITS, canDelete, canEdit, canSubmit, canView, isAdmin, type SongRef } from "@shared/permissions";
 import { serializeInstruments } from "@shared/instruments";
 import { OWNER_JOIN, OWNER_SELECT, getSongRow, loadSong, toPage, toSummary, type OwnerCols, type PageRow, type SongRow } from "@shared/server/db";
-import { IMAGE_TYPES, MAX_IMAGE_BYTES, songSchema } from "@shared/server/validation";
+import { IMAGE_TYPES, MAX_IMAGE_BYTES, MAX_TRANSCRIBE_BYTES, songSchema } from "@shared/server/validation";
+import { TRANSCRIBE_SYSTEM_PROMPT, TRANSCRIBE_USER_PROMPT, cleanTranscription } from "@shared/transcribe";
 import type { StudioEnv } from "../env";
 import { requireAdmin } from "../session";
 
@@ -14,6 +15,12 @@ const user = (c: Context<StudioEnv>) => c.get("user") as User;
 const forbidden = (c: Context) => c.json({ error: "Bạn không có quyền với bài này" }, 403);
 const notFound = (c: Context) => c.json({ error: "Không tìm thấy bài" }, 404);
 const today = () => new Date().toISOString().slice(0, 10);
+
+function toBase64(bytes: Uint8Array) {
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
 
 /** lấy bài + kiểm tra quyền; trả về Response nếu bị chặn */
 async function guard(c: Context<StudioEnv>, id: string, check: (u: User, s: SongRef) => boolean) {
@@ -175,6 +182,57 @@ export const songs = new Hono<StudioEnv>()
       ).bind(u.id, today()),
     ]);
     return c.json(toPage(row), 201);
+  })
+
+  // ----- AI: image -> text notation (result is returned for the editor to review, not saved) -----
+  .post("/:id/transcribe", async (c) => {
+    const songId = c.req.param("id");
+    const g = await guard(c, songId, canEdit);
+    if (g.res) return g.res;
+    const u = user(c);
+    if (!isAdmin(u)) {
+      const used = await c.env.DB.prepare("SELECT count FROM transcribe_counts WHERE user_id = ? AND day = ?")
+        .bind(u.id, today())
+        .first<{ count: number }>();
+      if ((used?.count ?? 0) >= LIMITS.maxTranscribesPerDay) {
+        return c.json({ error: "Bạn đã dùng hết lượt nhận dạng hôm nay, thử lại ngày mai" }, 429);
+      }
+    }
+
+    const form = await c.req.formData();
+    const file = form.get("image");
+    if (!(file instanceof File)) return c.json({ error: "Thiếu ảnh" }, 400);
+    if (!IMAGE_TYPES[file.type]) return c.json({ error: "Chỉ hỗ trợ ảnh WebP/JPEG/PNG" }, 400);
+    if (file.size > MAX_TRANSCRIBE_BYTES) return c.json({ error: "Ảnh quá lớn để nhận dạng" }, 400);
+
+    const dataUrl = `data:${file.type};base64,${toBase64(new Uint8Array(await file.arrayBuffer()))}`;
+    let raw: string;
+    try {
+      const out = (await c.env.AI.run(c.env.TRANSCRIBE_MODEL as "@cf/meta/llama-4-scout-17b-16e-instruct", {
+        messages: [
+          { role: "system", content: TRANSCRIBE_SYSTEM_PROMPT },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: TRANSCRIBE_USER_PROMPT },
+              { type: "image_url", image_url: { url: dataUrl } },
+            ],
+          },
+        ],
+        max_tokens: 4096,
+        temperature: 0.1,
+      })) as { response?: unknown };
+      raw = typeof out.response === "string" ? out.response : JSON.stringify(out.response ?? "");
+    } catch (e) {
+      console.error("transcribe failed", e);
+      return c.json({ error: "AI không đọc được ảnh này, thử lại sau" }, 502);
+    }
+    await c.env.DB.prepare(
+      "INSERT INTO transcribe_counts (user_id, day, count) VALUES (?, ?, 1) ON CONFLICT(user_id, day) DO UPDATE SET count = count + 1",
+    )
+      .bind(u.id, today())
+      .run();
+    return c.json(cleanTranscription(raw));
   })
 
   .put("/:id/pages/order", zValidator("json", z.object({ ids: z.array(z.string()).max(500) })), async (c) => {

@@ -33,3 +33,6 @@ export const IMAGE_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
 };
+
+/** downscaled image sent to the AI transcriber (client converts to JPEG/PNG/WebP) */
+export const MAX_TRANSCRIBE_BYTES = 4 * 1024 * 1024;
