@@ -7,16 +7,18 @@ export interface UseMetronomeOptions {
   subdivision?: number;
   /** 0..1 */
   volume: number;
+  /** gọi lúc LÊN LỊCH mỗi tiếng (cả tiếng chia nhỏ) — `time` theo audioNow(), dùng để phát nốt khớp nhịp */
+  onSchedule?: (beatIndex: number, time: number, sub: number) => void;
 }
 
 /** máy đếm nhịp: tự tắt khi unmount hoặc khi tab bị ẩn; `beat` = phách đang kêu (-1 khi tắt) */
-export function useMetronome({ bpm, beatsPerBar, subdivision = 1, volume }: UseMetronomeOptions) {
+export function useMetronome({ bpm, beatsPerBar, subdivision = 1, volume, onSchedule }: UseMetronomeOptions) {
   const ref = useRef<Metronome | null>(null);
   const timers = useRef(new Set<number>());
   const [running, setRunning] = useState(false);
   const [beat, setBeat] = useState(-1);
-  const opts = useRef({ bpm, beatsPerBar, subdivision, volume });
-  opts.current = { bpm, beatsPerBar, subdivision, volume };
+  const opts = useRef({ bpm, beatsPerBar, subdivision, volume, onSchedule });
+  opts.current = { bpm, beatsPerBar, subdivision, volume, onSchedule };
 
   const clearTimers = () => {
     for (const t of timers.current) window.clearTimeout(t);
@@ -38,6 +40,7 @@ export function useMetronome({ bpm, beatsPerBar, subdivision = 1, volume }: UseM
     m.subdivision = o.subdivision;
     m.setVolume(o.volume);
     m.onBeat = (b, time, sub) => {
+      opts.current.onSchedule?.(b, time, sub);
       if (sub !== 0) return;
       // tiếng được lên lịch trước ~100ms → chờ đúng lúc phát mới nháy đèn
       const delay = Math.max(0, (time - audioNow()) * 1000);
