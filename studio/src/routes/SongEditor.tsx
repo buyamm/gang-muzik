@@ -46,6 +46,8 @@ interface Form {
   mode: ViewMode;
   duration: string;
   fontScale: number;
+  /** nhịp độ cho máy đếm nhịp; trống = mặc định */
+  bpm: string;
 }
 
 const emptyForm: Form = {
@@ -58,6 +60,7 @@ const emptyForm: Form = {
   mode: "scroll",
   duration: "",
   fontScale: 1,
+  bpm: "",
 };
 
 function fromSong(s: Song): Form {
@@ -71,6 +74,7 @@ function fromSong(s: Song): Form {
     mode: s.settings.mode ?? "scroll",
     duration: s.settings.durationSec ? formatDuration(s.settings.durationSec) : "",
     fontScale: s.settings.fontScale ?? 1,
+    bpm: s.settings.bpm ? String(s.settings.bpm) : "",
   };
 }
 
@@ -107,6 +111,9 @@ export function SongEditor() {
 
   const durationSec = form.duration.trim() ? parseDuration(form.duration) : undefined;
   const durationInvalid = durationSec === null || (durationSec !== undefined && (durationSec < 5 || durationSec > 3600));
+  const bpm = form.bpm.trim() ? Number(form.bpm) : undefined;
+  const bpmInvalid = bpm !== undefined && !(Number.isInteger(bpm) && bpm >= 20 && bpm <= 400);
+  const settingsInvalid = durationInvalid || bpmInvalid;
 
   const toInput = (): SongInput => ({
     title: form.title.trim(),
@@ -120,6 +127,7 @@ export function SongEditor() {
       mode: form.mode,
       fontScale: form.fontScale,
       durationSec: durationSec ?? undefined,
+      bpm: bpmInvalid ? undefined : bpm,
     },
   });
 
@@ -139,7 +147,7 @@ export function SongEditor() {
       createdAt: song.data?.createdAt ?? Date.now(),
       updatedAt: song.data?.updatedAt ?? Date.now(),
     };
-  }, [id, form, pages, song.data, durationSec]); // toInput() chỉ phụ thuộc form + song.data
+  }, [id, form, pages, song.data, durationSec, bpm, bpmInvalid]); // toInput() chỉ phụ thuộc form + song.data
 
   const openPreview = () => {
     if (form.kind === "sheet" && !pages.length)
@@ -173,7 +181,7 @@ export function SongEditor() {
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.title.trim() || durationInvalid) return;
+    if (!form.title.trim() || settingsInvalid) return;
     // bài dạng chữ mới: tạo + gửi duyệt luôn, không qua bước nháp
     const direct = isNew && form.kind === "text";
     if (direct && !form.textContent.trim()) return;
@@ -308,7 +316,7 @@ export function SongEditor() {
               )}
             </span>
             {submittable && (
-              <Button onClick={submit} disabled={busy || !form.title.trim() || durationInvalid}>
+              <Button onClick={submit} disabled={busy || !form.title.trim() || settingsInvalid}>
                 <Send /> Gửi duyệt
               </Button>
             )}
@@ -435,6 +443,21 @@ export function SongEditor() {
                 aria-invalid={durationInvalid}
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="bpm">Nhịp độ (BPM) cho máy đếm nhịp</Label>
+              <Input
+                id="bpm"
+                type="number"
+                inputMode="numeric"
+                min={20}
+                max={400}
+                value={form.bpm}
+                onChange={(e) => set("bpm", e.target.value)}
+                placeholder="vd 96 — để trống = 80"
+                aria-invalid={bpmInvalid}
+              />
+              {bpmInvalid && <p className="text-xs text-destructive">Nhập số nguyên từ 20 đến 400.</p>}
+            </div>
           </div>
 
           <div className="space-y-3">
@@ -494,7 +517,7 @@ export function SongEditor() {
               type="submit"
               size="lg"
               className="w-full"
-              disabled={saving || !form.title.trim() || durationInvalid || (isNew && form.kind === "text" && !form.textContent.trim())}
+              disabled={saving || !form.title.trim() || settingsInvalid || (isNew && form.kind === "text" && !form.textContent.trim())}
             >
               {isNew && form.kind === "text" && <Send />}
               {saving
