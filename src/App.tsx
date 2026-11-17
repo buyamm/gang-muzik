@@ -3,6 +3,7 @@ import { Library } from "./routes/Library";
 import { SongPage } from "./routes/SongPage";
 import { NotFound } from "./routes/NotFound";
 import { Privacy, Terms } from "./routes/Legal";
+import { Practice } from "./routes/Practice";
 
 export default function App() {
   return (
@@ -11,6 +12,7 @@ export default function App() {
       <Route path="/s/:id" element={<SongPage />} />
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<Terms />} />
+      <Route path="/luyen-tap" element={<Practice />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

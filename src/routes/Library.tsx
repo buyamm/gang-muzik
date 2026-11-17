@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { FileImage, PenLine, Search, Type } from "lucide-react";
+import { FileImage, Music, PenLine, Search, Type } from "lucide-react";
 import type { SongKind, SongSummary } from "@shared/types";
 import { INSTRUMENTS, instrumentLabel, normalizeInstrument, type InstrumentId } from "@shared/instruments";
 import { Button } from "@/components/ui/button";
@@ -79,6 +79,11 @@ export function Library() {
         <div className="flex items-center gap-2">
           <LogoMark className="size-7" />
           <span className="flex-1 font-display text-base font-bold">Gang Muzik</span>
+          <Button asChild variant="ghost" size="sm" title="Luyện âm giai, hợp âm rải, nốt dài cùng máy đếm nhịp">
+            <Link to="/luyen-tap">
+              <Music /> Luyện tập
+            </Link>
+          </Button>
           <Button asChild variant="ghost" size="sm" title="Đăng nhập bằng Google để gửi bài của bạn">
             <a href={STUDIO_URL}>
               <PenLine /> <span className="hidden sm:inline">Đóng góp bài</span>
@@ -180,6 +185,9 @@ export function Library() {
             Khi đang chơi: pedal Bluetooth hoặc phím <Kbd>←</Kbd> <Kbd>→</Kbd> <Kbd>Space</Kbd>
           </span>
           <span className="flex shrink-0 gap-4">
+            <Link to="/luyen-tap" className="underline-offset-4 hover:text-foreground hover:underline">
+              Luyện tập
+            </Link>
             <Link to="/privacy" className="underline-offset-4 hover:text-foreground hover:underline">
               Quyền riêng tư
             </Link>
