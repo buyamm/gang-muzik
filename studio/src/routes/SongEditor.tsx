@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageUploader } from "@studio/components/ImageUploader";
+import { TranscribePanel } from "@studio/components/TranscribePanel";
 import { StatusBadge } from "@studio/components/StatusBadge";
 import { TextNotation } from "@/components/stage/TextNotation";
 import { Stage } from "@/components/stage/Stage";
@@ -140,7 +141,8 @@ export function SongEditor() {
       artist: input.artist ?? "",
       instruments: form.instruments,
       kind: form.kind,
-      textContent: form.kind === "text" ? form.textContent : "",
+      // image songs may also carry a text version (AI transcription) for transposing
+      textContent: form.textContent,
       note: input.note ?? "",
       settings: input.settings ?? {},
       pages: form.kind === "sheet" ? pages : [],
@@ -560,6 +562,16 @@ export function SongEditor() {
                       <img key={p.id} src={p.url} alt="" className="rounded border bg-white" />
                     ))}
                   </div>
+                )}
+                {(editable || form.textContent.trim()) && (
+                  <TranscribePanel
+                    songId={id}
+                    pages={pages}
+                    value={form.textContent}
+                    onChange={(v) => set("textContent", v)}
+                    editable={editable}
+                    fontScale={form.fontScale}
+                  />
                 )}
               </>
             ) : (

@@ -1,3 +1,4 @@
+import type { Transcription } from "@shared/transcribe";
 import type { PageImage, Song, SongInput, SongStatus, SongSummary, User } from "@shared/types";
 
 export class ApiError extends Error {
@@ -64,6 +65,12 @@ export const api = {
     return request<PageImage>(`/songs/${songId}/pages`, { method: "POST", body: fd });
   },
   reorderPages: (songId: string, ids: string[]) => request<Song>(`/songs/${songId}/pages/order`, json("PUT", { ids })),
+  /** AI reads one (downscaled) page image and returns text notation for review */
+  transcribe: (songId: string, image: Blob) => {
+    const fd = new FormData();
+    fd.append("image", image, "page.jpg");
+    return request<Transcription>(`/songs/${songId}/transcribe`, { method: "POST", body: fd });
+  },
   deletePage: (id: string) => request<{ ok: true }>(`/pages/${id}`, { method: "DELETE" }),
 
   listUsers: () => request<UserWithStats[]>("/users"),
