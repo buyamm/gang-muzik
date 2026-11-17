@@ -18,6 +18,21 @@ describe("matchNote", () => {
     expect(matchNote("mi'")).toEqual({ note: "Mi", octave: 2 });
     expect(matchNote("anh")).toBeNull();
   });
+
+  it("nhận dấu thăng / giáng viết liền sau tên nốt", () => {
+    expect(matchNote("Do#")).toEqual({ note: "Do", octave: 1, accidental: "#" });
+    expect(matchNote("Reb")).toEqual({ note: "Re", octave: 1, accidental: "b" });
+    expect(matchNote("Fa#2")).toEqual({ note: "Fa", octave: 2, accidental: "#" });
+    expect(matchNote("Sib'")).toEqual({ note: "Si", octave: 2, accidental: "b" });
+    expect(matchNote("Mi♭")).toEqual({ note: "Mi", octave: 1, accidental: "b" });
+    expect(matchNote("Solb")).toEqual({ note: "Sol", octave: 1, accidental: "b" });
+    expect(matchNote("D#2")).toEqual({ note: "Do", octave: 2, accidental: "#" });
+    // nốt không dấu: không có khoá accidental
+    expect(matchNote("Sol")).not.toHaveProperty("accidental");
+    // "B" hoa không phải dấu giáng
+    expect(matchNote("SB")).toBeNull();
+    expect(matchNote("Dob2x")).toBeNull();
+  });
 });
 
 describe("isNoteLine", () => {
@@ -34,6 +49,16 @@ describe("tokenizeNotes", () => {
     const t = tokenizeNotes("Sol-Re La. Si");
     expect(t.map((x) => x.text)).toEqual(["Sol", "-", "Re", " ", "La", ".", " ", "Si"]);
     expect(t.filter((x) => x.type === "note")).toHaveLength(4);
+  });
+
+  it("dòng nốt có dấu hoá vẫn là dòng nốt", () => {
+    const line = "Sol Sib Do2 Re2- Mib2 Re2 Do2. La Fa#";
+    expect(isNoteLine(line)).toBe(true);
+    const notes = tokenizeNotes(line).filter((x) => x.type === "note");
+    expect(notes).toHaveLength(9);
+    expect(notes[1]).toMatchObject({ text: "Sib", note: "Si", accidental: "b", octave: 1 });
+    expect(notes[4]).toMatchObject({ note: "Mi", accidental: "b", octave: 2 });
+    expect(notes[8]).toMatchObject({ note: "Fa", accidental: "#" });
   });
 });
 

@@ -9,8 +9,11 @@
 export type NoteName = "Do" | "Re" | "Mi" | "Fa" | "Sol" | "La" | "Si";
 export const NOTE_ORDER: NoteName[] = ["Do", "Re", "Mi", "Fa", "Sol", "La", "Si"];
 
+/** dấu hoá viết liền sau tên nốt: Do# (thăng), Sib (giáng) */
+export type Accidental = "#" | "b";
+
 export type Token =
-  | { type: "note"; text: string; note: NoteName; octave: number }
+  | { type: "note"; text: string; note: NoteName; octave: number; accidental?: Accidental }
   | { type: "sep"; text: string }
   | { type: "text"; text: string };
 
@@ -42,16 +45,20 @@ const NOTE_ALIASES: Record<string, NoteName> = {
   si: "Si", xi: "Si",
 };
 
-const NOTE_RE = /^(đô|đo|do|rê|re|mi|pha|fa|sol|son|la|si|xi|d|r|m|f|s|l)(\d)?(['’]*)$/i;
+/** tên nốt + dấu hoá (# / b, tuỳ chọn) + quãng tám (số hoặc dấu phẩy trên) */
+const NOTE_RE = /^(đô|đo|do|rê|re|mi|pha|fa|sol|son|la|si|xi|d|r|m|f|s|l)([#♯b♭])?(\d)?(['’]*)$/i;
 
-export function matchNote(word: string): { note: NoteName; octave: number } | null {
+export function matchNote(word: string): { note: NoteName; octave: number; accidental?: Accidental } | null {
   const m = NOTE_RE.exec(word.normalize("NFC"));
   if (!m) return null;
   const note = NOTE_ALIASES[m[1].toLowerCase()];
   if (!note) return null;
-  const primes = m[3]?.length ?? 0;
-  const octave = m[2] ? Number(m[2]) : 1 + primes;
-  return { note, octave };
+  // cờ /i cũng khớp "B" hoa — chỉ "b" thường mới là dấu giáng
+  if (m[2] === "B") return null;
+  const primes = m[4]?.length ?? 0;
+  const octave = m[3] ? Number(m[3]) : 1 + primes;
+  if (!m[2]) return { note, octave };
+  return { note, octave, accidental: m[2] === "#" || m[2] === "♯" ? "#" : "b" };
 }
 
 /** tách một dòng nốt thành token, giữ nguyên dấu nối (-), dấu chấm, phẩy... */
