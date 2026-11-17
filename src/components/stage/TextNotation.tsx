@@ -1,5 +1,5 @@
 import { memo, useMemo } from "react";
-import { isChordToken, parseNotation, splitInlineChords, type NoteName, type Row, type Token } from "@/lib/notation/parse";
+import { isChordToken, parseNotation, splitInlineChords, type Row, type Token } from "@/lib/notation/parse";
 import {
   detectKeyPc,
   isIdentity,
@@ -11,6 +11,7 @@ import {
   type TransposeSetting,
 } from "@/lib/notation/transpose";
 import { cn } from "@/lib/utils";
+import { NOTE_CLASS } from "@/lib/notation/colors";
 
 /** dịch giọng đã tính sẵn cho cả bài (null = hiển thị nguyên bản) */
 interface Shift {
@@ -20,16 +21,6 @@ interface Shift {
 }
 
 const ACCIDENTAL_GLYPH = { "#": "♯", b: "♭" } as const;
-
-const NOTE_CLASS: Record<NoteName, string> = {
-  Do: "text-note-do",
-  Re: "text-note-re",
-  Mi: "text-note-mi",
-  Fa: "text-note-fa",
-  Sol: "text-note-sol",
-  La: "text-note-la",
-  Si: "text-note-si",
-};
 
 function NoteToken({ t, colored, shift }: { t: Token; colored: boolean; shift: Shift | null }) {
   if (t.type === "sep") {
