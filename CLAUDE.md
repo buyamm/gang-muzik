@@ -29,13 +29,14 @@ Web xem sheet nhạc / cảm âm rảnh tay (tự cuộn, tự lật trang, peda
 - Sau khi đổi `wrangler.jsonc`: `npm run cf-typegen`
 
 ## Quy ước
-- Tiếng Việt cho mọi chuỗi UI.
+- Tiếng Việt cho mọi chuỗi UI (chữ người dùng nhìn thấy).
+- **Code viết bằng tiếng Anh:** tên biến/hàm/type/component, tên file, route/URL (vd `/practice`, không `/luyen-tap`), key localStorage, tên cột/API, comment và commit message. Code cũ còn comment tiếng Việt thì sửa dần khi đụng tới, không cần viết lại hàng loạt.
 - localStorage chỉ qua `src/lib/prefs.ts` (không throw).
 - Không thêm thư viện state; dùng TanStack Query cho dữ liệu server.
 
 ## Quy trình làm việc (bắt buộc, không cần nhắc)
 1. **Lưu plan thành file:** plan nào được duyệt thì lưu vào `docs/plans/YYYY-MM-DD-<slug>.md` và commit cùng nhánh tính năng. Đổi phạm vi thì cập nhật plan.
-2. **Commit convention:** `type(scope): subject` (feat, fix, refactor, style, chore, docs, test, perf, build, ci; scope ví dụ: stage, library, studio, notation, audio, db, ui). Subject ngắn, thể mệnh lệnh. Mỗi tính năng một nhánh riêng (`feat/<slug>`, `fix/<slug>`…), không commit thẳng `main`.
+2. **Commit convention:** `type(scope): subject` (feat, fix, refactor, style, chore, docs, test, perf, build, ci; scope ví dụ: stage, library, studio, notation, audio, db, ui). Commit message viết **tiếng Anh**, subject ngắn, thể mệnh lệnh. Mỗi tính năng một nhánh riêng (`feat/<slug>`, `fix/<slug>`…), không commit thẳng `main`.
 3. **Không xoá branch:** merge bằng `gh pr merge <n> --merge`, **không bao giờ** `--delete-branch`, không xoá nhánh local/remote trừ khi người dùng yêu cầu.
 4. **Xong tính năng thì tự chạy local:** `npm test` + `npm run typecheck` qua; có migration mới thì `npm run db:migrate:local`; bật dev server bằng preview (`.claude/launch.json`: `dev` 5173, `studio` 5174), tự kiểm tra trên trình duyệt, gửi ảnh chụp, rồi báo người dùng kiểm tra. Mở PR nhưng **chưa merge**.
 5. **Người dùng đồng ý thì tự merge + deploy:** khi người dùng nói đồng ý/OK cho PR đó trong chat → `gh pr merge <n> --merge` → `git checkout main && git pull` → `npm run release` (mặc định patch; `-- minor` khi có tính năng mới; không rõ thì hỏi). PR chỉ có docs/cấu hình thì merge, không release. Release lỗi thì dừng và báo, không deploy tay.
