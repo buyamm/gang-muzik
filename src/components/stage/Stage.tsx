@@ -60,7 +60,11 @@ interface ViewPrefs {
   /** máy đếm nhịp: nhịp độ + số phách mỗi ô nhịp */
   bpm: number;
   beatsPerBar: number;
+  /** song with both images and a text version: which one to show */
+  view: SourceView;
 }
+
+type SourceView = "image" | "text";
 
 /** giọng kèn chọn gần nhất — bài mới mở lần đầu dùng luôn giọng này */
 const TRANSPOSE_KEY = "gm:transpose";
@@ -87,6 +91,7 @@ function defaultsFor(song: Song): ViewPrefs {
     transpose: normalizeTranspose(readPref<Partial<TransposeSetting>>(TRANSPOSE_KEY, NO_TRANSPOSE)),
     bpm: s.bpm ?? DEFAULT_BPM,
     beatsPerBar: 4,
+    view: "image",
   };
 }
 
@@ -110,6 +115,9 @@ export function Stage({
   persist?: boolean;
 }) {
   const prefKey = `gm:song:${song.id}`;
+  const hasText = !!song.textContent.trim();
+  /** image song that also has a text version (AI transcription) → viewer can switch */
+  const hasBoth = song.pages.length > 0 && hasText;
   const defaults = useMemo(() => defaultsFor(song), [song]);
   const [prefs, setPrefs] = useState<ViewPrefs>(() => (persist ? readPref(prefKey, defaults) : defaults));
   const update = useCallback(
@@ -131,8 +139,16 @@ export function Stage({
   const [transposeOpen, setTransposeOpen] = useState(false);
   // bản lưu cũ có thể thiếu / sai — luôn chuẩn hoá trước khi dùng
   const transpose = useMemo(() => normalizeTranspose(prefs.transpose), [prefs.transpose]);
+  const view: SourceView = hasBoth ? (prefs.view === "text" ? "text" : "image") : hasText ? "text" : "image";
+  /** the song as displayed: only the chosen source when it has both */
+  const shown = useMemo<Song>(
+    () => (hasBoth ? (view === "text" ? { ...song, pages: [] } : { ...song, textContent: "" }) : song),
+    [song, hasBoth, view],
+  );
   const changeTranspose = (t: TransposeSetting) => {
-    update({ transpose: t });
+    // transposing only affects the text version → show it
+    const shifted = t.semitones !== 0 || t.octave !== 0;
+    update(shifted && hasBoth ? { transpose: t, view: "text" } : { transpose: t });
     writePref(TRANSPOSE_KEY, t);
   };
   const [audioOpen, setAudioOpen] = useState(false);
@@ -170,7 +186,6 @@ export function Stage({
   const { pageCount, cols } = book;
   const stepSize = prefs.turnBy === "page" ? 1 : cols;
   const maxFirst = prefs.turnBy === "page" ? Math.max(0, pageCount - cols) : Math.floor((pageCount - 1) / cols) * cols;
-  const hasText = !!song.textContent.trim();
   /** chế độ sách hiện tất cả trang trên một màn hình — không có gì để lật */
   const allMode = !isScroll && prefs.columns === "all";
 
@@ -339,13 +354,33 @@ export function Stage({
   /** các nút công cụ — trên máy tính nằm ở header, trên điện thoại nằm ở footer */
   const tools = (
     <>
+      {hasBoth && (
+        <div className="flex shrink-0 rounded-full bg-stage-fg/8 p-0.5 text-sm font-medium md:mr-1" role="radiogroup" aria-label="Nguồn hiển thị">
+          {(["image", "text"] as const).map((v) => (
+            <button
+              key={v}
+              role="radio"
+              aria-checked={view === v}
+              onClick={() => update({ view: v })}
+              title={v === "image" ? "Xem ảnh sheet gốc" : "Xem bản chữ (dịch giọng được)"}
+              className={cn(
+                "rounded-full px-3 py-0.5 whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                view === v ? "bg-stage-fg text-stage-bg" : "text-stage-fg/70 hover:text-stage-fg",
+              )}
+            >
+              <span className="sm:hidden">{v === "image" ? "Ảnh" : "Chữ"}</span>
+              <span className="hidden sm:inline">{v === "image" ? "Ảnh gốc" : "Bản chữ"}</span>
+            </button>
+          ))}
+        </div>
+      )}
       <IconBtn label="Thu nhỏ" onClick={zoomOut}>
         <ZoomOut />
       </IconBtn>
       <IconBtn label="Phóng to" onClick={zoomIn}>
         <ZoomIn />
       </IconBtn>
-      {hasText && (
+      {view === "text" && (
         <IconBtn label="Tô màu nốt" active={prefs.colored} onClick={() => update({ colored: !prefs.colored })}>
           <Palette />
         </IconBtn>
@@ -459,7 +494,7 @@ export function Stage({
               className="h-full overflow-y-auto overscroll-contain [scrollbar-width:thin]"
             >
               <div className="pt-8 pb-[70vh] sm:pt-10">
-                <StageContent song={song} scale={prefs.fontScale} colored={prefs.colored} notes={notes} transpose={transpose} />
+                <StageContent song={shown} scale={prefs.fontScale} colored={prefs.colored} notes={notes} transpose={transpose} />
               </div>
             </div>
             {/* vạch đọc */}
@@ -474,7 +509,7 @@ export function Stage({
           </>
         ) : (
           <BookView
-            song={song}
+            song={shown}
             scale={prefs.fontScale}
             colored={prefs.colored}
             first={first}
@@ -533,19 +568,22 @@ export function Stage({
       {!barsHidden && (
         <footer className="relative z-20 shrink-0 border-t border-stage-fg/10 bg-stage-bg px-3 pt-2.5 pb-[max(env(safe-area-inset-bottom),0.625rem)]">
           {/* công cụ trên điện thoại / tablet dọc */}
-          <div className="mb-2 flex items-center justify-center gap-0.5 md:hidden">
-            {tools}
-            {!isScroll && (
-              <span className="ml-1 sm:hidden">
-                <BookSettings
-                  columns={prefs.columns}
-                  autoCols={cols}
-                  turnBy={prefs.turnBy}
-                  onColumns={(c) => update({ columns: c })}
-                  onTurnBy={(t) => update({ turnBy: t })}
-                />
-              </span>
-            )}
+          {/* scrolls sideways when the icons do not fit (small phones) */}
+          <div className="-mx-3 mb-2 overflow-x-auto px-3 [scrollbar-width:none] md:hidden">
+            <div className="mx-auto flex w-max items-center gap-0.5">
+              {tools}
+              {!isScroll && (
+                <span className="ml-1 sm:hidden">
+                  <BookSettings
+                    columns={prefs.columns}
+                    autoCols={cols}
+                    turnBy={prefs.turnBy}
+                    onColumns={(c) => update({ columns: c })}
+                    onTurnBy={(t) => update({ turnBy: t })}
+                  />
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="mx-auto flex max-w-4xl items-center gap-2 sm:gap-3">
