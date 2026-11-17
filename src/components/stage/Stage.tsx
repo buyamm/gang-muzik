@@ -37,6 +37,7 @@ import { cn } from "@/lib/utils";
 import { BookSettings } from "./BookSettings";
 import { BookView, type ColumnsPref } from "./BookView";
 import { KeyMapDialog } from "./KeyMapDialog";
+import { DEFAULT_BPM, MetronomePanel, useStageAudio } from "./MetronomePanel";
 import { NotesDialog, usePersonalNote, type NotesData } from "./SongNotes";
 import { StageContent } from "./StageContent";
 
@@ -52,6 +53,9 @@ interface ViewPrefs {
   colored: boolean;
   /** hiện khung ghi chú trên đầu bài */
   showNotes: boolean;
+  /** máy đếm nhịp: nhịp độ + số phách mỗi ô nhịp */
+  bpm: number;
+  beatsPerBar: number;
 }
 
 const READ_LINE = 0.3;
@@ -73,6 +77,8 @@ function defaultsFor(song: Song): ViewPrefs {
     theme: "auto",
     colored: true,
     showNotes: true,
+    bpm: s.bpm ?? DEFAULT_BPM,
+    beatsPerBar: 4,
   };
 }
 
@@ -114,6 +120,7 @@ export function Stage({
   const [keymap, setKeymap] = useState<KeyMap>(loadKeyMap);
   const [keyDialog, setKeyDialog] = useState(false);
   const [noteDialog, setNoteDialog] = useState(false);
+  const [audioOpen, setAudioOpen] = useState(false);
   const [personalNote, setPersonalNote] = usePersonalNote(song.id);
   const authorNote = song.note ?? "";
   const hasNotes = !!(authorNote.trim() || personalNote);
@@ -136,6 +143,8 @@ export function Stage({
   const turnBarRef = useRef<HTMLDivElement>(null);
   const durationRef = useRef(prefs.durationSec);
   durationRef.current = prefs.durationSec;
+
+  const audio = useStageAudio({ bpm: prefs.bpm, beatsPerBar: prefs.beatsPerBar, onChange: update, countdown });
 
   const fs = useFullscreen();
   useWakeLock(true);
@@ -278,7 +287,7 @@ export function Stage({
     },
     [togglePlay, isScroll, scrollBack, goNext, goPrev],
   );
-  usePedalKeys(onPedal, keymap, !keyDialog && !noteDialog);
+  usePedalKeys(onPedal, keymap, !keyDialog && !noteDialog && !audioOpen);
 
   // ---------- chạm ----------
   const onTap = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -304,6 +313,7 @@ export function Stage({
       mode: prefs.mode,
       durationSec: prefs.durationSec,
       fontScale: prefs.fontScale,
+      bpm: prefs.bpm,
     });
     removePref(prefKey);
   };
@@ -338,6 +348,7 @@ export function Stage({
       >
         <StickyNote />
       </IconBtn>
+      <MetronomePanel audio={audio} onOpenChange={setAudioOpen} />
       <IconBtn label="Pedal & phím tắt" onClick={() => setKeyDialog(true)}>
         <Keyboard />
       </IconBtn>
