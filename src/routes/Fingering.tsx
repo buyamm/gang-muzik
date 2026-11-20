@@ -1,11 +1,10 @@
 import { useMemo } from "react";
-import { Link, useSearchParams } from "react-router";
-import { ArrowLeft, Link2, TriangleAlert, Volume2, Wind } from "lucide-react";
+import { useSearchParams } from "react-router";
+import { Link2, TriangleAlert, Volume2, Wind } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
-import { LogoMark } from "@/components/brand/Staff";
 import { SaxFingeringDiagram, describeFingering } from "@/components/stage/SaxFingeringDiagram";
 import { SaoFingeringDiagram } from "@/components/fingering/SaoFingeringDiagram";
 import { playTone } from "@/lib/audio/engine";
@@ -122,19 +121,8 @@ export function Fingering() {
 
   return (
     <div className="min-h-full">
+      <SiteHeader containerClassName="max-w-5xl" />
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
-        <header className="mb-6 flex items-center gap-2">
-          <Button asChild variant="ghost" size="icon">
-            <Link to="/" aria-label="Về thư viện">
-              <ArrowLeft />
-            </Link>
-          </Button>
-          <Link to="/" className="flex flex-1 items-center gap-2">
-            <LogoMark className="size-7" />
-            <span className="font-display text-base font-bold">Gang Muzik</span>
-          </Link>
-          <ThemeToggle />
-        </header>
 
         <div className="mb-6">
           <h1 className="font-display text-3xl font-bold sm:text-4xl">Tra thế bấm</h1>

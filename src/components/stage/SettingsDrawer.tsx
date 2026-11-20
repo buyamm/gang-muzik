@@ -75,7 +75,7 @@ export const SettingsButton = forwardRef<
   {
     open: boolean;
     onClick: () => void;
-    /** short transpose badge, e.g. "Alto" (null = concert) */
+    /** short transpose badge, e.g. "Alto", "Sáo Đô" (null = concert) */
     badge?: string | null;
     /** metronome or drone is playing */
     audioActive?: boolean;
@@ -105,7 +105,7 @@ export const SettingsButton = forwardRef<
       <Settings2 />
       <span className="hidden sm:inline">Cài đặt</span>
       {badge && (
-        <span className="rounded-full bg-primary px-1.5 text-[10px] leading-4 font-bold text-primary-foreground">{badge}</span>
+        <span className="rounded-full bg-primary px-1.5 text-[10px] leading-4 font-bold whitespace-nowrap text-primary-foreground">{badge}</span>
       )}
       {fingeringOn && (
         <span className="hidden items-center gap-0.5 rounded-full bg-stage-fg/10 px-1.5 text-[10px] leading-4 font-semibold sm:inline-flex">
@@ -226,8 +226,8 @@ export function SettingsDrawer({
               {transpose && (
                 <Disclosure
                   icon={Music2}
-                  label="Giọng kèn"
-                  description="Dịch cảm âm & hợp âm sang giọng nhạc cụ của bạn"
+                  label="Giọng nhạc cụ"
+                  description="Dịch cảm âm & hợp âm sang giọng nhạc cụ của bạn — sax hoặc sáo"
                   summary={<Chip active={!!badge}>{badge ?? "Concert"}</Chip>}
                   open={expanded.transpose}
                   onToggle={() => toggleBlock("transpose")}

@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router";
-import { ArrowLeft, Pause, Play } from "lucide-react";
+import { Pause, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { SiteHeader } from "@/components/SiteHeader";
 import { LongToneDisplay } from "@/components/practice/LongToneDisplay";
 import { NoteChips } from "@/components/practice/NoteChips";
 import {
@@ -153,17 +152,10 @@ export function Practice() {
 
   return (
     <div className="min-h-full pb-28 sm:pb-12">
-      <header className="mx-auto flex max-w-3xl items-center gap-2 px-4 pt-4 sm:px-6">
-        <Button asChild variant="ghost" size="icon">
-          <Link to="/" aria-label="Về thư viện">
-            <ArrowLeft />
-          </Link>
-        </Button>
-        <h1 className="flex-1 font-display text-xl font-bold sm:text-2xl">Luyện tập cùng gam</h1>
-        <ThemeToggle />
-      </header>
+      <SiteHeader containerClassName="max-w-3xl" />
 
       <main className="mx-auto max-w-3xl space-y-6 px-4 pt-4 sm:px-6">
+        <h1 className="font-display text-2xl font-bold sm:text-3xl">Luyện tập cùng gam</h1>
         {!isAudioSupported() && (
           <p className="rounded-md bg-destructive/10 p-2 text-sm text-destructive">Trình duyệt này không hỗ trợ phát âm thanh.</p>
         )}

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { BPM_MAX, BPM_MIN, pushTap, tapTempo } from "@/lib/audio/engine";
-import { HORN_PRESETS, isSaxPreset, type HornPreset, type SpellingPref, type TransposeSetting } from "@/lib/notation/transpose";
+import { HORN_PRESETS, hasRangeCheck, type HornPreset, type HornPresetInfo, type SpellingPref, type TransposeSetting } from "@/lib/notation/transpose";
 import { selectPreset } from "@/lib/practice/instrument";
 import { keyName, noteText, scaleDef, type ScaleType } from "@/lib/practice/scales";
 import { cn } from "@/lib/utils";
@@ -90,27 +90,46 @@ export function VolumeRow({ label, value, onChange }: { label: string; value: nu
   );
 }
 
+/** preset groups of the picker, in order (same grouping as the Stage settings drawer) */
+const PRESET_GROUPS: { family: HornPresetInfo["family"]; label: string }[] = [
+  { family: "concert", label: "Concert" },
+  { family: "sax", label: "Saxophone" },
+  { family: "sao", label: "Sáo trúc 6 lỗ" },
+];
+
 /**
- * Horn picker: every `HORN_PRESETS` entry (+ the custom shift set on a song page, when in use), then the
- * octave (concert / custom only: sax presets play at the horn's real pitch) and the spelling.
+ * Instrument picker: `HORN_PRESETS` grouped by family (+ the custom shift set on a song page, when in use),
+ * then the octave (concert / custom only: sax and sáo play at the instrument's real pitch) and the spelling.
  */
 export function InstrumentPicker({ value, onChange }: { value: TransposeSetting; onChange: (t: TransposeSetting) => void }) {
   const preset: HornPreset = value.preset ?? "custom";
-  const options: { value: HornPreset; label: string; title?: string }[] = HORN_PRESETS.map((p) => ({ value: p.id, label: p.label }));
-  if (preset === "custom")
-    options.push({ value: "custom", label: `Tuỳ chỉnh ${value.semitones > 0 ? "+" : ""}${value.semitones}`, title: "Đặt ở trang bài" });
+  const groups = PRESET_GROUPS.map((g) => {
+    const options: { value: HornPreset; label: string; title?: string }[] = HORN_PRESETS.filter((p) => p.family === g.family).map(
+      (p) => ({ value: p.id, label: p.family === "sao" ? p.label.replace(/^Sáo /, "") : p.label }),
+    );
+    if (g.family === "concert" && preset === "custom")
+      options.push({ value: "custom", label: `Tuỳ chỉnh ${value.semitones > 0 ? "+" : ""}${value.semitones}`, title: "Đặt ở trang bài" });
+    return { ...g, options };
+  });
   return (
     <div className="space-y-3">
-      <Field label="Giọng kèn" hint="Nốt hiện theo giọng viết của nhạc cụ; tiếng phát ra là cao độ thật (concert).">
-        <Segmented
-          label="Giọng kèn"
-          value={preset}
-          options={options}
-          onChange={(id) => onChange(selectPreset(value, id))}
-          className="grid grid-cols-2 sm:grid-cols-3"
-        />
+      <Field label="Nhạc cụ" hint="Nốt hiện theo giọng viết của nhạc cụ; tiếng phát ra là cao độ thật (concert).">
+        <div className="space-y-2">
+          {groups.map((g) => (
+            <div key={g.family} className="space-y-1">
+              <div className="text-xs font-medium text-muted-foreground">{g.label}</div>
+              <Segmented
+                label={g.label}
+                value={preset}
+                options={g.options}
+                onChange={(id) => onChange(selectPreset(value, id))}
+                className={g.family === "sao" ? "grid grid-cols-4 sm:grid-cols-7" : "grid grid-cols-2 sm:grid-cols-4"}
+              />
+            </div>
+          ))}
+        </div>
       </Field>
-      {!isSaxPreset(preset) && (
+      {!hasRangeCheck(preset) && (
         <Field label="Quãng tám của kèn" hint="Nhạc cụ kêu thấp hơn nốt viết 1 quãng tám: chọn “Thấp hơn 1”.">
           <Segmented
             label="Quãng tám của kèn"

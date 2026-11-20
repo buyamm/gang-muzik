@@ -695,7 +695,8 @@ export function Stage({
                 onChange: changeTranspose,
                 autoOctaveValue,
                 rangeSummary,
-                notice: hasText ? undefined : "Bài dạng ảnh không dịch nốt được — chỉ hiện tone cho kèn.",
+                notice: hasText ? undefined : "Bài dạng ảnh không dịch nốt được — chỉ hiện tone cho nhạc cụ.",
+                songKey,
               }
             : undefined
         }
