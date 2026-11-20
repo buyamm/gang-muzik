@@ -40,6 +40,21 @@ describe("fingering table", () => {
     }
   });
 
+  it("every alternate explains when to use it, labels are unique per note", () => {
+    for (const [semi, f] of Object.entries(FINGERINGS)) {
+      const labels = (f.alts ?? []).map((a) => a.label);
+      expect(new Set(labels).size, `semitone ${semi}`).toBe(labels.length);
+      for (const a of f.alts ?? []) expect(a.description?.trim(), `semitone ${semi} ${a.label}`).toBeTruthy();
+    }
+  });
+
+  it("includes the front F options and Bb alternates in both octaves", () => {
+    expect(fingeringFor(29)!.alts!.map((a) => a.keys)).toContainEqual(["octave", "l1", "frontF"]);
+    expect(fingeringFor(30)!.alts!.some((a) => a.keys.includes("frontF") && a.keys.includes("sideBb"))).toBe(true);
+    expect(fingeringFor(22)!.alts!.map((a) => a.label)).toEqual(["1 và 1", "Phím cạnh Sib"]);
+    expect(fingeringFor(22)!.alts!.every((a) => a.keys[0] === "octave")).toBe(true);
+  });
+
   it("names notes the way sax charts do", () => {
     expect(saxNoteAt(-2)).toEqual({ note: "Si", accidental: "b", octave: 0 });
     expect(saxNoteAt(8)).toEqual({ note: "Sol", accidental: "#", octave: 1 });
