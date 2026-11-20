@@ -36,7 +36,18 @@ import { readPref, removePref, writePref } from "@/lib/prefs";
 import { cn } from "@/lib/utils";
 import { parseNotation } from "@/lib/notation/parse";
 import { bestOctave, resolveShift, summarizeRange } from "@/lib/notation/range";
-import { hornPreset, isSaxPreset, normalizeTranspose, NO_TRANSPOSE, type TransposeSetting } from "@/lib/notation/transpose";
+import {
+  formatKeyName,
+  hornPreset,
+  isSaxPreset,
+  keyMajorPc,
+  keyRootPc,
+  normalizeTranspose,
+  NO_TRANSPOSE,
+  transposeBadge,
+  transposeKeyName,
+  type TransposeSetting,
+} from "@/lib/notation/transpose";
 import { BookSettings } from "./BookSettings";
 import { BookView, type ColumnsPref } from "./BookView";
 import { KeyMapDialog } from "./KeyMapDialog";
@@ -139,7 +150,12 @@ export function Stage({
   };
   const sections = useMemo(() => parseNotation(song.textContent), [song.textContent]);
   // auto octave, spelling and horn range for this song
-  const shift = useMemo(() => resolveShift(transpose, sections), [transpose, sections]);
+  // the stored song key (if valid) decides accidental spelling before the first-chord guess
+  const songKey = keyMajorPc(song.settings.key) !== null ? song.settings.key : undefined;
+  const shift = useMemo(
+    () => resolveShift(transpose, sections, keyMajorPc(songKey) ?? undefined),
+    [transpose, sections, songKey],
+  );
   const rangeSummary = useMemo(() => summarizeRange(sections, shift), [sections, shift]);
   const autoOctaveValue = useMemo(
     () => (isSaxPreset(transpose.preset) ? bestOctave(sections, transpose.semitones) : undefined),
@@ -186,6 +202,13 @@ export function Stage({
   const stepSize = prefs.turnBy === "page" ? 1 : cols;
   const maxFirst = prefs.turnBy === "page" ? Math.max(0, pageCount - cols) : Math.floor((pageCount - 1) / cols) * cols;
   const hasText = !!song.textContent.trim();
+  // "Tone Am · Alto: F♯m": the key as written for the horn, spelled like the transposed notes
+  const songKeyLabel = useMemo(() => {
+    if (!songKey) return null;
+    const badge = transposeBadge(transpose);
+    if (!badge || !shift?.semitones) return `Tone ${formatKeyName(songKey)}`;
+    return `Tone ${formatKeyName(songKey)} · ${badge}: ${formatKeyName(transposeKeyName(songKey, shift.semitones, shift.spelling))}`;
+  }, [songKey, transpose, shift]);
   /** chế độ sách hiện tất cả trang trên một màn hình — không có gì để lật */
   const allMode = !isScroll && prefs.columns === "all";
 
@@ -365,13 +388,14 @@ export function Stage({
           <Palette />
         </IconBtn>
       )}
-      {hasText && (
+      {(hasText || songKey) && (
         <TransposeSettings
           value={transpose}
           onChange={changeTranspose}
           onOpenChange={setTransposeOpen}
           autoOctaveValue={autoOctaveValue}
           rangeSummary={rangeSummary}
+          notice={hasText ? undefined : "Bài dạng ảnh không dịch nốt được — chỉ hiện tone cho kèn."}
         />
       )}
       <IconBtn
@@ -387,7 +411,12 @@ export function Stage({
       >
         <StickyNote />
       </IconBtn>
-      <MetronomePanel audio={audio} onOpenChange={setAudioOpen} horn={hasText ? horn : undefined} />
+      <MetronomePanel
+        audio={audio}
+        onOpenChange={setAudioOpen}
+        horn={hasText || songKey ? horn : undefined}
+        tonicPc={keyRootPc(songKey) ?? undefined}
+      />
       <IconBtn label="Pedal & phím tắt" onClick={() => setKeyDialog(true)}>
         <Keyboard />
       </IconBtn>
@@ -439,7 +468,13 @@ export function Stage({
           )}
           <div className="min-w-0 flex-1">
             <h1 className="truncate font-display text-xl leading-tight font-bold">{song.title}</h1>
-            {song.artist && <p className="truncate text-xs text-stage-lyric">{song.artist}</p>}
+            {(song.artist || songKeyLabel) && (
+              <p className="truncate text-xs text-stage-lyric">
+                {song.artist}
+                {song.artist && songKeyLabel && " · "}
+                {songKeyLabel}
+              </p>
+            )}
           </div>
           <div className="flex shrink-0 rounded-full bg-stage-fg/8 p-1 text-sm font-medium" role="radiogroup" aria-label="Chế độ xem">
             {(["scroll", "pages"] as const).map((m) => (

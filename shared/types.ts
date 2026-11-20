@@ -31,6 +31,8 @@ export interface SongSettings {
   /** seconds each page stays before auto-turning in pages mode */
   pageSeconds?: number;
   bpm?: number;
+  /** original song key: root A–G, optional #/b, trailing "m" for minor ("C", "Am", "F#m", "Bb") */
+  key?: string;
 }
 
 export interface PageImage {
@@ -51,6 +53,8 @@ export interface SongSummary {
   kind: SongKind;
   updatedAt: number;
   pageCount: number;
+  /** original song key from settings ("Am", "F#m"…), only when set */
+  key?: string;
   /** chỉ có trong Studio */
   status?: SongStatus;
   owner?: Owner | null;

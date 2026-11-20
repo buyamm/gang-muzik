@@ -81,6 +81,7 @@ export function toSong(r: SongRow & OwnerCols, pages: PageRow[], withMeta = fals
 }
 
 export function toSummary(r: SongRow & OwnerCols & { page_count: number }, withMeta = false): SongSummary {
+  const key = parseSettings(r.settings_json)?.key;
   return {
     id: r.id,
     title: r.title,
@@ -89,6 +90,7 @@ export function toSummary(r: SongRow & OwnerCols & { page_count: number }, withM
     kind: r.kind,
     updatedAt: r.updated_at,
     pageCount: r.page_count,
+    ...(typeof key === "string" && key ? { key } : {}),
     ...meta(r, withMeta),
   };
 }

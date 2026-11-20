@@ -150,11 +150,14 @@ export function MetronomePanel({
   audio,
   onOpenChange,
   horn,
+  tonicPc,
 }: {
   audio: StageAudio;
   onOpenChange?: (open: boolean) => void;
   /** transposing instrument in use (omit for concert) */
   horn?: HornInfo;
+  /** tonic pitch class (0..11) of the song's stored key; shows a "song tonic" shortcut for the drone */
+  tonicPc?: number;
 }) {
   const { bpm, beatsPerBar, metro, drone, prefs, setAudio } = audio;
   const [taps, setTaps] = useState<number[]>([]);
@@ -332,6 +335,18 @@ export function MetronomePanel({
                 {hornNote.accidental && ACCIDENTAL_GLYPH[hornNote.accidental]}
               </span>
             </p>
+          )}
+          {tonicPc !== undefined && NOTE_NAMES[tonicPc] && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full"
+              disabled={prefs.droneNote === tonicPc}
+              onClick={() => setAudio({ droneNote: tonicPc })}
+            >
+              Chủ âm của bài: {NOTE_NAMES[tonicPc].name} ({NOTE_NAMES[tonicPc].letter})
+            </Button>
           )}
         </section>
       </PopoverContent>

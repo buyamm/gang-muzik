@@ -11,6 +11,7 @@ import { LogoMark, SongMotif } from "@/components/brand/Staff";
 import { api } from "@/lib/api";
 import { STUDIO_URL } from "@/lib/links";
 import { SiteFooter } from "@/components/SiteFooter";
+import { formatKeyName } from "@/lib/notation/transpose";
 import { cn } from "@/lib/utils";
 import { useSeo } from "@/lib/seo";
 import { homeSeo } from "@shared/seo";
@@ -270,7 +271,12 @@ export function SongCard({ song: s, preview = false }: { song: SongSummary; prev
               +{s.instruments.length - 2}
             </span>
           )}
-          <span className="ml-auto flex shrink-0 items-center gap-1.5" title={s.kind === "text" ? "Bài dạng chữ" : "Bài dạng ảnh"}>
+          {s.key && (
+            <span className="ml-auto shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-foreground/80" title={`Tone ${s.key}`}>
+              {formatKeyName(s.key)}
+            </span>
+          )}
+          <span className={cn("flex shrink-0 items-center gap-1.5", !s.key && "ml-auto")} title={s.kind === "text" ? "Bài dạng chữ" : "Bài dạng ảnh"}>
             {s.kind === "text" ? <Type className="size-4" /> : <FileImage className="size-4" />}
             {s.kind === "text" ? "Chữ" : `${s.pageCount} ảnh`}
           </span>

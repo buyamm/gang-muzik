@@ -65,6 +65,7 @@ export function TransposeSettings({
   onOpenChange,
   autoOctaveValue,
   rangeSummary,
+  notice,
 }: {
   value: TransposeSetting;
   onChange: (t: TransposeSetting) => void;
@@ -73,6 +74,8 @@ export function TransposeSettings({
   autoOctaveValue?: number;
   /** written span of the song on the horn (sax presets, songs with cảm âm notes) */
   rangeSummary?: RangeSummary | null;
+  /** optional muted line shown at the top of the popover */
+  notice?: string;
 }) {
   const badge = transposeBadge(value);
   const preset = value.preset ?? "custom";
@@ -108,6 +111,7 @@ export function TransposeSettings({
         className="max-h-[min(80vh,40rem)] w-80 space-y-4 overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
+        {notice && <p className="text-xs text-muted-foreground">{notice}</p>}
         <div className="space-y-2">
           <div>
             <div className="text-sm font-semibold">Loại kèn</div>

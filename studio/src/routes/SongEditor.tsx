@@ -20,6 +20,8 @@ import { INSTRUMENTS, instrumentLabel, parseInstruments, type InstrumentId } fro
 import { useMe } from "@studio/hooks/useMe";
 import { api } from "@studio/lib/api";
 import { formatDuration, parseDuration } from "@/lib/stage/math";
+import { parseNotation } from "@/lib/notation/parse";
+import { guessKeyName, KEY_ROOTS, keyRootPc } from "@/lib/notation/transpose";
 import { cn } from "@/lib/utils";
 
 const EXAMPLES = {
@@ -48,6 +50,9 @@ interface Form {
   fontScale: number;
   /** nhịp độ cho máy đếm nhịp; trống = mặc định */
   bpm: string;
+  /** original key root from KEY_ROOTS; "" = unknown */
+  keyRoot: string;
+  keyMinor: boolean;
 }
 
 const emptyForm: Form = {
@@ -61,7 +66,19 @@ const emptyForm: Form = {
   duration: "",
   fontScale: 1,
   bpm: "",
+  keyRoot: "",
+  keyMinor: false,
 };
+
+/** split a stored key ("Am", "A#") into the picker's canonical root + minor flag */
+function keyParts(key: string | undefined): Pick<Form, "keyRoot" | "keyMinor"> {
+  const pc = keyRootPc(key);
+  if (pc === null) return { keyRoot: "", keyMinor: false };
+  return { keyRoot: KEY_ROOTS[pc], keyMinor: key!.endsWith("m") };
+}
+
+const SELECT_CLASS =
+  "h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-2 py-1 text-base shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:bg-input/30";
 
 function fromSong(s: Song): Form {
   return {
@@ -75,6 +92,7 @@ function fromSong(s: Song): Form {
     duration: s.settings.durationSec ? formatDuration(s.settings.durationSec) : "",
     fontScale: s.settings.fontScale ?? 1,
     bpm: s.settings.bpm ? String(s.settings.bpm) : "",
+    ...keyParts(s.settings.key),
   };
 }
 
@@ -114,6 +132,11 @@ export function SongEditor() {
   const bpm = form.bpm.trim() ? Number(form.bpm) : undefined;
   const bpmInvalid = bpm !== undefined && !(Number.isInteger(bpm) && bpm >= 20 && bpm <= 400);
   const settingsInvalid = durationInvalid || bpmInvalid;
+  const songKey = form.keyRoot ? form.keyRoot + (form.keyMinor ? "m" : "") : undefined;
+  const guessedKey = useMemo(
+    () => (form.kind === "text" && !form.keyRoot ? guessKeyName(parseNotation(form.textContent)) : null),
+    [form.kind, form.keyRoot, form.textContent],
+  );
 
   const toInput = (): SongInput => ({
     title: form.title.trim(),
@@ -128,6 +151,7 @@ export function SongEditor() {
       fontScale: form.fontScale,
       durationSec: durationSec ?? undefined,
       bpm: bpmInvalid ? undefined : bpm,
+      key: songKey,
     },
   });
 
@@ -147,7 +171,7 @@ export function SongEditor() {
       createdAt: song.data?.createdAt ?? Date.now(),
       updatedAt: song.data?.updatedAt ?? Date.now(),
     };
-  }, [id, form, pages, song.data, durationSec, bpm, bpmInvalid]); // toInput() chỉ phụ thuộc form + song.data
+  }, [id, form, pages, song.data, durationSec, bpm, bpmInvalid, songKey]); // toInput() chỉ phụ thuộc form + song.data
 
   const openPreview = () => {
     if (form.kind === "sheet" && !pages.length)
@@ -458,6 +482,34 @@ export function SongEditor() {
               />
               {bpmInvalid && <p className="text-xs text-destructive">Nhập số nguyên từ 20 đến 400.</p>}
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="key-root">Tone gốc</Label>
+              <div className="flex gap-2">
+                <select id="key-root" className={SELECT_CLASS} value={form.keyRoot} onChange={(e) => set("keyRoot", e.target.value)}>
+                  <option value="">Không rõ</option>
+                  {KEY_ROOTS.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  aria-label="Trưởng hay thứ"
+                  className={SELECT_CLASS}
+                  value={form.keyMinor ? "minor" : "major"}
+                  onChange={(e) => set("keyMinor", e.target.value === "minor")}
+                  disabled={!form.keyRoot}
+                >
+                  <option value="major">Trưởng</option>
+                  <option value="minor">Thứ</option>
+                </select>
+              </div>
+              {guessedKey && (
+                <Button type="button" variant="outline" size="sm" onClick={() => setForm((f) => ({ ...f, ...keyParts(guessedKey) }))}>
+                  Đoán từ hợp âm: {guessedKey}
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="space-y-3">
@@ -536,7 +588,7 @@ export function SongEditor() {
         <div className="space-y-3">
           <Label>Thẻ bài trên thư viện</Label>
           <ul className="max-w-xs">
-            <SongCard preview song={{ ...draftSong, pageCount: pages.length }} />
+            <SongCard preview song={{ ...draftSong, pageCount: pages.length, key: songKey }} />
           </ul>
           <p className="text-xs text-muted-foreground">
             Hiện trong mục:{" "}
