@@ -34,7 +34,17 @@ import { useWakeLock } from "@/hooks/useWakeLock";
 import { formatDuration, speedFromDuration } from "@/lib/stage/math";
 import { readPref, removePref, writePref } from "@/lib/prefs";
 import { cn } from "@/lib/utils";
-import { normalizeTranspose, NO_TRANSPOSE, type TransposeSetting } from "@/lib/notation/transpose";
+import {
+  formatKeyName,
+  keyMajorPc,
+  keyRootPc,
+  normalizeTranspose,
+  NO_TRANSPOSE,
+  resolveSpelling,
+  transposeBadge,
+  transposeKeyName,
+  type TransposeSetting,
+} from "@/lib/notation/transpose";
 import { BookSettings } from "./BookSettings";
 import { BookView, type ColumnsPref } from "./BookView";
 import { KeyMapDialog } from "./KeyMapDialog";
@@ -171,6 +181,14 @@ export function Stage({
   const stepSize = prefs.turnBy === "page" ? 1 : cols;
   const maxFirst = prefs.turnBy === "page" ? Math.max(0, pageCount - cols) : Math.floor((pageCount - 1) / cols) * cols;
   const hasText = !!song.textContent.trim();
+  const songKey = keyMajorPc(song.settings.key) !== null ? song.settings.key : undefined;
+  const songKeyLabel = useMemo(() => {
+    if (!songKey) return null;
+    const badge = transposeBadge(transpose);
+    if (!badge || !transpose.semitones) return `Tone ${formatKeyName(songKey)}`;
+    const spelling = resolveSpelling(transpose.spelling, transpose.semitones, keyMajorPc(songKey) ?? 0);
+    return `Tone ${formatKeyName(songKey)} · ${badge}: ${formatKeyName(transposeKeyName(songKey, transpose.semitones, spelling))}`;
+  }, [songKey, transpose]);
   /** chế độ sách hiện tất cả trang trên một màn hình — không có gì để lật */
   const allMode = !isScroll && prefs.columns === "all";
 
@@ -350,7 +368,14 @@ export function Stage({
           <Palette />
         </IconBtn>
       )}
-      {hasText && <TransposeSettings value={transpose} onChange={changeTranspose} onOpenChange={setTransposeOpen} />}
+      {(hasText || songKey) && (
+        <TransposeSettings
+          value={transpose}
+          onChange={changeTranspose}
+          onOpenChange={setTransposeOpen}
+          notice={hasText ? undefined : "Bài dạng ảnh không dịch nốt được — chỉ hiện tone cho kèn."}
+        />
+      )}
       <IconBtn
         label={stageTheme === "dark" ? "Nền sáng" : "Nền tối"}
         onClick={() => update({ theme: stageTheme === "dark" ? "light" : "dark" })}
@@ -364,7 +389,7 @@ export function Stage({
       >
         <StickyNote />
       </IconBtn>
-      <MetronomePanel audio={audio} onOpenChange={setAudioOpen} />
+      <MetronomePanel audio={audio} onOpenChange={setAudioOpen} tonicPc={keyRootPc(songKey) ?? undefined} />
       <IconBtn label="Pedal & phím tắt" onClick={() => setKeyDialog(true)}>
         <Keyboard />
       </IconBtn>
@@ -416,7 +441,13 @@ export function Stage({
           )}
           <div className="min-w-0 flex-1">
             <h1 className="truncate font-display text-xl leading-tight font-bold">{song.title}</h1>
-            {song.artist && <p className="truncate text-xs text-stage-lyric">{song.artist}</p>}
+            {(song.artist || songKeyLabel) && (
+              <p className="truncate text-xs text-stage-lyric">
+                {song.artist}
+                {song.artist && songKeyLabel && " · "}
+                {songKeyLabel}
+              </p>
+            )}
           </div>
           <div className="flex shrink-0 rounded-full bg-stage-fg/8 p-1 text-sm font-medium" role="radiogroup" aria-label="Chế độ xem">
             {(["scroll", "pages"] as const).map((m) => (
@@ -459,7 +490,7 @@ export function Stage({
               className="h-full overflow-y-auto overscroll-contain [scrollbar-width:thin]"
             >
               <div className="pt-8 pb-[70vh] sm:pt-10">
-                <StageContent song={song} scale={prefs.fontScale} colored={prefs.colored} notes={notes} transpose={transpose} />
+                <StageContent song={song} scale={prefs.fontScale} colored={prefs.colored} notes={notes} transpose={transpose} songKey={songKey} />
               </div>
             </div>
             {/* vạch đọc */}
@@ -484,6 +515,7 @@ export function Stage({
             onStep={onBookStep}
             notes={notes}
             transpose={transpose}
+            songKey={songKey}
           />
         )}
 

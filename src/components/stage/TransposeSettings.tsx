@@ -60,10 +60,13 @@ export function TransposeSettings({
   value,
   onChange,
   onOpenChange,
+  notice,
 }: {
   value: TransposeSetting;
   onChange: (t: TransposeSetting) => void;
   onOpenChange?: (open: boolean) => void;
+  /** optional muted line shown at the top of the popover */
+  notice?: string;
 }) {
   const badge = transposeBadge(value);
   const preset = presetOf(value.semitones);
@@ -92,6 +95,7 @@ export function TransposeSettings({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 space-y-4" onClick={(e) => e.stopPropagation()}>
+        {notice && <p className="text-xs text-muted-foreground">{notice}</p>}
         <div className="space-y-2">
           <div>
             <div className="text-sm font-semibold">Giọng kèn</div>
