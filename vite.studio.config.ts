@@ -13,6 +13,9 @@ const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), 
 export default defineConfig({
   define: { __APP_VERSION__: JSON.stringify(pkg.version) },
   root: r("./studio"),
+  // separate dep-optimizer cache: the library dev server (5173) uses node_modules/.vite,
+  // and two servers re-optimizing into the same folder can hang module requests
+  cacheDir: r("./node_modules/.vite-studio"),
   plugins: [
     react(),
     tailwindcss(),
