@@ -1,23 +1,11 @@
 import { memo, useMemo } from "react";
 import { isChordToken, parseNotation, splitInlineChords, type NoteName, type Row, type Token } from "@/lib/notation/parse";
-import {
-  detectKeyPc,
-  isIdentity,
-  resolveSpelling,
-  transposeChord,
-  transposeChordLine,
-  transposeNote,
-  type Spelling,
-  type TransposeSetting,
-} from "@/lib/notation/transpose";
+import { isOutOfRange, type ResolvedShift } from "@/lib/notation/range";
+import { noteToSemitone, transposeChord, transposeChordLine, transposeNote } from "@/lib/notation/transpose";
 import { cn } from "@/lib/utils";
 
-/** dịch giọng đã tính sẵn cho cả bài (null = hiển thị nguyên bản) */
-interface Shift {
-  semitones: number;
-  octave: number;
-  spelling: Spelling;
-}
+/** transposition resolved for the whole song (null = shown as written) */
+type Shift = ResolvedShift;
 
 const ACCIDENTAL_GLYPH = { "#": "♯", b: "♭" } as const;
 
@@ -47,8 +35,16 @@ function NoteToken({ t, colored, shift }: { t: Token; colored: boolean; shift: S
   }
   if (shift) {
     const v = transposeNote(t, shift.semitones, shift.spelling, shift.octave);
+    const outside = !!shift.range && isOutOfRange(noteToSemitone(v), shift.range);
     return (
-      <span className={cn("whitespace-nowrap", colored && NOTE_CLASS[v.note])}>
+      <span
+        className={cn(
+          "whitespace-nowrap",
+          colored && NOTE_CLASS[v.note],
+          outside && "underline decoration-destructive decoration-wavy decoration-2 underline-offset-[0.2em]",
+        )}
+        title={outside ? "Ngoài tầm kèn (Sib0–Fa#3)" : undefined}
+      >
         {v.note}
         {v.accidental && <span className="ml-[0.02em] text-[0.8em]">{ACCIDENTAL_GLYPH[v.accidental]}</span>}
         {v.octave !== 1 && <sup className="ml-[0.04em] text-[0.55em] font-extrabold">{v.octave}</sup>}
@@ -103,17 +99,11 @@ export const TextNotation = memo(function TextNotation({
   text: string;
   colored?: boolean;
   compact?: boolean;
-  /** dịch giọng cho nhạc cụ (Bb, Eb...); bỏ trống / 0 = nguyên bản */
-  transpose?: TransposeSetting;
+  /** transposition resolved for this song (see `resolveShift`); missing / null = as written */
+  transpose?: ResolvedShift | null;
 }) {
   const sections = useMemo(() => parseNotation(text), [text]);
-  const semitones = transpose?.semitones ?? 0;
-  const octave = transpose?.octave ?? 0;
-  const spellingPref = transpose?.spelling ?? "auto";
-  const shift = useMemo<Shift | null>(() => {
-    if (isIdentity({ semitones, octave, spelling: spellingPref })) return null;
-    return { semitones, octave, spelling: resolveSpelling(spellingPref, semitones, detectKeyPc(sections)) };
-  }, [sections, semitones, octave, spellingPref]);
+  const shift: Shift | null = transpose ?? null;
   if (!sections.length) return null;
   return (
     <div className={compact ? "px-1" : "mx-auto max-w-5xl px-5 sm:px-10"}>

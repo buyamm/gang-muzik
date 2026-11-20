@@ -1,14 +1,15 @@
 import { Minus, Music2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { formatNote, type RangeSummary } from "@/lib/notation/range";
 import {
   clampOctave,
   clampSemitones,
-  presetOf,
+  HORN_PRESETS,
+  isSaxPreset,
   SEMITONE_MAX,
   SEMITONE_MIN,
   transposeBadge,
-  TRANSPOSE_PRESETS,
   type SpellingPref,
   type TransposeSetting,
 } from "@/lib/notation/transpose";
@@ -20,6 +21,8 @@ const OCTAVES: { value: number; label: string }[] = [
   { value: 0, label: "Giữ nguyên" },
   { value: 1, label: "Nâng 1" },
 ];
+
+const octaveLabel = (n: number) => OCTAVES.find((o) => o.value === n)?.label ?? "Giữ nguyên";
 
 const SPELLINGS: { value: SpellingPref; label: string }[] = [
   { value: "auto", label: "Tự động" },
@@ -55,18 +58,26 @@ function Stepper({
   );
 }
 
-/** chọn giọng nhạc cụ (Bb, Eb, tuỳ chỉnh) để dịch cảm âm & hợp âm */
+/** pick the instrument (sax type, or a custom interval) to transpose cảm âm & chords */
 export function TransposeSettings({
   value,
   onChange,
   onOpenChange,
+  autoOctaveValue,
+  rangeSummary,
 }: {
   value: TransposeSetting;
   onChange: (t: TransposeSetting) => void;
   onOpenChange?: (open: boolean) => void;
+  /** octave the auto mode picks for this song (sax presets) */
+  autoOctaveValue?: number;
+  /** written span of the song on the horn (sax presets, songs with cảm âm notes) */
+  rangeSummary?: RangeSummary | null;
 }) {
   const badge = transposeBadge(value);
-  const preset = presetOf(value.semitones);
+  const preset = value.preset ?? "custom";
+  const sax = isSaxPreset(preset);
+  const auto = sax && !!value.autoOctave;
   const set = (patch: Partial<TransposeSetting>) => onChange({ ...value, ...patch });
   const n = value.semitones;
   const label = badge ? `Giọng kèn (đang dịch: ${badge})` : "Giọng kèn";
@@ -91,17 +102,26 @@ export function TransposeSettings({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 space-y-4" onClick={(e) => e.stopPropagation()}>
+      <PopoverContent
+        align="end"
+        collisionPadding={8}
+        className="max-h-[min(80vh,40rem)] w-80 space-y-4 overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="space-y-2">
           <div>
-            <div className="text-sm font-semibold">Giọng kèn</div>
+            <div className="text-sm font-semibold">Loại kèn</div>
             <div className="text-xs text-muted-foreground">
-              Dịch cảm âm và hợp âm sang giọng của nhạc cụ — saxophone, trumpet, clarinet… thổi đúng nốt đã viết.
+              Dịch cảm âm và hợp âm sang giọng của kèn — thổi đúng nốt đã viết. Kèn sax tự chọn quãng tám vừa tầm kèn.
             </div>
           </div>
           <div className="flex flex-col gap-1">
-            {TRANSPOSE_PRESETS.map((p) => (
-              <Choice key={p.id} active={preset === p.id} onClick={() => set({ semitones: p.semitones })}>
+            {HORN_PRESETS.map((p) => (
+              <Choice
+                key={p.id}
+                active={preset === p.id}
+                onClick={() => set({ preset: p.id, semitones: p.semitones, autoOctave: p.sax })}
+              >
                 <span className="flex items-center justify-between gap-2">
                   <span>{p.label}</span>
                   <span className="text-xs opacity-75">{p.semitones ? `+${p.semitones}` : "0"}</span>
@@ -109,15 +129,36 @@ export function TransposeSettings({
               </Choice>
             ))}
           </div>
+          {rangeSummary && (
+            <div
+              className={cn(
+                "rounded-md px-2 py-1.5 text-xs",
+                rangeSummary.outOfRange ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground",
+              )}
+            >
+              Tầm nốt trên kèn: {formatNote(rangeSummary.low)} → {formatNote(rangeSummary.high)}
+              {rangeSummary.outOfRange ? (
+                <span className="block font-medium">{rangeSummary.outOfRange} nốt ngoài tầm — đã gạch đỏ trong bài</span>
+              ) : (
+                " · vừa tầm"
+              )}
+            </div>
+          )}
         </div>
 
         <div className="space-y-1.5">
-          <div className="text-sm font-semibold">Tuỳ chỉnh {preset === null && <span className="text-xs font-normal text-primary">(đang dùng)</span>}</div>
+          <div>
+            <div className="text-sm font-semibold">
+              Nhạc cụ khác / tuỳ chỉnh{" "}
+              {preset === "custom" && <span className="text-xs font-normal text-primary">(đang dùng)</span>}
+            </div>
+            <div className="text-xs text-muted-foreground">Trumpet, clarinet… chọn số bán cung cần dịch.</div>
+          </div>
           <Stepper
             label="bán cung"
             value={n === 0 ? "0 bán cung" : `${n > 0 ? "+" : "−"}${Math.abs(n)} bán cung`}
-            onDec={() => set({ semitones: clampSemitones(n - 1) })}
-            onInc={() => set({ semitones: clampSemitones(n + 1) })}
+            onDec={() => set({ preset: "custom", semitones: clampSemitones(n - 1) })}
+            onInc={() => set({ preset: "custom", semitones: clampSemitones(n + 1) })}
             decDisabled={n <= SEMITONE_MIN}
             incDisabled={n >= SEMITONE_MAX}
           />
@@ -128,9 +169,20 @@ export function TransposeSettings({
             <div className="text-sm font-semibold">Quãng tám (cảm âm)</div>
             <div className="text-xs text-muted-foreground">Nốt dịch lên cao quá / thấp quá thì hạ hoặc nâng cả bài một quãng tám.</div>
           </div>
+          {sax && (
+            <div className="flex">
+              <Choice active={auto} onClick={() => set({ autoOctave: true })}>
+                Tự động{autoOctaveValue !== undefined && ` (đang: ${octaveLabel(autoOctaveValue)})`}
+              </Choice>
+            </div>
+          )}
           <div className="flex gap-1">
             {OCTAVES.map((o) => (
-              <Choice key={o.value} active={value.octave === o.value} onClick={() => set({ octave: clampOctave(o.value) })}>
+              <Choice
+                key={o.value}
+                active={!auto && value.octave === o.value}
+                onClick={() => set({ octave: clampOctave(o.value), autoOctave: false })}
+              >
                 {o.label}
               </Choice>
             ))}
