@@ -53,6 +53,13 @@ export function stopAllAudio() {
   for (const a of [...active]) a.stop();
 }
 
+const tones = new Set<{ stop: () => void }>();
+
+/** stop every sounding / scheduled reference tone (metronome and drone untouched) */
+export function stopTones() {
+  for (const t of [...tones]) t.stop();
+}
+
 // ---------- click ----------
 const CLICK_FREQ: Record<TickKind, number> = { bar: 1760, beat: 1046.5, sub: 784 };
 const CLICK_GAIN: Record<TickKind, number> = { bar: 1, beat: 0.7, sub: 0.35 };
@@ -282,11 +289,14 @@ export function createDrone(frequency: number, volume?: number) {
   return new Drone(frequency, volume);
 }
 
-/** phát một nốt ngắn (nốt tham chiếu); trả về thời điểm kết thúc theo audioNow() */
-export function playTone(freq: number, durationSec = 1, volume = 0.6): number {
+/**
+ * Play a short reference tone; returns its end time on the audioNow() clock.
+ * `when` (audioNow clock) plays it exactly on an already scheduled click; omitted = play now.
+ */
+export function playTone(freq: number, durationSec = 1, volume = 0.6, when?: number): number {
   const c = resumeAudio();
   if (!c || !Number.isFinite(freq) || durationSec <= 0) return 0;
-  const now = c.currentTime + 0.01;
+  const now = Math.max(c.currentTime + 0.01, when ?? 0);
   const attack = Math.min(0.02, durationSec / 4);
   const release = Math.min(0.15, durationSec / 3);
   const end = now + durationSec;
@@ -299,9 +309,32 @@ export function playTone(freq: number, durationSec = 1, volume = 0.6): number {
   const voice = warmVoice(c, freq, g);
   voice.start(now);
   voice.stop(end + 0.02);
-  window.setTimeout(() => {
+  let done = false;
+  const cleanup = () => {
+    if (done) return;
+    done = true;
+    tones.delete(handle);
+    active.delete(handle);
     voice.disconnect();
     g.disconnect();
-  }, (durationSec + 0.3) * 1000);
+  };
+  // early stop (Stop pressed while scheduled / sounding): ramp down fast to avoid a click
+  const handle = {
+    stop() {
+      if (done) return;
+      const t = c.currentTime;
+      g.gain.cancelScheduledValues(t);
+      g.gain.setTargetAtTime(0, t, 0.015);
+      try {
+        voice.stop(t + 0.1);
+      } catch {
+        /* already stopped */
+      }
+      window.setTimeout(cleanup, 200);
+    },
+  };
+  tones.add(handle);
+  active.add(handle);
+  window.setTimeout(cleanup, (end - c.currentTime + 0.3) * 1000);
   return end;
 }

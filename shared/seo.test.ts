@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FINGERING_SEO, homeSeo, songSeo, songJsonLd, truncate } from "./seo";
+import { FINGERING_SEO, homeSeo, PRACTICE_SEO, songSeo, songJsonLd, truncate } from "./seo";
 
 const song = {
   id: "abc",
@@ -45,5 +45,10 @@ describe("seo", () => {
     expect(comp.url).toBe("https://x.test/s/abc");
     expect(comp.dateModified).toBe("1970-01-02T00:00:00.000Z");
     expect(crumbs.itemListElement[1].item).toBe("https://x.test/s/abc");
+  });
+
+  it("practice page has its path and a description of at most 160 chars", () => {
+    expect(PRACTICE_SEO.path).toBe("/practice");
+    expect(PRACTICE_SEO.description.length).toBeLessThanOrEqual(160);
   });
 });

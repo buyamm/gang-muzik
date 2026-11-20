@@ -76,7 +76,15 @@ export const FINGERING_SEO = {
   type: "website",
 } satisfies SeoMeta;
 
-export const notFoundSeo =(path: string): SeoMeta => ({
+export const PRACTICE_SEO = {
+  title: `Luyện tập cùng gam · ${SITE_NAME}`,
+  description:
+    "Luyện âm giai, hợp âm rải và nốt dài cho saxophone, kèn, sáo… theo giọng Concert, Sib, Mib — có máy đếm nhịp, nốt tham chiếu và drone chủ âm.",
+  path: "/practice",
+  type: "website",
+} satisfies SeoMeta;
+
+export const notFoundSeo = (path: string): SeoMeta => ({
   title: `Không tìm thấy · ${SITE_NAME}`,
   description: DEFAULT_DESCRIPTION,
   path,

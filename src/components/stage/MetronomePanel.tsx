@@ -26,7 +26,7 @@ export const BEAT_OPTIONS = [2, 3, 4, 6] as const;
 const OCTAVES = [2, 3, 4, 5] as const;
 
 /** cài đặt âm thanh chung cho mọi bài (không theo bài) */
-interface AudioPrefs {
+export interface AudioPrefs {
   metroVolume: number;
   droneVolume: number;
   /** 0 = Đô … 11 = Si */
@@ -38,6 +38,10 @@ interface AudioPrefs {
 
 const AUDIO_KEY = "gm:audio";
 const AUDIO_DEFAULTS: AudioPrefs = { metroVolume: 0.8, droneVolume: 0.5, droneNote: 0, droneOctave: 3, countIn: true };
+
+/** read / write the shared audio prefs (`gm:audio`); the practice page shares these volumes */
+export const loadAudioPrefs = () => readPref(AUDIO_KEY, AUDIO_DEFAULTS);
+export const saveAudioPrefs = (p: AudioPrefs) => writePref(AUDIO_KEY, p);
 
 /**
  * Toàn bộ trạng thái nhịp & drone của Stage. Gọi MỘT lần trong Stage rồi truyền xuống
@@ -56,11 +60,11 @@ export function useStageAudio({
   /** giá trị đếm ngược hiện tại của Stage (null = không đếm) — để phát tiếng đếm vào */
   countdown: number | null;
 }) {
-  const [prefs, setPrefs] = useState<AudioPrefs>(() => readPref(AUDIO_KEY, AUDIO_DEFAULTS));
+  const [prefs, setPrefs] = useState<AudioPrefs>(loadAudioPrefs);
   const setAudio = (patch: Partial<AudioPrefs>) =>
     setPrefs((p) => {
       const next = { ...p, ...patch };
-      writePref(AUDIO_KEY, next);
+      saveAudioPrefs(next);
       return next;
     });
 

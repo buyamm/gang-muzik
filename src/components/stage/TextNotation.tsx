@@ -1,5 +1,5 @@
 import { memo, useMemo } from "react";
-import { isChordToken, parseNotation, splitInlineChords, type NoteName, type Row, type Token } from "@/lib/notation/parse";
+import { isChordToken, parseNotation, splitInlineChords, type Row, type Token } from "@/lib/notation/parse";
 import { isOutOfRange, type ResolvedShift } from "@/lib/notation/range";
 import {
   noteToSemitone,
@@ -9,21 +9,12 @@ import {
   type NoteValue,
 } from "@/lib/notation/transpose";
 import { cn } from "@/lib/utils";
+import { NOTE_CLASS } from "@/lib/notation/colors";
 
 /** transposition resolved for the whole song (null = shown as written) */
 type Shift = ResolvedShift;
 
 const ACCIDENTAL_GLYPH = { "#": "♯", b: "♭" } as const;
-
-const NOTE_CLASS: Record<NoteName, string> = {
-  Do: "text-note-do",
-  Re: "text-note-re",
-  Mi: "text-note-mi",
-  Fa: "text-note-fa",
-  Sol: "text-note-sol",
-  La: "text-note-la",
-  Si: "text-note-si",
-};
 
 const toValue = (n: NoteValue): NoteValue =>
   n.accidental ? { note: n.note, octave: n.octave, accidental: n.accidental } : { note: n.note, octave: n.octave };
