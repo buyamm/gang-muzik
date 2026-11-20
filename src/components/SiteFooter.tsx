@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { INSTRUMENTS } from "@shared/instruments";
+import { INSTRUMENTS_FOCUS_FIRST, isFocusInstrument } from "@shared/instruments";
 import { LogoMark } from "@/components/brand/Staff";
 import { CREATOR_NAME, CREATOR_URL, FEEDBACK_URL, PUBLIC_URL, STUDIO_URL } from "@/lib/links";
 import { cn } from "@/lib/utils";
@@ -36,29 +36,42 @@ function LegalBar({ children, className }: { children?: React.ReactNode; classNa
 
 /** Full footer of the public site: about, instruments, contribute, info + legal bar */
 export function SiteFooter() {
-  const instruments = INSTRUMENTS.filter((i) => i.id !== "other");
+  const instruments = INSTRUMENTS_FOCUS_FIRST.filter((i) => i.id !== "other");
   return (
     <footer className="border-t bg-card/40">
       <div className="mx-auto max-w-6xl px-4 pt-10 pb-6 sm:px-6">
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
-          <div className="max-w-xs">
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_0.8fr_0.9fr_0.9fr]">
+          <div className="max-w-xs sm:col-span-2 lg:col-span-1">
             <Link to="/" className="inline-flex items-center gap-2 font-display text-lg font-bold">
               <LogoMark className="size-7" /> Gang Muzik
             </Link>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              Thư viện sheet nhạc, cảm âm, hợp âm và tab tự cuộn, tự lật trang. Lật bằng pedal Bluetooth hoặc phím ← → Space để hai tay
-              rảnh khi chơi.
+              Học và chơi saxophone, sáo trúc: tra thế bấm, luyện gam, rồi mở bài để sheet và cảm âm tự cuộn, tự lật trang. Lật bằng pedal
+              Bluetooth hoặc phím ← → Space để hai tay rảnh khi thổi.
             </p>
           </div>
 
           <FooterColumn title="Nhạc cụ" twoColumns>
             {instruments.map((i) => (
               <li key={i.id}>
-                <Link to={`/?instrument=${i.id}`} className={linkClass}>
+                <Link to={`/?instrument=${i.id}`} className={cn(linkClass, isFocusInstrument(i.id) && "font-medium text-foreground")}>
                   {i.label}
                 </Link>
               </li>
             ))}
+          </FooterColumn>
+
+          <FooterColumn title="Học">
+            <li>
+              <Link to="/fingering" className={linkClass}>
+                Thế bấm
+              </Link>
+            </li>
+            <li>
+              <Link to="/practice" className={linkClass}>
+                Luyện gam
+              </Link>
+            </li>
           </FooterColumn>
 
           <FooterColumn title="Đóng góp">
