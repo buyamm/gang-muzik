@@ -32,6 +32,8 @@ export const LIMITS = {
   maxUnapprovedSongs: 20,
   maxPagesPerSong: 40,
   maxUploadsPerDay: 150,
+  /** AI image-to-text transcriptions per day (contributor) */
+  maxTranscribesPerDay: 60,
 } as const;
 
 export const STATUS_LABEL: Record<SongStatus, string> = {
