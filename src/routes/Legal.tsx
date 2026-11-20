@@ -1,8 +1,6 @@
 import { Link } from "react-router";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { SiteFooter } from "@/components/SiteFooter";
+import { SiteHeader } from "@/components/SiteHeader";
 import { useSeo } from "@/lib/seo";
 import { LEGAL_SEO } from "@shared/seo";
 
@@ -13,17 +11,10 @@ function Shell({ title, page, children }: { title: string; page: keyof typeof LE
   useSeo(LEGAL_SEO[page]);
   return (
     <div className="min-h-full">
-      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-        <div className="mb-6 flex items-center gap-2">
-          <Button asChild variant="ghost" size="icon">
-            <Link to="/" aria-label="Về thư viện">
-              <ArrowLeft />
-            </Link>
-          </Button>
-          <h1 className="flex-1 font-display text-3xl font-bold">{title}</h1>
-          <ThemeToggle />
-        </div>
-        <p className="mb-6 text-sm text-muted-foreground">Cập nhật lần cuối: {UPDATED}</p>
+      <SiteHeader />
+      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
+        <h1 className="font-display text-3xl font-bold sm:text-4xl">{title}</h1>
+        <p className="mt-2 mb-6 text-sm text-muted-foreground">Cập nhật lần cuối: {UPDATED}</p>
         <div className="space-y-6 leading-relaxed [&_h2]:mb-2 [&_h2]:font-display [&_h2]:text-xl [&_h2]:font-semibold [&_li]:ml-5 [&_li]:list-disc [&_ul]:space-y-1">
           {children}
         </div>
