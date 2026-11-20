@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Eye,
   EyeOff,
+  Hand,
   Keyboard,
   Maximize,
   Minimize,
@@ -23,6 +24,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
+import { toast } from "sonner";
 import type { Song, SongSettings, ViewMode } from "@shared/types";
 import { Button as AnimatedButton } from "@/components/animate-ui/components/buttons/button";
 import { SlidingNumber } from "@/components/animate-ui/primitives/texts/sliding-number";
@@ -34,10 +36,12 @@ import { useWakeLock } from "@/hooks/useWakeLock";
 import { formatDuration, speedFromDuration } from "@/lib/stage/math";
 import { readPref, removePref, writePref } from "@/lib/prefs";
 import { cn } from "@/lib/utils";
-import { normalizeTranspose, NO_TRANSPOSE, type TransposeSetting } from "@/lib/notation/transpose";
+import { parseNotation } from "@/lib/notation/parse";
+import { normalizeTranspose, NO_TRANSPOSE, type NoteValue, type TransposeSetting } from "@/lib/notation/transpose";
 import { BookSettings } from "./BookSettings";
 import { BookView, type ColumnsPref } from "./BookView";
 import { KeyMapDialog } from "./KeyMapDialog";
+import { FingeringChartDialog, FingeringPopover, fingeringTarget, type FingeringTarget } from "./FingeringPopover";
 import { DEFAULT_BPM, MetronomePanel, useStageAudio } from "./MetronomePanel";
 import { NotesDialog, usePersonalNote, type NotesData } from "./SongNotes";
 import { StageContent } from "./StageContent";
@@ -64,6 +68,9 @@ interface ViewPrefs {
 
 /** giọng kèn chọn gần nhất — bài mới mở lần đầu dùng luôn giọng này */
 const TRANSPOSE_KEY = "gm:transpose";
+/** fingering mode (tap a note to see its sax fingering), shared by all songs */
+const FINGERING_KEY = "gm:fingering";
+const FINGERING_DEFAULT = { on: false, hinted: false };
 
 const READ_LINE = 0.3;
 
@@ -136,6 +143,41 @@ export function Stage({
     writePref(TRANSPOSE_KEY, t);
   };
   const [audioOpen, setAudioOpen] = useState(false);
+  // ---------- fingering lookup ----------
+  const hasNoteRows = useMemo(
+    () => parseNotation(song.textContent).some((sec) => sec.rows.some((r) => r.notes?.some((t) => t.type === "note"))),
+    [song.textContent],
+  );
+  const [fingeringPref, setFingeringPref] = useState(() => readPref(FINGERING_KEY, FINGERING_DEFAULT));
+  const fingeringOn = hasNoteRows && fingeringPref.on;
+  const [fingerTarget, setFingerTarget] = useState<FingeringTarget | null>(null);
+  const [fingerOpen, setFingerOpen] = useState(false);
+  const [chartOpen, setChartOpen] = useState(false);
+  const [chartHighlight, setChartHighlight] = useState<number | null>(null);
+  const toggleFingering = () => {
+    const next = { on: !fingeringPref.on, hinted: true };
+    if (next.on && !fingeringPref.hinted) toast("Chạm vào nốt để xem thế bấm");
+    if (!next.on) {
+      setFingerOpen(false);
+      setChartOpen(false);
+    }
+    setFingeringPref(next);
+    writePref(FINGERING_KEY, next);
+  };
+  const onNoteClick = useCallback((written: NoteValue, concert: NoteValue, el: HTMLElement) => {
+    setFingerTarget(fingeringTarget(written, concert, el));
+    setFingerOpen(true);
+  }, []);
+  // a tap that only dismisses the popover must not also start playback / turn the page
+  const fingerDismissedAt = useRef(0);
+  const onFingerOutside = useCallback(() => {
+    fingerDismissedAt.current = performance.now();
+  }, []);
+  const openChart = useCallback((semi: number | null) => {
+    setFingerOpen(false);
+    setChartHighlight(semi);
+    setChartOpen(true);
+  }, []);
   const [personalNote, setPersonalNote] = usePersonalNote(song.id);
   const authorNote = song.note ?? "";
   const hasNotes = !!(authorNote.trim() || personalNote);
@@ -302,10 +344,11 @@ export function Stage({
     },
     [togglePlay, isScroll, scrollBack, goNext, goPrev],
   );
-  usePedalKeys(onPedal, keymap, !keyDialog && !noteDialog && !transposeOpen && !audioOpen);
+  usePedalKeys(onPedal, keymap, !keyDialog && !noteDialog && !transposeOpen && !audioOpen && !fingerOpen && !chartOpen);
 
   // ---------- chạm ----------
   const onTap = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (performance.now() - fingerDismissedAt.current < 600) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
     if (!isScroll && x < 0.3) return goPrev();
@@ -351,6 +394,15 @@ export function Stage({
         </IconBtn>
       )}
       {hasText && <TransposeSettings value={transpose} onChange={changeTranspose} onOpenChange={setTransposeOpen} />}
+      {hasNoteRows && (
+        <IconBtn
+          label={fingeringOn ? "Thế bấm (đang bật: chạm vào nốt)" : "Thế bấm"}
+          active={fingeringOn}
+          onClick={toggleFingering}
+        >
+          <Hand />
+        </IconBtn>
+      )}
       <IconBtn
         label={stageTheme === "dark" ? "Nền sáng" : "Nền tối"}
         onClick={() => update({ theme: stageTheme === "dark" ? "light" : "dark" })}
@@ -459,7 +511,14 @@ export function Stage({
               className="h-full overflow-y-auto overscroll-contain [scrollbar-width:thin]"
             >
               <div className="pt-8 pb-[70vh] sm:pt-10">
-                <StageContent song={song} scale={prefs.fontScale} colored={prefs.colored} notes={notes} transpose={transpose} />
+                <StageContent
+                  song={song}
+                  scale={prefs.fontScale}
+                  colored={prefs.colored}
+                  notes={notes}
+                  transpose={transpose}
+                  onNoteClick={fingeringOn ? onNoteClick : undefined}
+                />
               </div>
             </div>
             {/* vạch đọc */}
@@ -484,6 +543,7 @@ export function Stage({
             onStep={onBookStep}
             notes={notes}
             transpose={transpose}
+            onNoteClick={fingeringOn ? onNoteClick : undefined}
           />
         )}
 
@@ -629,6 +689,18 @@ export function Stage({
         </footer>
       )}
 
+      {fingeringOn && (
+        <>
+          <FingeringPopover
+            target={fingerTarget}
+            open={fingerOpen}
+            onOpenChange={setFingerOpen}
+            onOpenChart={openChart}
+            onPointerDownOutside={onFingerOutside}
+          />
+          <FingeringChartDialog open={chartOpen} onOpenChange={setChartOpen} highlight={chartHighlight} />
+        </>
+      )}
       <NotesDialog
         open={noteDialog}
         onOpenChange={setNoteDialog}

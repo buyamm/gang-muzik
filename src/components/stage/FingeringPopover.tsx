@@ -37,6 +37,7 @@ export function FingeringPopover({
   open,
   onOpenChange,
   onOpenChart,
+  onPointerDownOutside,
 }: {
   /** last tapped note (kept after closing so the exit animation has content) */
   target: FingeringTarget | null;
@@ -44,6 +45,8 @@ export function FingeringPopover({
   onOpenChange: (open: boolean) => void;
   /** open the full chart, highlighting a written semitone */
   onOpenChart: (semi: number | null) => void;
+  /** a tap outside closed the popover (lets the stage ignore that tap) */
+  onPointerDownOutside?: () => void;
 }) {
   const shown = target;
   const escaped = useRef(false);
@@ -59,6 +62,7 @@ export function FingeringPopover({
           collisionPadding={12}
           className="w-auto max-w-[calc(100vw-1.5rem)] p-4"
           onClick={(e) => e.stopPropagation()}
+          onPointerDownOutside={() => onPointerDownOutside?.()}
           onEscapeKeyDown={() => {
             escaped.current = true;
           }}
