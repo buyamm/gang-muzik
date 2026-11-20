@@ -15,9 +15,7 @@ export type Accidental = "#" | "b";
 export type Token =
   | { type: "note"; text: string; note: NoteName; octave: number; accidental?: Accidental }
   | { type: "sep"; text: string }
-  | { type: "text"; text: string }
-  /** breath mark (V, v or U+1D112) between notes: where to take a breath */
-  | { type: "breath"; text: string };
+  | { type: "text"; text: string };
 
 export interface Row {
   lyric?: string;
@@ -46,11 +44,6 @@ const NOTE_ALIASES: Record<string, NoteName> = {
   la: "La", l: "La",
   si: "Si", xi: "Si",
 };
-
-/** standalone breath-mark word inside a note line */
-export function isBreathMark(word: string): boolean {
-  return word === "V" || word === "v" || word === "\u{1D112}";
-}
 
 /** tên nốt + dấu hoá (# / b, tuỳ chọn) + quãng tám (số hoặc dấu phẩy trên) */
 const NOTE_RE = /^(đô|đo|do|rê|re|mi|pha|fa|sol|son|la|si|xi|d|r|m|f|s|l)([#♯b♭])?(\d)?(['’]*)$/i;
@@ -82,22 +75,18 @@ export function tokenizeNotes(line: string): Token[] {
       tokens.push({ type: "sep", text: part });
       continue;
     }
-    if (isBreathMark(part)) {
-      tokens.push({ type: "breath", text: part });
-      continue;
-    }
     const n = matchNote(part);
     tokens.push(n ? { type: "note", text: part, ...n } : { type: "text", text: part });
   }
   return tokens;
 }
 
-/** a line is a note line when >= 60% of its words are notes (breath marks are not counted) */
+/** a line is a note line when >= 60% of its words are notes */
 export function isNoteLine(line: string): boolean {
   const words = line
     .split(/[\s\-–.,;:|/()~]+/)
     .map((w) => w.trim())
-    .filter((w) => w && !isBreathMark(w));
+    .filter(Boolean);
   if (!words.length) return false;
   const notes = words.filter((w) => matchNote(w)).length;
   return notes > 0 && notes / words.length >= 0.6;
