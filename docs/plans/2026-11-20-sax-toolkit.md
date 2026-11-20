@@ -270,3 +270,6 @@ Mỗi nhánh:
 - https://bretpimentel.com/planning-breaths
 - https://en.wikipedia.org/wiki/Breath_mark
 - https://newzik.com/en/resources-sheet-music-app/how-to-transpose-sheet-music-app
+
+## Cập nhật 2026-11-20
+Mục D (dấu lấy hơi, PR #16) đã được gỡ bỏ theo yêu cầu người dùng (nhánh `revert/breath-marks`, xem `docs/plans/2026-11-20-sax-sao-learning.md`).
