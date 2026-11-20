@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { SiteFooter } from "@/components/SiteFooter";
 import { useSeo } from "@/lib/seo";
 import { LEGAL_SEO } from "@shared/seo";
 
@@ -27,6 +28,7 @@ function Shell({ title, page, children }: { title: string; page: keyof typeof LE
           {children}
         </div>
       </div>
+      <SiteFooter />
     </div>
   );
 }

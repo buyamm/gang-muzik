@@ -10,6 +10,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { LogoMark, SongMotif } from "@/components/brand/Staff";
 import { api } from "@/lib/api";
 import { STUDIO_URL } from "@/lib/links";
+import { SiteFooter } from "@/components/SiteFooter";
 import { cn } from "@/lib/utils";
 import { useSeo } from "@/lib/seo";
 import { homeSeo } from "@shared/seo";
@@ -174,24 +175,7 @@ export function Library() {
         )}
       </main>
 
-      <footer className="border-t">
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-6 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <span>
-            Khi đang chơi: pedal Bluetooth hoặc phím <Kbd>←</Kbd> <Kbd>→</Kbd> <Kbd>Space</Kbd>
-          </span>
-          <span className="flex shrink-0 gap-4">
-            <Link to="/privacy" className="underline-offset-4 hover:text-foreground hover:underline">
-              Quyền riêng tư
-            </Link>
-            <Link to="/terms" className="underline-offset-4 hover:text-foreground hover:underline">
-              Điều khoản
-            </Link>
-            <a href={STUDIO_URL} className="underline-offset-4 hover:text-foreground hover:underline">
-              Studio
-            </a>
-          </span>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
@@ -304,13 +288,5 @@ export function SongCard({ song: s, preview = false }: { song: SongSummary; prev
         </Link>
       )}
     </li>
-  );
-}
-
-function Kbd({ children }: { children: React.ReactNode }) {
-  return (
-    <kbd className="mx-0.5 inline-flex min-w-6 justify-center rounded border border-b-2 bg-card px-1.5 py-px font-sans text-xs text-foreground">
-      {children}
-    </kbd>
   );
 }

@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { CompactFooter } from "@/components/SiteFooter";
 import { LogoMark } from "@/components/brand/Staff";
 import { api } from "@studio/lib/api";
 import { useMe } from "@studio/hooks/useMe";
@@ -92,6 +93,7 @@ export function Login() {
           </form>
         )}
       </div>
+      <CompactFooter className="mt-8 w-full max-w-3xl border-t pt-4" />
     </div>
   );
 }
