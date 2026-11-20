@@ -65,3 +65,14 @@ export function instrumentLabel(value: string | null | undefined): string {
   const id = normalizeInstrument(value);
   return id ? (LABEL.get(id) ?? "") : "";
 }
+
+/** Instruments the site focuses on (learning sax and sáo trúc); shown first everywhere */
+export const FOCUS_INSTRUMENT_IDS = ["sax", "flute"] as const satisfies readonly InstrumentId[];
+
+export const isFocusInstrument = (id: string): boolean => (FOCUS_INSTRUMENT_IDS as readonly string[]).includes(id);
+
+/** Catalog with the focus instruments first, the rest in catalog order */
+export const INSTRUMENTS_FOCUS_FIRST = [
+  ...FOCUS_INSTRUMENT_IDS.map((id) => INSTRUMENTS.find((i) => i.id === id)!),
+  ...INSTRUMENTS.filter((i) => !isFocusInstrument(i.id)),
+];
