@@ -135,7 +135,16 @@ function BpmInput({ bpm, onCommit }: { bpm: number; onCommit: (v: number) => voi
 }
 
 /** nút "Nhịp & drone" + popover điều khiển */
-export function MetronomePanel({ audio, onOpenChange }: { audio: StageAudio; onOpenChange?: (open: boolean) => void }) {
+export function MetronomePanel({
+  audio,
+  onOpenChange,
+  tonicPc,
+}: {
+  audio: StageAudio;
+  onOpenChange?: (open: boolean) => void;
+  /** tonic pitch class (0..11) of the song's stored key; shows a "song tonic" shortcut for the drone */
+  tonicPc?: number;
+}) {
   const { bpm, beatsPerBar, metro, drone, prefs, setAudio } = audio;
   const [taps, setTaps] = useState<number[]>([]);
   const tapped = taps.length >= 2;
@@ -301,6 +310,19 @@ export function MetronomePanel({ audio, onOpenChange }: { audio: StageAudio; onO
           </div>
 
           <VolumeRow label="Âm lượng nốt nền" value={prefs.droneVolume} onChange={(v) => setAudio({ droneVolume: v })} />
+
+          {tonicPc !== undefined && NOTE_NAMES[tonicPc] && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full"
+              disabled={prefs.droneNote === tonicPc}
+              onClick={() => setAudio({ droneNote: tonicPc })}
+            >
+              Chủ âm của bài: {NOTE_NAMES[tonicPc].name} ({NOTE_NAMES[tonicPc].letter})
+            </Button>
+          )}
         </section>
       </PopoverContent>
     </Popover>
