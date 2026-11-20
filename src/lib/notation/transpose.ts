@@ -179,3 +179,52 @@ export function resolveSpelling(pref: SpellingPref, semitones: number, fromKeyPc
   if (pref !== "auto") return pref;
   return FLAT_KEYS.has(mod12(fromKeyPc + semitones)) ? "flat" : "sharp";
 }
+
+// ---------- song key ("C", "Am", "F#m", "Bb") ----------
+
+const KEY_NAME = /^([A-G])([#b]?)(m?)$/;
+/** canonical root spelling for key names (matches the Studio key picker) */
+export const KEY_ROOTS = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
+
+function parseKeyName(key: string | null | undefined): { pc: number; minor: boolean } | null {
+  const m = KEY_NAME.exec(key ?? "");
+  if (!m) return null;
+  return { pc: rootPc(m[1], m[2]), minor: m[3] === "m" };
+}
+
+/** major key pc (0..11) used for accidental spelling; a minor key maps to its relative major (Am → C = 0) */
+export function keyMajorPc(key: string | null | undefined): number | null {
+  const k = parseKeyName(key);
+  if (!k) return null;
+  return k.minor ? mod12(k.pc + 3) : k.pc;
+}
+
+/** tonic pc (0..11) of the key, e.g. for a drone (Am → A = 9) */
+export function keyRootPc(key: string | null | undefined): number | null {
+  return parseKeyName(key)?.pc ?? null;
+}
+
+/** guess the song key from its first chord ("Am7" → "Am", "Bb/D" → "Bb"); no chord → null */
+export function guessKeyName(sections: Section[]): string | null {
+  for (const sec of sections) {
+    for (const row of sec.rows) {
+      const candidates: string[] = [];
+      if (row.chords) candidates.push(...row.chords.trim().split(/\s+/));
+      if (row.lyric) for (const seg of splitInlineChords(row.lyric) ?? []) if (seg.chord) candidates.push(seg.chord);
+      for (const c of candidates) {
+        if (!isChordToken(c)) continue;
+        const m = CHORD_PARTS.exec(c);
+        if (!m) continue;
+        const minor = /^(m(?!aj)|min)/.test(m[4]);
+        return KEY_ROOTS[rootPc(m[2], m[3])] + (minor ? "m" : "");
+      }
+    }
+  }
+  return null;
+}
+
+/** transpose a key name: "Am" +9 sharp → "F#m"; invalid key → returned unchanged */
+export function transposeKeyName(key: string, semitones: number, spelling: Spelling): string {
+  if (!parseKeyName(key)) return key;
+  return transposeChord(key, semitones, spelling);
+}

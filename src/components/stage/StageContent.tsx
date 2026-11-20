@@ -12,6 +12,7 @@ export const StageContent = memo(function StageContent({
   fit = false,
   notes,
   transpose,
+  songKey,
 }: {
   song: Song;
   scale: number;
@@ -22,6 +23,8 @@ export const StageContent = memo(function StageContent({
   notes?: NotesData | null;
   /** dịch giọng cho nhạc cụ (chỉ áp dụng nhạc dạng chữ) */
   transpose?: TransposeSetting;
+  /** stored song key, used for accidental spelling when transposing */
+  songKey?: string;
 }) {
   return (
     <div className="text-stage-fg" style={{ fontSize: `${scale * 1.25}rem` }}>
@@ -45,7 +48,7 @@ export const StageContent = memo(function StageContent({
       )}
       {song.textContent.trim() && (
         <div className={song.pages.length ? (fit ? "pt-6" : "pt-10") : ""}>
-          <TextNotation text={song.textContent} colored={colored} compact={fit} transpose={transpose} />
+          <TextNotation text={song.textContent} colored={colored} compact={fit} transpose={transpose} songKey={songKey} />
         </div>
       )}
     </div>

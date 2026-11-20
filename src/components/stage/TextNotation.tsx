@@ -3,6 +3,7 @@ import { isChordToken, parseNotation, splitInlineChords, type NoteName, type Row
 import {
   detectKeyPc,
   isIdentity,
+  keyMajorPc,
   resolveSpelling,
   transposeChord,
   transposeChordLine,
@@ -91,12 +92,15 @@ export const TextNotation = memo(function TextNotation({
   colored = true,
   compact = false,
   transpose,
+  songKey,
 }: {
   text: string;
   colored?: boolean;
   compact?: boolean;
   /** dịch giọng cho nhạc cụ (Bb, Eb...); bỏ trống / 0 = nguyên bản */
   transpose?: TransposeSetting;
+  /** stored song key ("Am", "Bb"…); preferred over the first-chord guess for accidental spelling */
+  songKey?: string;
 }) {
   const sections = useMemo(() => parseNotation(text), [text]);
   const semitones = transpose?.semitones ?? 0;
@@ -104,8 +108,8 @@ export const TextNotation = memo(function TextNotation({
   const spellingPref = transpose?.spelling ?? "auto";
   const shift = useMemo<Shift | null>(() => {
     if (isIdentity({ semitones, octave, spelling: spellingPref })) return null;
-    return { semitones, octave, spelling: resolveSpelling(spellingPref, semitones, detectKeyPc(sections)) };
-  }, [sections, semitones, octave, spellingPref]);
+    return { semitones, octave, spelling: resolveSpelling(spellingPref, semitones, keyMajorPc(songKey) ?? detectKeyPc(sections)) };
+  }, [sections, semitones, octave, spellingPref, songKey]);
   if (!sections.length) return null;
   return (
     <div className={compact ? "px-1" : "mx-auto max-w-5xl px-5 sm:px-10"}>

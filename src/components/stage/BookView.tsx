@@ -43,6 +43,7 @@ export function BookView({
   onStep,
   notes,
   transpose,
+  songKey,
 }: {
   song: Song;
   scale: number;
@@ -54,6 +55,8 @@ export function BookView({
   onStep: (dir: 1 | -1) => void;
   notes?: NotesData | null;
   transpose?: TransposeSetting;
+  /** stored song key, used for accidental spelling when transposing */
+  songKey?: string;
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
@@ -106,7 +109,7 @@ export function BookView({
     const ro = new ResizeObserver(measure);
     ro.observe(m);
     return () => ro.disconnect();
-  }, [innerW, pageH, size.h, song, scale, notes, transpose]);
+  }, [innerW, pageH, size.h, song, scale, notes, transpose, songKey]);
 
   useEffect(() => {
     if (pages.length) onLayout({ pageCount: pages.length, cols: fitAll ? pages.length : cols });
@@ -171,7 +174,7 @@ export function BookView({
         >
           <div className="overflow-hidden" style={{ height: pages[i].height }}>
             <div style={{ transform: `translateY(${-pages[i].start}px)` }}>
-              <StageContent song={song} scale={scale} colored={colored} fit notes={notes} transpose={transpose} />
+              <StageContent song={song} scale={scale} colored={colored} fit notes={notes} transpose={transpose} songKey={songKey} />
             </div>
           </div>
         </div>
@@ -261,7 +264,7 @@ export function BookView({
         className="pointer-events-none invisible absolute top-0 left-0"
         style={{ width: innerW }}
       >
-        <StageContent song={song} scale={scale} colored={colored} fit notes={notes} transpose={transpose} />
+        <StageContent song={song} scale={scale} colored={colored} fit notes={notes} transpose={transpose} songKey={songKey} />
       </div>
 
       {ready && fitAll && allPages()}
