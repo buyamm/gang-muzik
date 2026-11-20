@@ -1,6 +1,6 @@
 # Gang Muzik 🎷
 
-Thư viện sheet nhạc, cảm âm, hợp âm, tab **rảnh tay** cho mọi nhạc cụ: tự cuộn theo thời lượng bài, chế độ sách tự lật trang, điều khiển bằng pedal Bluetooth / phím / lăn chuột.
+Nơi **học và chơi saxophone, sáo trúc** (vẫn có bài cho guitar, piano và các nhạc cụ khác): tra thế bấm từng nốt, luyện gam, xem sheet nhạc, cảm âm, hợp âm, tab **rảnh tay**. Bài tự cuộn theo thời lượng, chế độ sách tự lật trang, điều khiển bằng pedal Bluetooth / phím / lăn chuột.
 
 Gồm **2 site dùng chung một database (D1) + kho ảnh (R2)**:
 

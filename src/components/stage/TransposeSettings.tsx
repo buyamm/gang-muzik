@@ -1,15 +1,17 @@
-import { Minus, Music2, Plus } from "lucide-react";
+import { Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { formatNote, type RangeSummary } from "@/lib/notation/range";
 import {
   clampOctave,
   clampSemitones,
+  formatKeyName,
   HORN_PRESETS,
   hasRangeCheck,
+  hornPreset,
   SEMITONE_MAX,
   SEMITONE_MIN,
-  transposeBadge,
+  suggestSaoKey,
+  type HornPresetInfo,
   type SpellingPref,
   type TransposeSetting,
 } from "@/lib/notation/transpose";
@@ -23,6 +25,13 @@ const OCTAVES: { value: number; label: string }[] = [
 ];
 
 const octaveLabel = (n: number) => OCTAVES.find((o) => o.value === n)?.label ?? "Giữ nguyên";
+
+/** preset groups shown in the panel, in order */
+const PRESET_GROUPS: { family: HornPresetInfo["family"]; label: string }[] = [
+  { family: "concert", label: "Concert" },
+  { family: "sax", label: "Saxophone" },
+  { family: "sao", label: "Sáo trúc 6 lỗ" },
+];
 
 const SPELLINGS: { value: SpellingPref; label: string }[] = [
   { value: "auto", label: "Tự động" },
@@ -61,49 +70,71 @@ function Stepper({
 export interface TransposePanelProps {
   value: TransposeSetting;
   onChange: (t: TransposeSetting) => void;
-  /** octave the auto mode picks for this song (sax presets) */
+  /** octave the auto mode picks for this song (sax / sáo presets) */
   autoOctaveValue?: number;
-  /** written span of the song on the horn (sax presets, songs with cảm âm notes) */
+  /** written span of the song on the instrument (sax / sáo presets, songs with cảm âm notes) */
   rangeSummary?: RangeSummary | null;
   /** optional muted line shown at the top */
   notice?: string;
+  /** song key (e.g. "Am"); used to suggest a matching sáo */
+  songKey?: string;
   className?: string;
 }
 
 const formatSemitones = (n: number) => (n === 0 ? "0" : `${n > 0 ? "+" : "−"}${Math.abs(n)}`);
 
-/** transpose controls (instrument presets, custom interval, octave, spelling) without a trigger */
-export function TransposePanel({ value, onChange, autoOctaveValue, rangeSummary, notice, className }: TransposePanelProps) {
+/** transpose controls (instrument presets, custom interval, octave, spelling) */
+export function TransposePanel({ value, onChange, autoOctaveValue, rangeSummary, notice, songKey, className }: TransposePanelProps) {
   const preset = value.preset ?? "custom";
-  const sax = hasRangeCheck(preset);
-  const auto = sax && !!value.autoOctave;
+  const ranged = hasRangeCheck(preset);
+  const auto = ranged && !!value.autoOctave;
   const set = (patch: Partial<TransposeSetting>) => onChange({ ...value, ...patch });
+  const pick = (p: HornPresetInfo) => set({ preset: p.id, semitones: p.semitones, autoOctave: hasRangeCheck(p.id) });
   const n = value.semitones;
+  const saoHint = hornPreset(suggestSaoKey(songKey) ?? undefined);
 
   return (
     <div className={cn("space-y-4", className)}>
       {notice && <p className="text-xs text-muted-foreground">{notice}</p>}
+      {songKey && saoHint && (
+        <div className="flex items-center justify-between gap-2 rounded-md bg-primary/10 px-2 py-1.5 text-xs">
+          <span>
+            Bài tone {formatKeyName(songKey)} → hợp <span className="font-semibold">{saoHint.name}</span>
+          </span>
+          {preset !== saoHint.id && (
+            <button
+              type="button"
+              onClick={() => pick(saoHint)}
+              className="shrink-0 rounded-md bg-primary px-2 py-0.5 font-semibold text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            >
+              Dùng {saoHint.name}
+            </button>
+          )}
+        </div>
+      )}
       <div className="space-y-2">
         <div>
-          <div className="text-sm font-semibold">Loại kèn</div>
+          <div className="text-sm font-semibold">Nhạc cụ</div>
           <div className="text-xs text-muted-foreground">
-            Dịch cảm âm và hợp âm sang giọng của kèn — thổi đúng nốt đã viết. Kèn sax tự chọn quãng tám vừa tầm kèn.
+            Dịch cảm âm & hợp âm sang giọng nhạc cụ của bạn — sax hoặc sáo, thổi đúng nốt đã viết. Sax và sáo tự chọn quãng tám
+            vừa tầm.
           </div>
         </div>
-        <div className="flex flex-col gap-1">
-          {HORN_PRESETS.map((p) => (
-            <Choice
-              key={p.id}
-              active={preset === p.id}
-              onClick={() => set({ preset: p.id, semitones: p.semitones, autoOctave: hasRangeCheck(p.id) })}
-            >
-              <span className="flex items-center justify-between gap-2">
-                <span>{p.label}</span>
-                <span className="text-xs opacity-75">{formatSemitones(p.semitones)}</span>
-              </span>
-            </Choice>
-          ))}
-        </div>
+        {PRESET_GROUPS.map((g) => (
+          <div key={g.family} className="space-y-1">
+            <div className="text-xs font-medium text-muted-foreground">{g.label}</div>
+            <div className="flex flex-col gap-1">
+              {HORN_PRESETS.filter((p) => p.family === g.family).map((p) => (
+                <Choice key={p.id} active={preset === p.id} onClick={() => pick(p)}>
+                  <span className="flex items-center justify-between gap-2">
+                    <span>{p.label}</span>
+                    <span className="text-xs opacity-75">{formatSemitones(p.semitones)}</span>
+                  </span>
+                </Choice>
+              ))}
+            </div>
+          </div>
+        ))}
         {rangeSummary && (
           <div
             className={cn(
@@ -111,7 +142,7 @@ export function TransposePanel({ value, onChange, autoOctaveValue, rangeSummary,
               rangeSummary.outOfRange ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground",
             )}
           >
-            Tầm nốt trên kèn: {formatNote(rangeSummary.low)} → {formatNote(rangeSummary.high)}
+            Tầm nốt trên {hornPreset(preset)?.name ?? "nhạc cụ"}: {formatNote(rangeSummary.low)} → {formatNote(rangeSummary.high)}
             {rangeSummary.outOfRange ? (
               <span className="block font-medium">{rangeSummary.outOfRange} nốt ngoài tầm — đã gạch đỏ trong bài</span>
             ) : (
@@ -127,7 +158,7 @@ export function TransposePanel({ value, onChange, autoOctaveValue, rangeSummary,
             Nhạc cụ khác / tuỳ chỉnh{" "}
             {preset === "custom" && <span className="text-xs font-normal text-primary">(đang dùng)</span>}
           </div>
-          <div className="text-xs text-muted-foreground">Trumpet, clarinet… chọn số bán cung cần dịch.</div>
+          <div className="text-xs text-muted-foreground">Trumpet, clarinet, sáo khác giọng… chọn số bán cung cần dịch.</div>
         </div>
         <Stepper
           label="bán cung"
@@ -144,7 +175,7 @@ export function TransposePanel({ value, onChange, autoOctaveValue, rangeSummary,
           <div className="text-sm font-semibold">Quãng tám (cảm âm)</div>
           <div className="text-xs text-muted-foreground">Nốt dịch lên cao quá / thấp quá thì hạ hoặc nâng cả bài một quãng tám.</div>
         </div>
-        {sax && (
+        {ranged && (
           <div className="flex">
             <Choice active={auto} onClick={() => set({ autoOctave: true })}>
               Tự động{autoOctaveValue !== undefined && ` (đang: ${octaveLabel(autoOctaveValue)})`}
@@ -178,47 +209,5 @@ export function TransposePanel({ value, onChange, autoOctaveValue, rangeSummary,
         </div>
       </div>
     </div>
-  );
-}
-
-/** pick the instrument (sax type, or a custom interval) to transpose cảm âm & chords */
-export function TransposeSettings({
-  onOpenChange,
-  ...panel
-}: Omit<TransposePanelProps, "className"> & {
-  onOpenChange?: (open: boolean) => void;
-}) {
-  const badge = transposeBadge(panel.value);
-  const label = badge ? `Giọng kèn (đang dịch: ${badge})` : "Giọng kèn";
-
-  return (
-    <Popover onOpenChange={onOpenChange}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          aria-label={label}
-          title={label}
-          onClick={(e) => e.stopPropagation()}
-          className={cn("relative text-stage-fg hover:bg-stage-fg/10 hover:text-stage-fg", badge && "text-primary")}
-        >
-          <Music2 />
-          {badge && (
-            <span className="pointer-events-none absolute -top-0.5 -right-1 rounded-full bg-primary px-1 text-[10px] leading-4 font-bold text-primary-foreground">
-              {badge}
-            </span>
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        collisionPadding={8}
-        className="max-h-[min(80vh,40rem)] w-80 overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <TransposePanel {...panel} />
-      </PopoverContent>
-    </Popover>
   );
 }

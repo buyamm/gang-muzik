@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { SAX_WRITTEN_RANGE } from "@/lib/notation/range";
-import { HORN_PRESETS, NO_TRANSPOSE, noteToSemitone, type TransposeSetting } from "@/lib/notation/transpose";
+import { SAO_WRITTEN_RANGE, SAX_WRITTEN_RANGE } from "@/lib/notation/range";
+import { hasRangeCheck, HORN_PRESETS, NO_TRANSPOSE, noteToSemitone, SAO_KEYS, type TransposeSetting } from "@/lib/notation/transpose";
 import { practiceRange, practiceTranspose, selectPreset } from "./instrument";
 import { buildRange, startOctave, type ScaleOptions } from "./scales";
 
@@ -16,8 +16,9 @@ const opts = (o: Partial<ScaleOptions>): ScaleOptions => ({
 const custom: TransposeSetting = { semitones: 3, octave: 1, spelling: "auto", preset: "custom", autoOctave: false };
 
 describe("practice/instrument", () => {
-  it("sax presets use SAX_WRITTEN_RANGE; concert and custom have no range", () => {
+  it("sax / sáo presets use their written range; concert and custom have no range", () => {
     for (const id of ["alto", "tenor", "soprano", "baritone"] as const) expect(practiceRange(id)).toBe(SAX_WRITTEN_RANGE);
+    for (const k of SAO_KEYS) expect(practiceRange(k.id)).toBe(SAO_WRITTEN_RANGE);
     expect(practiceRange("concert")).toBeNull();
     expect(practiceRange("custom")).toBeNull();
     expect(practiceRange(undefined)).toBeNull();
@@ -32,6 +33,13 @@ describe("practice/instrument", () => {
     expect(concertOf("alto")).toBe(-9); // Eb3
     expect(concertOf("tenor")).toBe(-14); // Bb2
     expect(concertOf("baritone")).toBe(-21); // Eb2
+  });
+
+  it("sáo presets sound at the flute's real pitch (written Do1 = SAO_KEYS concert)", () => {
+    for (const k of SAO_KEYS) {
+      const t = practiceTranspose(selectPreset(NO_TRANSPOSE, k.id));
+      expect(buildRange(opts({ tonic: 0, transpose: t, range: SAO_WRITTEN_RANGE }))[0].concert).toBe(k.concert);
+    }
   });
 
   it("the octave stored for the Stage does not leak into sax practice", () => {
@@ -50,7 +58,7 @@ describe("practice/instrument", () => {
   it("selectPreset writes the shared TransposeSetting shape", () => {
     for (const p of HORN_PRESETS) {
       const t = selectPreset(custom, p.id);
-      expect(t).toMatchObject({ preset: p.id, semitones: p.semitones, autoOctave: p.sax, spelling: "auto" });
+      expect(t).toMatchObject({ preset: p.id, semitones: p.semitones, autoOctave: hasRangeCheck(p.id), spelling: "auto" });
     }
   });
 

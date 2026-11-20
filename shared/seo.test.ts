@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FINGERING_SEO, homeSeo, PRACTICE_SEO, songSeo, songJsonLd, truncate } from "./seo";
+import { DEFAULT_DESCRIPTION, FINGERING_SEO, homeSeo, PRACTICE_SEO, siteJsonLd, songSeo, songJsonLd, truncate } from "./seo";
 
 const song = {
   id: "abc",
@@ -38,6 +38,20 @@ describe("seo", () => {
     expect(homeSeo("guitar").path).toBe("/?instrument=guitar");
     expect(homeSeo("xyz123").path).toBe("/");
     expect(homeSeo(null).path).toBe("/");
+    expect(homeSeo("sax").title).toContain("Saxophone");
+  });
+
+  it("home page and site JSON-LD focus on saxophone and sáo trúc", () => {
+    const home = homeSeo(null);
+    expect(home.title).toMatch(/saxophone/i);
+    expect(home.title).toMatch(/sáo trúc/i);
+    expect(home.description).toBe(DEFAULT_DESCRIPTION);
+    expect(DEFAULT_DESCRIPTION).not.toContain("mọi nhạc cụ");
+    expect(DEFAULT_DESCRIPTION.length).toBeLessThanOrEqual(160);
+    const site = siteJsonLd("https://x.test");
+    expect(site.url).toBe("https://x.test/");
+    expect(site.keywords).toContain("sáo trúc");
+    expect(site.keywords).toContain("saxophone");
   });
 
   it("JSON-LD dùng URL tuyệt đối", () => {
