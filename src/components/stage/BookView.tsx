@@ -5,6 +5,7 @@ import type { ResolvedShift } from "@/lib/notation/range";
 import { autoColumns, fitGrid, paginateBook } from "@/lib/stage/math";
 import type { NotesData } from "./SongNotes";
 import { StageContent } from "./StageContent";
+import type { NoteClickHandler } from "./TextNotation";
 
 /** "all" = thu nhỏ để hiện tất cả các trang trên một màn hình */
 export type ColumnsPref = "auto" | 1 | 2 | 3 | 4 | "all";
@@ -43,6 +44,7 @@ export function BookView({
   onStep,
   notes,
   transpose,
+  onNoteClick,
 }: {
   song: Song;
   scale: number;
@@ -54,6 +56,7 @@ export function BookView({
   onStep: (dir: 1 | -1) => void;
   notes?: NotesData | null;
   transpose?: ResolvedShift | null;
+  onNoteClick?: NoteClickHandler;
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
@@ -106,7 +109,7 @@ export function BookView({
     const ro = new ResizeObserver(measure);
     ro.observe(m);
     return () => ro.disconnect();
-  }, [innerW, pageH, size.h, song, scale, notes, transpose]);
+  }, [innerW, pageH, size.h, song, scale, notes, transpose, onNoteClick]);
 
   useEffect(() => {
     if (pages.length) onLayout({ pageCount: pages.length, cols: fitAll ? pages.length : cols });
@@ -171,7 +174,7 @@ export function BookView({
         >
           <div className="overflow-hidden" style={{ height: pages[i].height }}>
             <div style={{ transform: `translateY(${-pages[i].start}px)` }}>
-              <StageContent song={song} scale={scale} colored={colored} fit notes={notes} transpose={transpose} />
+              <StageContent song={song} scale={scale} colored={colored} fit notes={notes} transpose={transpose} onNoteClick={onNoteClick} />
             </div>
           </div>
         </div>
@@ -261,7 +264,7 @@ export function BookView({
         className="pointer-events-none invisible absolute top-0 left-0"
         style={{ width: innerW }}
       >
-        <StageContent song={song} scale={scale} colored={colored} fit notes={notes} transpose={transpose} />
+        <StageContent song={song} scale={scale} colored={colored} fit notes={notes} transpose={transpose} onNoteClick={onNoteClick} />
       </div>
 
       {ready && fitAll && allPages()}
