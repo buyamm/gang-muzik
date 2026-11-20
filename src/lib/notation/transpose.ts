@@ -228,3 +228,8 @@ export function transposeKeyName(key: string, semitones: number, spelling: Spell
   if (!parseKeyName(key)) return key;
   return transposeChord(key, semitones, spelling);
 }
+
+/** display form of a key name with music glyphs: "F#m" → "F♯m", "Bb" → "B♭" */
+export function formatKeyName(key: string): string {
+  return key.replace(/^([A-G])#/, "$1♯").replace(/^([A-G])b/, "$1♭");
+}

@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { TextNotation } from "@/components/stage/TextNotation";
 import { parseNotation } from "./parse";
-import { guessKeyName, keyMajorPc, keyRootPc, transposeKeyName, type TransposeSetting } from "./transpose";
+import { formatKeyName, guessKeyName, keyMajorPc, keyRootPc, transposeKeyName, type TransposeSetting } from "./transpose";
 
 describe("keyMajorPc / keyRootPc", () => {
   it("maps major keys to their own pc", () => {
@@ -61,6 +61,15 @@ describe("transposeKeyName", () => {
 
   it("leaves invalid keys unchanged", () => {
     expect(transposeKeyName("Cmaj", 2, "sharp")).toBe("Cmaj");
+  });
+});
+
+describe("formatKeyName", () => {
+  it("renders accidentals as music glyphs", () => {
+    expect(formatKeyName("F#m")).toBe("F♯m");
+    expect(formatKeyName("Bb")).toBe("B♭");
+    expect(formatKeyName("Ebm")).toBe("E♭m");
+    expect(formatKeyName("Am")).toBe("Am");
   });
 });
 
