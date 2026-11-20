@@ -6,7 +6,7 @@ import {
   clampOctave,
   clampSemitones,
   HORN_PRESETS,
-  isSaxPreset,
+  hasRangeCheck,
   SEMITONE_MAX,
   SEMITONE_MIN,
   transposeBadge,
@@ -79,7 +79,7 @@ export function TransposeSettings({
 }) {
   const badge = transposeBadge(value);
   const preset = value.preset ?? "custom";
-  const sax = isSaxPreset(preset);
+  const sax = hasRangeCheck(preset);
   const auto = sax && !!value.autoOctave;
   const set = (patch: Partial<TransposeSetting>) => onChange({ ...value, ...patch });
   const n = value.semitones;
@@ -124,11 +124,11 @@ export function TransposeSettings({
               <Choice
                 key={p.id}
                 active={preset === p.id}
-                onClick={() => set({ preset: p.id, semitones: p.semitones, autoOctave: p.sax })}
+                onClick={() => set({ preset: p.id, semitones: p.semitones, autoOctave: hasRangeCheck(p.id) })}
               >
                 <span className="flex items-center justify-between gap-2">
                   <span>{p.label}</span>
-                  <span className="text-xs opacity-75">{p.semitones ? `+${p.semitones}` : "0"}</span>
+                  <span className="text-xs opacity-75">{p.semitones > 0 ? `+${p.semitones}` : p.semitones < 0 ? `−${-p.semitones}` : "0"}</span>
                 </span>
               </Choice>
             ))}

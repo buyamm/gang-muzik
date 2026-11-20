@@ -37,11 +37,10 @@ import { formatDuration, speedFromDuration } from "@/lib/stage/math";
 import { readPref, removePref, writePref } from "@/lib/prefs";
 import { cn } from "@/lib/utils";
 import { parseNotation } from "@/lib/notation/parse";
-import { bestOctave, resolveShift, summarizeRange } from "@/lib/notation/range";
+import { bestOctave, rangeFor, resolveShift, summarizeRange } from "@/lib/notation/range";
 import {
   formatKeyName,
   hornPreset,
-  isSaxPreset,
   keyMajorPc,
   keyRootPc,
   normalizeTranspose,
@@ -165,7 +164,10 @@ export function Stage({
   );
   const rangeSummary = useMemo(() => summarizeRange(sections, shift), [sections, shift]);
   const autoOctaveValue = useMemo(
-    () => (isSaxPreset(transpose.preset) ? bestOctave(sections, transpose.semitones) : undefined),
+    () => {
+      const range = rangeFor(transpose.preset);
+      return range ? bestOctave(sections, transpose.semitones, range) : undefined;
+    },
     [sections, transpose.preset, transpose.semitones],
   );
   const horn = useMemo(() => {
