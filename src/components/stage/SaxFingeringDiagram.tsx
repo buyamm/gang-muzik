@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useId } from "react";
 import { SAX_KEY_LABELS, type SaxKey } from "@/lib/sax/fingering";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +38,7 @@ const LAYOUT: Record<SaxKey, Shape> = {
 };
 
 const ORDER = Object.keys(LAYOUT) as SaxKey[];
+const MAIN_KEYS: SaxKey[] = ["l1", "bis", "l2", "l3", "r1", "r2", "r3"];
 const VIEW = { x: 8, y: 17, w: 104, h: 246 };
 
 function KeyShape({ shape, pressed, accent }: { shape: Shape; pressed: boolean; accent: boolean }) {
@@ -89,6 +90,7 @@ export const SaxFingeringDiagram = memo(function SaxFingeringDiagram({
   label?: string;
 }) {
   const pressed = new Set(keys);
+  const maskId = useId();
   const strokeWidth = height < 140 ? 1.1 : 1.5;
   return (
     <svg
@@ -100,8 +102,25 @@ export const SaxFingeringDiagram = memo(function SaxFingeringDiagram({
       className={cn("shrink-0", className)}
       strokeWidth={strokeWidth}
     >
-      {/* instrument body guide + split between the hands */}
-      <line x1={56} y1={42} x2={56} y2={240} stroke="currentColor" strokeOpacity={0.14} strokeWidth={6} strokeLinecap="round" />
+      {/* instrument body guide (hidden behind the main keys) + split between the hands */}
+      <mask id={maskId} maskUnits="userSpaceOnUse">
+        <rect x={VIEW.x} y={VIEW.y} width={VIEW.w} height={VIEW.h} fill="white" />
+        {MAIN_KEYS.map((k) => {
+          const c = LAYOUT[k] as Extract<Shape, { kind: "circle" }>;
+          return <circle key={k} cx={c.cx} cy={c.cy} r={c.r + 1.5} fill="black" />;
+        })}
+      </mask>
+      <line
+        x1={56}
+        y1={42}
+        x2={56}
+        y2={240}
+        stroke="currentColor"
+        strokeOpacity={0.14}
+        strokeWidth={6}
+        strokeLinecap="round"
+        mask={`url(#${maskId})`}
+      />
       <line
         x1={34}
         y1={159}
