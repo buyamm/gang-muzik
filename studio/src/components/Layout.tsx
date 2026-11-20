@@ -5,15 +5,12 @@ import { Dialog as DialogPrimitive } from "radix-ui";
 import { ExternalLink, Inbox, LibraryBig, LogOut, Menu, Music2, Users as UsersIcon, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { SiteCredit } from "@/components/SiteCredit";
+import { CompactFooter } from "@/components/SiteFooter";
 import { LogoMark } from "@/components/brand/Staff";
+import { PUBLIC_URL } from "@/lib/links";
 import { cn } from "@/lib/utils";
 import { api } from "@studio/lib/api";
 import { useMe } from "@studio/hooks/useMe";
-
-const PUBLIC_URL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname)
-  ? "http://localhost:5173"
-  : "https://gang-muzik.lytruong.workers.dev";
 
 interface NavItem {
   to: string;
@@ -91,7 +88,7 @@ export function Layout() {
         </main>
         <footer className="border-t">
           <div className="mx-auto w-full max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
-            <SiteCredit />
+            <CompactFooter />
           </div>
         </footer>
       </div>

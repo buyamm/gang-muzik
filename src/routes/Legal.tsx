@@ -2,7 +2,7 @@ import { Link } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { SiteCredit } from "@/components/SiteCredit";
+import { SiteFooter } from "@/components/SiteFooter";
 import { useSeo } from "@/lib/seo";
 import { LEGAL_SEO } from "@shared/seo";
 
@@ -27,10 +27,8 @@ function Shell({ title, page, children }: { title: string; page: keyof typeof LE
         <div className="space-y-6 leading-relaxed [&_h2]:mb-2 [&_h2]:font-display [&_h2]:text-xl [&_h2]:font-semibold [&_li]:ml-5 [&_li]:list-disc [&_ul]:space-y-1">
           {children}
         </div>
-        <footer className="mt-12 border-t pt-5">
-          <SiteCredit />
-        </footer>
       </div>
+      <SiteFooter />
     </div>
   );
 }

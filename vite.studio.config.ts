@@ -3,11 +3,15 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
 
 const r = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 
+const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")) as { version: string };
+
 /** Studio (CMS): `npm run dev:studio` → http://localhost:5174 */
 export default defineConfig({
+  define: { __APP_VERSION__: JSON.stringify(pkg.version) },
   root: r("./studio"),
   plugins: [
     react(),
