@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { Link, useNavigate, useParams } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, Check, Eye, Lock, Send, Trash2, Undo2, X } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, Eye, Lock, Send, Trash2, Undo2, X } from "lucide-react";
 import type { PageImage, Song, SongInput, SongKind, ViewMode } from "@shared/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,7 @@ import { TextNotation } from "@/components/stage/TextNotation";
 import { Stage } from "@/components/stage/Stage";
 import { SongCard } from "@/routes/Library";
 import { canDelete, canEdit, canSubmit, type SongRef } from "@shared/permissions";
-import { INSTRUMENTS, instrumentLabel, parseInstruments, type InstrumentId } from "@shared/instruments";
+import { INSTRUMENTS_FOCUS_FIRST, instrumentLabel, isFocusInstrument, parseInstruments, type InstrumentId } from "@shared/instruments";
 import { useMe } from "@studio/hooks/useMe";
 import { api } from "@studio/lib/api";
 import { formatDuration, parseDuration } from "@/lib/stage/math";
@@ -75,6 +75,64 @@ function keyParts(key: string | undefined): Pick<Form, "keyRoot" | "keyMinor"> {
   const pc = keyRootPc(key);
   if (pc === null) return { keyRoot: "", keyMinor: false };
   return { keyRoot: KEY_ROOTS[pc], keyMinor: key!.endsWith("m") };
+}
+
+const FOCUS_CHOICES = INSTRUMENTS_FOCUS_FIRST.filter((i) => isFocusInstrument(i.id));
+const OTHER_CHOICES = INSTRUMENTS_FOCUS_FIRST.filter((i) => !isFocusInstrument(i.id));
+
+/** Saxophone and Sáo up front; the other instruments sit in a collapsible group (opened when one of them is picked) */
+function InstrumentPicker({ value, onToggle }: { value: InstrumentId[]; onToggle: (id: InstrumentId) => void }) {
+  const pickedOthers = value.filter((id) => !isFocusInstrument(id));
+  const hasOthers = pickedOthers.length > 0;
+  const [open, setOpen] = useState(hasOthers);
+  // songs load after the first render: open the group once an existing song turns out to use another instrument
+  useEffect(() => {
+    if (hasOthers) setOpen(true);
+  }, [hasOthers]);
+
+  const chip = (i: (typeof INSTRUMENTS_FOCUS_FIRST)[number], big = false) => {
+    const on = value.includes(i.id);
+    return (
+      <button
+        key={i.id}
+        type="button"
+        aria-pressed={on}
+        onClick={() => onToggle(i.id)}
+        className={cn(
+          "flex items-center gap-1 rounded-full border text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+          big ? "px-4 py-1.5" : "px-3 py-1",
+          on ? "border-foreground bg-foreground text-background" : "text-muted-foreground hover:border-foreground/40 hover:text-foreground",
+        )}
+      >
+        {on && <Check className="-ml-0.5 size-3.5" />}
+        {i.label}
+      </button>
+    );
+  };
+
+  return (
+    <div className="space-y-2" role="group" aria-labelledby="instrument-label">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {FOCUS_CHOICES.map((i) => chip(i, true))}
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls="instrument-others"
+          onClick={() => setOpen((o) => !o)}
+          className="flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        >
+          Nhạc cụ khác
+          {hasOthers && !open && <span className="rounded-full bg-muted px-1.5 text-xs text-foreground tabular-nums">{pickedOthers.length}</span>}
+          <ChevronDown className={cn("size-4 transition-transform", open && "rotate-180")} />
+        </button>
+      </div>
+      {open && (
+        <div id="instrument-others" className="flex flex-wrap gap-1.5 rounded-xl border border-dashed p-2">
+          {OTHER_CHOICES.map((i) => chip(i))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 const SELECT_CLASS =
@@ -398,26 +456,7 @@ export function SongEditor() {
           <div className="space-y-2">
             <Label id="instrument-label">Nhạc cụ</Label>
             <p className="text-xs text-muted-foreground">Chọn được nhiều nhạc cụ. Bài sẽ hiện trong từng mục tương ứng ở thư viện.</p>
-            <div className="flex flex-wrap gap-1.5" role="group" aria-labelledby="instrument-label">
-              {INSTRUMENTS.map((i) => {
-                const on = form.instruments.includes(i.id);
-                return (
-                  <button
-                    key={i.id}
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() => toggleInstrument(i.id)}
-                    className={cn(
-                      "flex items-center gap-1 rounded-full border px-3 py-1 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                      on ? "border-foreground bg-foreground text-background" : "text-muted-foreground hover:border-foreground/40 hover:text-foreground",
-                    )}
-                  >
-                    {on && <Check className="-ml-0.5 size-3.5" />}
-                    {i.label}
-                  </button>
-                );
-              })}
-            </div>
+            <InstrumentPicker value={form.instruments} onToggle={toggleInstrument} />
           </div>
 
           <div className="space-y-2">
