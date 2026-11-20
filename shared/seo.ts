@@ -7,7 +7,19 @@ import type { Song } from "./types";
 
 export const SITE_NAME = "Gang Muzik";
 export const DEFAULT_DESCRIPTION =
-  "Thư viện sheet nhạc, cảm âm, hợp âm, tab tự cuộn, lật trang bằng pedal — rảnh tay khi chơi mọi nhạc cụ.";
+  "Học và chơi saxophone, sáo trúc: tra thế bấm, luyện gam, sheet nhạc và cảm âm tự cuộn, lật trang bằng pedal.";
+
+/** Search keywords for the whole site (schema.org WebSite) */
+export const SITE_KEYWORDS = [
+  "học saxophone",
+  "học sáo trúc",
+  "thế bấm saxophone",
+  "thế bấm sáo trúc",
+  "luyện gam",
+  "cảm âm",
+  "sheet nhạc",
+  "hợp âm",
+];
 
 export interface SeoMeta {
   title: string;
@@ -43,7 +55,12 @@ export function homeSeo(instrumentParam?: string | null): SeoMeta {
       type: "website",
     };
   }
-  return { title: `${SITE_NAME} · Thư viện sheet nhạc, cảm âm, hợp âm`, description: DEFAULT_DESCRIPTION, path: "/", type: "website" };
+  return {
+    title: `${SITE_NAME} · Học saxophone, sáo trúc qua sheet và cảm âm`,
+    description: DEFAULT_DESCRIPTION,
+    path: "/",
+    type: "website",
+  };
 }
 
 export function songSeo(song: Pick<Song, "id" | "title" | "artist" | "instruments" | "kind" | "pages">): SeoMeta {
@@ -115,5 +132,10 @@ export function siteJsonLd(origin: string) {
     url: `${origin}/`,
     inLanguage: "vi",
     description: DEFAULT_DESCRIPTION,
+    keywords: SITE_KEYWORDS.join(", "),
+    about: [
+      { "@type": "Thing", name: "Saxophone" },
+      { "@type": "Thing", name: "Sáo trúc" },
+    ],
   };
 }

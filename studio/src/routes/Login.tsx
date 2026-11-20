@@ -62,7 +62,7 @@ export function Login() {
         <LogoMark className="mx-auto mb-4 size-12" />
         <h1 className="font-display text-3xl font-extrabold">Gang Muzik Studio</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Đăng sheet nhạc, cảm âm, hợp âm, tab. Bài của bạn sẽ hiện trên thư viện sau khi được duyệt.
+          Đăng sheet nhạc, cảm âm cho saxophone, sáo trúc và các nhạc cụ khác. Bài của bạn sẽ hiện trên thư viện sau khi được duyệt.
         </p>
         {error && <p className="mt-4 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{ERRORS[error] ?? "Đăng nhập thất bại."}</p>}
         <Button asChild size="lg" variant="outline" className="mt-6 w-full gap-3" disabled={data && !data.googleReady}>
