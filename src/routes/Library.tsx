@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { FileImage, Music, PenLine, Search, Type } from "lucide-react";
+import { FileImage, PenLine, Search, Type } from "lucide-react";
 import type { SongKind, SongSummary } from "@shared/types";
 import { INSTRUMENTS, instrumentLabel, normalizeInstrument, type InstrumentId } from "@shared/instruments";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,8 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { LogoMark, SongMotif } from "@/components/brand/Staff";
 import { api } from "@/lib/api";
 import { STUDIO_URL } from "@/lib/links";
+import { SiteFooter } from "@/components/SiteFooter";
+import { formatKeyName } from "@/lib/notation/transpose";
 import { cn } from "@/lib/utils";
 import { useSeo } from "@/lib/seo";
 import { homeSeo } from "@shared/seo";
@@ -79,11 +81,6 @@ export function Library() {
         <div className="flex items-center gap-2">
           <LogoMark className="size-7" />
           <span className="flex-1 font-display text-base font-bold">Gang Muzik</span>
-          <Button asChild variant="ghost" size="sm" title="Luyện âm giai, hợp âm rải, nốt dài cùng máy đếm nhịp">
-            <Link to="/practice">
-              <Music /> Luyện tập
-            </Link>
-          </Button>
           <Button asChild variant="ghost" size="sm" title="Đăng nhập bằng Google để gửi bài của bạn">
             <a href={STUDIO_URL}>
               <PenLine /> <span className="hidden sm:inline">Đóng góp bài</span>
@@ -179,27 +176,7 @@ export function Library() {
         )}
       </main>
 
-      <footer className="border-t">
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-6 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <span>
-            Khi đang chơi: pedal Bluetooth hoặc phím <Kbd>←</Kbd> <Kbd>→</Kbd> <Kbd>Space</Kbd>
-          </span>
-          <span className="flex shrink-0 gap-4">
-            <Link to="/practice" className="underline-offset-4 hover:text-foreground hover:underline">
-              Luyện tập
-            </Link>
-            <Link to="/privacy" className="underline-offset-4 hover:text-foreground hover:underline">
-              Quyền riêng tư
-            </Link>
-            <Link to="/terms" className="underline-offset-4 hover:text-foreground hover:underline">
-              Điều khoản
-            </Link>
-            <a href={STUDIO_URL} className="underline-offset-4 hover:text-foreground hover:underline">
-              Studio
-            </a>
-          </span>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
@@ -294,7 +271,12 @@ export function SongCard({ song: s, preview = false }: { song: SongSummary; prev
               +{s.instruments.length - 2}
             </span>
           )}
-          <span className="ml-auto flex shrink-0 items-center gap-1.5" title={s.kind === "text" ? "Bài dạng chữ" : "Bài dạng ảnh"}>
+          {s.key && (
+            <span className="ml-auto shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-foreground/80" title={`Tone ${s.key}`}>
+              {formatKeyName(s.key)}
+            </span>
+          )}
+          <span className={cn("flex shrink-0 items-center gap-1.5", !s.key && "ml-auto")} title={s.kind === "text" ? "Bài dạng chữ" : "Bài dạng ảnh"}>
             {s.kind === "text" ? <Type className="size-4" /> : <FileImage className="size-4" />}
             {s.kind === "text" ? "Chữ" : `${s.pageCount} ảnh`}
           </span>
@@ -312,13 +294,5 @@ export function SongCard({ song: s, preview = false }: { song: SongSummary; prev
         </Link>
       )}
     </li>
-  );
-}
-
-function Kbd({ children }: { children: React.ReactNode }) {
-  return (
-    <kbd className="mx-0.5 inline-flex min-w-6 justify-center rounded border border-b-2 bg-card px-1.5 py-px font-sans text-xs text-foreground">
-      {children}
-    </kbd>
   );
 }

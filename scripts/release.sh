@@ -50,6 +50,9 @@ undo() {
   exit 1
 }
 
+step "Build lại với version mới (footer hiện số phiên bản)"
+npm run build --silent >/dev/null || undo "Build lỗi"
+
 step "Migration D1 production (an toàn: chỉ chạy migration chưa áp dụng)"
 npx wrangler d1 migrations apply gang-muzik --remote || undo "Migration lỗi"
 

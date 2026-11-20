@@ -1,26 +1,29 @@
 import { memo, useMemo } from "react";
 import { isChordToken, parseNotation, splitInlineChords, type Row, type Token } from "@/lib/notation/parse";
+import { isOutOfRange, type ResolvedShift } from "@/lib/notation/range";
 import {
-  detectKeyPc,
-  isIdentity,
-  resolveSpelling,
+  noteToSemitone,
   transposeChord,
   transposeChordLine,
   transposeNote,
-  type Spelling,
-  type TransposeSetting,
+  type NoteValue,
 } from "@/lib/notation/transpose";
 import { cn } from "@/lib/utils";
 import { NOTE_CLASS } from "@/lib/notation/colors";
 
-/** dịch giọng đã tính sẵn cho cả bài (null = hiển thị nguyên bản) */
-interface Shift {
-  semitones: number;
-  octave: number;
-  spelling: Spelling;
-}
+/** transposition resolved for the whole song (null = shown as written) */
+type Shift = ResolvedShift;
 
 const ACCIDENTAL_GLYPH = { "#": "♯", b: "♭" } as const;
+
+const toValue = (n: NoteValue): NoteValue =>
+  n.accidental ? { note: n.note, octave: n.octave, accidental: n.accidental } : { note: n.note, octave: n.octave };
+
+/** the note as displayed (resolved octave + spelling) and whether it falls outside the horn's range */
+function writtenNote(t: NoteValue, shift: Shift): { written: NoteValue; outside: boolean } {
+  const written = transposeNote(toValue(t), shift.semitones, shift.spelling, shift.octave);
+  return { written, outside: !!shift.range && isOutOfRange(noteToSemitone(written), shift.range) };
+}
 
 function NoteToken({ t, colored, shift }: { t: Token; colored: boolean; shift: Shift | null }) {
   if (t.type === "sep") {
@@ -28,10 +31,25 @@ function NoteToken({ t, colored, shift }: { t: Token; colored: boolean; shift: S
     return <span className="mx-[0.06em] text-stage-lyric/70">{t.text}</span>;
   }
   if (t.type === "text") return <span className="text-stage-fg/80">{t.text}</span>;
-  if (shift) {
-    const v = transposeNote(t, shift.semitones, shift.spelling, shift.octave);
+  // Breath mark: never transposed, rendered as a small superscript V
+  if (t.type === "breath") {
     return (
-      <span className={cn("whitespace-nowrap", colored && NOTE_CLASS[v.note])}>
+      <sup title="Lấy hơi" aria-label="Lấy hơi" className="mx-[0.12em] text-[0.6em] font-extrabold text-primary">
+        V
+      </sup>
+    );
+  }
+  if (shift) {
+    const { written: v, outside } = writtenNote(t, shift);
+    return (
+      <span
+        className={cn(
+          "whitespace-nowrap",
+          colored && NOTE_CLASS[v.note],
+          outside && "underline decoration-destructive decoration-wavy decoration-2 underline-offset-[0.2em]",
+        )}
+        title={outside ? "Ngoài tầm kèn (Sib0–Fa#3)" : undefined}
+      >
         {v.note}
         {v.accidental && <span className="ml-[0.02em] text-[0.8em]">{ACCIDENTAL_GLYPH[v.accidental]}</span>}
         {v.octave !== 1 && <sup className="ml-[0.04em] text-[0.55em] font-extrabold">{v.octave}</sup>}
@@ -44,6 +62,43 @@ function NoteToken({ t, colored, shift }: { t: Token; colored: boolean; shift: S
       {base}
       {t.octave !== 1 && <sup className="ml-[0.04em] text-[0.55em] font-extrabold">{t.octave}</sup>}
     </span>
+  );
+}
+
+/** tap a note to look it up (e.g. its saxophone fingering): written = displayed note, concert = original token */
+export type NoteClickHandler = (written: NoteValue, concert: NoteValue, el: HTMLElement) => void;
+
+/** wraps a rendered note in a button; stops propagation so the stage tap (play / turn page) does not fire */
+function NoteButton({
+  t,
+  shift,
+  onNoteClick,
+  children,
+}: {
+  t: NoteValue;
+  shift: Shift | null;
+  onNoteClick: NoteClickHandler;
+  children: React.ReactNode;
+}) {
+  // same computation as NoteToken, so the looked-up note is exactly the one shown
+  const concert = toValue(t);
+  const { written, outside } = shift ? writtenNote(t, shift) : { written: concert, outside: false };
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onNoteClick(written, concert, e.currentTarget);
+      }}
+      className={cn(
+        "cursor-pointer rounded-[0.15em] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        // out-of-range notes keep their own wavy underline instead of the dotted tap hint
+        !outside &&
+          "underline decoration-current/35 decoration-dotted decoration-[0.07em] underline-offset-[0.2em] hover:decoration-current/80",
+      )}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -82,21 +137,18 @@ export const TextNotation = memo(function TextNotation({
   colored = true,
   compact = false,
   transpose,
+  onNoteClick,
 }: {
   text: string;
   colored?: boolean;
   compact?: boolean;
-  /** dịch giọng cho nhạc cụ (Bb, Eb...); bỏ trống / 0 = nguyên bản */
-  transpose?: TransposeSetting;
+  /** transposition resolved for this song (see `resolveShift`); missing / null = as written */
+  transpose?: ResolvedShift | null;
+  /** when set, notes become buttons (fingering lookup) */
+  onNoteClick?: NoteClickHandler;
 }) {
   const sections = useMemo(() => parseNotation(text), [text]);
-  const semitones = transpose?.semitones ?? 0;
-  const octave = transpose?.octave ?? 0;
-  const spellingPref = transpose?.spelling ?? "auto";
-  const shift = useMemo<Shift | null>(() => {
-    if (isIdentity({ semitones, octave, spelling: spellingPref })) return null;
-    return { semitones, octave, spelling: resolveSpelling(spellingPref, semitones, detectKeyPc(sections)) };
-  }, [sections, semitones, octave, spellingPref]);
+  const shift: Shift | null = transpose ?? null;
   if (!sections.length) return null;
   return (
     <div className={compact ? "px-1" : "mx-auto max-w-5xl px-5 sm:px-10"}>
@@ -115,9 +167,15 @@ export const TextNotation = memo(function TextNotation({
               )}
               {row.notes && (
                 <p className="text-[1.55em] leading-[1.25] font-bold tracking-tight text-stage-fg">
-                  {row.notes.map((t, k) => (
-                    <NoteToken key={k} t={t} colored={colored} shift={shift} />
-                  ))}
+                  {row.notes.map((t, k) =>
+                    onNoteClick && t.type === "note" ? (
+                      <NoteButton key={k} t={t} shift={shift} onNoteClick={onNoteClick}>
+                        <NoteToken t={t} colored={colored} shift={shift} />
+                      </NoteButton>
+                    ) : (
+                      <NoteToken key={k} t={t} colored={colored} shift={shift} />
+                    ),
+                  )}
                 </p>
               )}
             </div>

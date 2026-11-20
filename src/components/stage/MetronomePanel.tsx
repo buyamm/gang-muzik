@@ -17,6 +17,7 @@ import {
   pushTap,
   tapTempo,
 } from "@/lib/audio/engine";
+import { semitoneToNote, type Spelling } from "@/lib/notation/transpose";
 import { readPref, writePref } from "@/lib/prefs";
 import { cn } from "@/lib/utils";
 
@@ -138,8 +139,30 @@ function BpmInput({ bpm, onCommit }: { bpm: number; onCommit: (v: number) => voi
   );
 }
 
-/** nút "Nhịp & drone" + popover điều khiển */
-export function MetronomePanel({ audio, onOpenChange }: { audio: StageAudio; onOpenChange?: (open: boolean) => void }) {
+/** the player's transposing instrument, to show the drone note as written for it */
+export interface HornInfo {
+  /** name inside a sentence, e.g. "kèn alto" */
+  label: string;
+  semitones: number;
+  spelling: Spelling;
+}
+
+const ACCIDENTAL_GLYPH = { "#": "♯", b: "♭" } as const;
+
+/** "Nhịp & drone" button + control popover */
+export function MetronomePanel({
+  audio,
+  onOpenChange,
+  horn,
+  tonicPc,
+}: {
+  audio: StageAudio;
+  onOpenChange?: (open: boolean) => void;
+  /** transposing instrument in use (omit for concert) */
+  horn?: HornInfo;
+  /** tonic pitch class (0..11) of the song's stored key; shows a "song tonic" shortcut for the drone */
+  tonicPc?: number;
+}) {
   const { bpm, beatsPerBar, metro, drone, prefs, setAudio } = audio;
   const [taps, setTaps] = useState<number[]>([]);
   const tapped = taps.length >= 2;
@@ -153,6 +176,8 @@ export function MetronomePanel({ audio, onOpenChange }: { audio: StageAudio; onO
 
   const label = audio.active ? "Nhịp & drone (đang phát)" : "Nhịp & drone";
   const droneNote = NOTE_NAMES[prefs.droneNote] ?? NOTE_NAMES[0];
+  // the drone note as written for the player's horn (concert pc + semitones)
+  const hornNote = horn && horn.semitones % 12 !== 0 ? semitoneToNote(prefs.droneNote + horn.semitones, horn.spelling) : null;
 
   return (
     <Popover onOpenChange={onOpenChange}>
@@ -305,6 +330,28 @@ export function MetronomePanel({ audio, onOpenChange }: { audio: StageAudio; onO
           </div>
 
           <VolumeRow label="Âm lượng nốt nền" value={prefs.droneVolume} onChange={(v) => setAudio({ droneVolume: v })} />
+
+          {horn && hornNote && (
+            <p className="rounded-md bg-muted px-2 py-1.5 text-xs text-muted-foreground">
+              Trên {horn.label}:{" "}
+              <span className="font-semibold text-foreground">
+                {hornNote.note}
+                {hornNote.accidental && ACCIDENTAL_GLYPH[hornNote.accidental]}
+              </span>
+            </p>
+          )}
+          {tonicPc !== undefined && NOTE_NAMES[tonicPc] && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full"
+              disabled={prefs.droneNote === tonicPc}
+              onClick={() => setAudio({ droneNote: tonicPc })}
+            >
+              Chủ âm của bài: {NOTE_NAMES[tonicPc].name} ({NOTE_NAMES[tonicPc].letter})
+            </Button>
+          )}
         </section>
       </PopoverContent>
     </Popover>
