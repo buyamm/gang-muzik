@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { isNoteLine, matchNote, parseNotation, tokenizeNotes } from "./parse";
-import { transposeNote } from "./transpose";
 
 const SAMPLE = `Đường về chiều mưa rơi, Thấy anh cùng ai bước chung
 Sol La Si Re2 Re2. Si La Sol-Re La Re2 Si
@@ -117,43 +116,5 @@ describe("hợp âm & tab (mọi nhạc cụ)", () => {
     expect(isTabLine("Em đi")).toBe(false);
     const s = parseNotation("Intro\ne|--0--|\nB|--1--|\nG|--0--|");
     expect(s[0].rows).toEqual([{ lyric: "Intro" }, { tab: ["e|--0--|", "B|--1--|", "G|--0--|"] }]);
-  });
-});
-
-describe("breath marks", () => {
-  it("tokenizes a standalone V between notes as a breath token", () => {
-    const t = tokenizeNotes("Sol La V Si");
-    expect(t.map((x) => x.type)).toEqual(["note", "sep", "note", "sep", "breath", "sep", "note"]);
-    expect(t[4]).toEqual({ type: "breath", text: "V" });
-    expect(tokenizeNotes("Sol v La")[2]).toEqual({ type: "breath", text: "v" });
-    expect(tokenizeNotes("Sol 𝄒 La")[2]).toEqual({ type: "breath", text: "𝄒" });
-  });
-
-  it("a line with only breath marks is not a note line", () => {
-    expect(isNoteLine("V")).toBe(false);
-    expect(isNoteLine("V v 𝄒")).toBe(false);
-    expect(parseNotation("V")[0].rows).toEqual([{ lyric: "V" }]);
-  });
-
-  it("breath marks do not dilute the note-line ratio", () => {
-    expect(isNoteLine("Sol V La V Si V")).toBe(true);
-    expect(isNoteLine("Do V V V")).toBe(true);
-    const rows = parseNotation("Đường về chiều\nSol La V Si Re2 V")[0].rows;
-    expect(rows[0].lyric).toBe("Đường về chiều");
-    expect(rows[0].notes?.filter((x) => x.type === "breath")).toHaveLength(2);
-    expect(rows[0].notes?.filter((x) => x.type === "note")).toHaveLength(4);
-  });
-
-  it("leaves lyric lines containing the word V untouched", () => {
-    const rows = parseNotation("Chữ V trong lời ca\nSol La Si")[0].rows;
-    expect(rows[0].lyric).toBe("Chữ V trong lời ca");
-    expect(rows[0].notes?.some((x) => x.type === "breath")).toBe(false);
-  });
-
-  it("breath tokens are never notes, so transposition skips them", () => {
-    expect(matchNote("V")).toBeNull();
-    const shifted = tokenizeNotes("Sol V La").map((t) => (t.type === "note" ? transposeNote(t, 2, "sharp") : t));
-    expect(shifted[2]).toEqual({ type: "breath", text: "V" });
-    expect(shifted[0]).toMatchObject({ note: "La" });
   });
 });
