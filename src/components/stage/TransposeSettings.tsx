@@ -95,7 +95,7 @@ export function TransposePanel({ value, onChange, autoOctaveValue, rangeSummary,
             <Choice
               key={p.id}
               active={preset === p.id}
-              onClick={() => set({ preset: p.id, semitones: p.semitones, autoOctave: p.sax })}
+              onClick={() => set({ preset: p.id, semitones: p.semitones, autoOctave: hasRangeCheck(p.id) })}
             >
               <span className="flex items-center justify-between gap-2">
                 <span>{p.label}</span>
