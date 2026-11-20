@@ -167,7 +167,7 @@ describe("cài đặt dịch giọng", () => {
   });
 
   it("horn presets: sax semitones and labels", () => {
-    expect(HORN_PRESETS.map((p) => [p.id, p.semitones, p.badge])).toEqual([
+    expect(HORN_PRESETS.filter((p) => p.family !== "sao").map((p) => [p.id, p.semitones, p.badge])).toEqual([
       ["concert", 0, "C"],
       ["alto", 9, "Alto"],
       ["tenor", 2, "Tenor"],

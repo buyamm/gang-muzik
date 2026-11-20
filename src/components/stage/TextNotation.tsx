@@ -31,14 +31,6 @@ function NoteToken({ t, colored, shift }: { t: Token; colored: boolean; shift: S
     return <span className="mx-[0.06em] text-stage-lyric/70">{t.text}</span>;
   }
   if (t.type === "text") return <span className="text-stage-fg/80">{t.text}</span>;
-  // Breath mark: never transposed, rendered as a small superscript V
-  if (t.type === "breath") {
-    return (
-      <sup title="Lấy hơi" aria-label="Lấy hơi" className="mx-[0.12em] text-[0.6em] font-extrabold text-primary">
-        V
-      </sup>
-    );
-  }
   if (shift) {
     const { written: v, outside } = writtenNote(t, shift);
     return (

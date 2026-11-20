@@ -7,22 +7,11 @@ import {
   ChevronRight,
   Eye,
   EyeOff,
-  Hand,
-  Keyboard,
-  Maximize,
-  Minimize,
   Minus,
-  Moon,
-  Palette,
   Pause,
   Play,
   Plus,
   RotateCcw,
-  Save,
-  StickyNote,
-  Sun,
-  ZoomIn,
-  ZoomOut,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Song, SongSettings, ViewMode } from "@shared/types";
@@ -35,13 +24,13 @@ import { useTheme } from "@/hooks/useTheme";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import { formatDuration, speedFromDuration } from "@/lib/stage/math";
 import { readPref, removePref, writePref } from "@/lib/prefs";
+import { instrumentForPreset, readLearnInstrument } from "@/lib/learnInstrument";
 import { cn } from "@/lib/utils";
 import { parseNotation } from "@/lib/notation/parse";
-import { bestOctave, resolveShift, summarizeRange } from "@/lib/notation/range";
+import { bestOctave, rangeFor, resolveShift, summarizeRange } from "@/lib/notation/range";
 import {
   formatKeyName,
   hornPreset,
-  isSaxPreset,
   keyMajorPc,
   keyRootPc,
   normalizeTranspose,
@@ -51,14 +40,13 @@ import {
   type NoteValue,
   type TransposeSetting,
 } from "@/lib/notation/transpose";
-import { BookSettings } from "./BookSettings";
 import { BookView, type ColumnsPref } from "./BookView";
 import { KeyMapDialog } from "./KeyMapDialog";
 import { FingeringChartDialog, FingeringPopover, fingeringTarget, type FingeringTarget } from "./FingeringPopover";
-import { DEFAULT_BPM, MetronomePanel, useStageAudio } from "./MetronomePanel";
+import { DEFAULT_BPM, useStageAudio } from "./MetronomePanel";
+import { SettingsButton, SettingsDrawer, useSettingsShortcut } from "./SettingsDrawer";
 import { NotesDialog, usePersonalNote, type NotesData } from "./SongNotes";
 import { StageContent } from "./StageContent";
-import { TransposeSettings } from "./TransposeSettings";
 
 interface ViewPrefs {
   mode: ViewMode;
@@ -148,7 +136,8 @@ export function Stage({
   const [keymap, setKeymap] = useState<KeyMap>(loadKeyMap);
   const [keyDialog, setKeyDialog] = useState(false);
   const [noteDialog, setNoteDialog] = useState(false);
-  const [transposeOpen, setTransposeOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsBtnRef = useRef<HTMLButtonElement>(null);
   // stored values may be legacy / malformed: always normalize before use
   const transpose = useMemo(() => normalizeTranspose(prefs.transpose), [prefs.transpose]);
   const changeTranspose = (t: TransposeSetting) => {
@@ -165,7 +154,10 @@ export function Stage({
   );
   const rangeSummary = useMemo(() => summarizeRange(sections, shift), [sections, shift]);
   const autoOctaveValue = useMemo(
-    () => (isSaxPreset(transpose.preset) ? bestOctave(sections, transpose.semitones) : undefined),
+    () => {
+      const range = rangeFor(transpose.preset);
+      return range ? bestOctave(sections, transpose.semitones, range) : undefined;
+    },
     [sections, transpose.preset, transpose.semitones],
   );
   const horn = useMemo(() => {
@@ -173,7 +165,6 @@ export function Stage({
     const name = hornPreset(shift.preset)?.name ?? `nhạc cụ (${shift.semitones > 0 ? "+" : "−"}${Math.abs(shift.semitones)})`;
     return { label: name, semitones: shift.semitones, spelling: shift.spelling };
   }, [shift]);
-  const [audioOpen, setAudioOpen] = useState(false);
   // ---------- fingering lookup ----------
   const hasNoteRows = useMemo(
     () => sections.some((sec) => sec.rows.some((r) => r.notes?.some((t) => t.type === "note"))),
@@ -181,6 +172,9 @@ export function Stage({
   );
   const [fingeringPref, setFingeringPref] = useState(() => readPref(FINGERING_KEY, FINGERING_DEFAULT));
   const fingeringOn = hasNoteRows && fingeringPref.on;
+  // sax / sáo presets pick their own diagram; concert and custom use the stored learning instrument
+  const [learnInstrument] = useState(readLearnInstrument);
+  const fingeringInstrument = instrumentForPreset(transpose.preset, learnInstrument);
   const [fingerTarget, setFingerTarget] = useState<FingeringTarget | null>(null);
   const [fingerOpen, setFingerOpen] = useState(false);
   const [chartOpen, setChartOpen] = useState(false);
@@ -382,7 +376,13 @@ export function Stage({
     },
     [togglePlay, isScroll, scrollBack, goNext, goPrev],
   );
-  usePedalKeys(onPedal, keymap, !keyDialog && !noteDialog && !transposeOpen && !audioOpen && !fingerOpen && !chartOpen);
+  const otherDialogOpen = keyDialog || noteDialog || fingerOpen || chartOpen;
+  usePedalKeys(onPedal, keymap, !otherDialogOpen && !settingsOpen);
+  useSettingsShortcut(
+    () => setSettingsOpen((o) => !o),
+    !otherDialogOpen,
+    Object.values(keymap).flat(),
+  );
 
   // ---------- chạm ----------
   const onTap = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -417,73 +417,8 @@ export function Stage({
   const zoomOut = () => update({ fontScale: Math.max(0.6, +(prefs.fontScale - 0.1).toFixed(2)) });
   const zoomIn = () => update({ fontScale: Math.min(3, +(prefs.fontScale + 0.1).toFixed(2)) });
 
-  /** các nút công cụ — trên máy tính nằm ở header, trên điện thoại nằm ở footer */
-  const tools = (
-    <>
-      <IconBtn label="Thu nhỏ" onClick={zoomOut}>
-        <ZoomOut />
-      </IconBtn>
-      <IconBtn label="Phóng to" onClick={zoomIn}>
-        <ZoomIn />
-      </IconBtn>
-      {hasText && (
-        <IconBtn label="Tô màu nốt" active={prefs.colored} onClick={() => update({ colored: !prefs.colored })}>
-          <Palette />
-        </IconBtn>
-      )}
-      {(hasText || songKey) && (
-        <TransposeSettings
-          value={transpose}
-          onChange={changeTranspose}
-          onOpenChange={setTransposeOpen}
-          autoOctaveValue={autoOctaveValue}
-          rangeSummary={rangeSummary}
-          notice={hasText ? undefined : "Bài dạng ảnh không dịch nốt được — chỉ hiện tone cho kèn."}
-        />
-      )}
-      {hasNoteRows && (
-        <IconBtn
-          label={fingeringOn ? "Thế bấm (đang bật: chạm vào nốt)" : "Thế bấm"}
-          active={fingeringOn}
-          onClick={toggleFingering}
-        >
-          <Hand />
-        </IconBtn>
-      )}
-      <IconBtn
-        label={stageTheme === "dark" ? "Nền sáng" : "Nền tối"}
-        onClick={() => update({ theme: stageTheme === "dark" ? "light" : "dark" })}
-      >
-        {stageTheme === "dark" ? <Sun /> : <Moon />}
-      </IconBtn>
-      <IconBtn
-        label={hasNotes ? "Ghi chú (đang có)" : "Ghi chú"}
-        active={hasNotes && prefs.showNotes}
-        onClick={() => setNoteDialog(true)}
-      >
-        <StickyNote />
-      </IconBtn>
-      <MetronomePanel
-        audio={audio}
-        onOpenChange={setAudioOpen}
-        horn={hasText || songKey ? horn : undefined}
-        tonicPc={keyRootPc(songKey) ?? undefined}
-      />
-      <IconBtn label="Pedal & phím tắt" onClick={() => setKeyDialog(true)}>
-        <Keyboard />
-      </IconBtn>
-      {fs.supported && (
-        <IconBtn label={fs.isFull ? "Thoát toàn màn hình" : "Toàn màn hình"} onClick={fs.toggle}>
-          {fs.isFull ? <Minimize /> : <Maximize />}
-        </IconBtn>
-      )}
-      {canSaveDefaults && onSaveDefaults && (
-        <IconBtn label="Lưu cài đặt làm mặc định cho bài" onClick={saveDefaults}>
-          <Save />
-        </IconBtn>
-      )}
-    </>
-  );
+  const hasTranspose = hasText || !!songKey;
+  const transposeChip = hasTranspose ? transposeBadge(transpose) : null;
 
   const nextKey = keyLabel(keymap.next[0] ?? "→");
   const prevKey = keyLabel(keymap.prev[0] ?? "←");
@@ -506,7 +441,7 @@ export function Stage({
 
       {/* ===== header (cố định, không tự ẩn) ===== */}
       {!barsHidden && (
-        <header className="relative z-20 flex shrink-0 items-center gap-2 border-b border-stage-fg/10 bg-stage-bg px-2 pt-[max(env(safe-area-inset-top),0.5rem)] pb-2 sm:px-3">
+        <header className="relative z-20 flex shrink-0 items-center gap-1 sm:gap-2 border-b border-stage-fg/10 bg-stage-bg px-2 pt-[max(env(safe-area-inset-top),0.5rem)] pb-2 sm:px-3">
           {onBack ? (
             <Button variant="ghost" size="icon" className="shrink-0 text-stage-fg hover:bg-stage-fg/10" aria-label="Quay lại" title="Quay lại" onClick={onBack}>
               <ArrowLeft />
@@ -519,7 +454,7 @@ export function Stage({
             </Button>
           )}
           <div className="min-w-0 flex-1">
-            <h1 className="truncate font-display text-xl leading-tight font-bold">{song.title}</h1>
+            <h1 className="truncate font-display text-lg leading-tight font-bold sm:text-xl">{song.title}</h1>
             {(song.artist || songKeyLabel) && (
               <p className="truncate text-xs text-stage-lyric">
                 {song.artist}
@@ -537,7 +472,7 @@ export function Stage({
                 onClick={() => switchMode(m)}
                 title={m === "scroll" ? "Tự cuộn liên tục" : "Xem như quyển sách, lật trang"}
                 className={cn(
-                  "rounded-full px-3.5 py-1 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                  "rounded-full px-2.5 py-1 transition-colors sm:px-3.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                   prefs.mode === m ? "bg-stage-fg text-stage-bg" : "text-stage-fg/70 hover:text-stage-fg",
                 )}
               >
@@ -545,13 +480,22 @@ export function Stage({
               </button>
             ))}
           </div>
-          <div className="hidden items-center gap-0.5 md:flex">{tools}</div>
+          <SettingsButton
+            ref={settingsBtnRef}
+            open={settingsOpen}
+            onClick={() => setSettingsOpen(true)}
+            badge={transposeChip}
+            audioActive={audio.active}
+            downbeat={audio.metro.running && audio.metro.beat === 0}
+            fingeringOn={fingeringOn}
+          />
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setBars(true)}
             title="Ẩn thanh điều khiển để có thêm chỗ đọc"
-            className="shrink-0 gap-1.5 text-stage-fg hover:bg-stage-fg/10 hover:text-stage-fg"
+            aria-label="Ẩn thanh điều khiển"
+            className="shrink-0 gap-1.5 px-2 text-stage-fg hover:bg-stage-fg/10 hover:text-stage-fg sm:px-3"
           >
             <EyeOff />
             <span className="hidden lg:inline">Ẩn thanh</span>
@@ -650,22 +594,6 @@ export function Stage({
       {/* ===== footer (cố định, không tự ẩn) ===== */}
       {!barsHidden && (
         <footer className="relative z-20 shrink-0 border-t border-stage-fg/10 bg-stage-bg px-3 pt-2.5 pb-[max(env(safe-area-inset-bottom),0.625rem)]">
-          {/* công cụ trên điện thoại / tablet dọc */}
-          <div className="mb-2 flex items-center justify-center gap-0.5 md:hidden">
-            {tools}
-            {!isScroll && (
-              <span className="ml-1 sm:hidden">
-                <BookSettings
-                  columns={prefs.columns}
-                  autoCols={cols}
-                  turnBy={prefs.turnBy}
-                  onColumns={(c) => update({ columns: c })}
-                  onTurnBy={(t) => update({ turnBy: t })}
-                />
-              </span>
-            )}
-          </div>
-
           <div className="mx-auto flex max-w-4xl items-center gap-2 sm:gap-3">
             {/* thời lượng bài => tốc độ */}
             <div className="flex items-center gap-1 rounded-full bg-stage-fg/8 p-1" title="Thời lượng cả bài — quyết định tốc độ cuộn / lật">
@@ -717,21 +645,10 @@ export function Stage({
               {isScroll ? (
                 <span className="font-display text-lg font-bold tabular-nums text-stage-lyric">{Math.round(progress * 100)}%</span>
               ) : (
-                <div className="flex flex-col items-end gap-1">
-                  <span className="font-display text-lg leading-none font-bold whitespace-nowrap tabular-nums">
-                    {allMode ? `${pageCount} trang` : first + 1}
-                    {allMode ? "" : `${cols > 1 && pageCount > 1 ? `–${Math.min(first + cols, pageCount)}` : ""} / ${pageCount}`}
-                  </span>
-                  <div className="hidden sm:block">
-                    <BookSettings
-                      columns={prefs.columns}
-                      autoCols={cols}
-                      turnBy={prefs.turnBy}
-                      onColumns={(c) => update({ columns: c })}
-                      onTurnBy={(t) => update({ turnBy: t })}
-                    />
-                  </div>
-                </div>
+                <span className="font-display text-lg leading-none font-bold whitespace-nowrap tabular-nums">
+                  {allMode ? `${pageCount} trang` : first + 1}
+                  {allMode ? "" : `${cols > 1 && pageCount > 1 ? `–${Math.min(first + cols, pageCount)}` : ""} / ${pageCount}`}
+                </span>
               )}
             </div>
           </div>
@@ -739,10 +656,10 @@ export function Stage({
           {/* gợi ý thao tác cho người mới */}
           <p className="mt-2 hidden text-center text-[11px] text-stage-lyric lg:block">
             {isScroll
-              ? `Chạm vào bản nhạc hoặc bấm Space để chạy / dừng · ${prevKey} tua lại · lăn chuột để cuộn tay`
+              ? `Chạm vào bản nhạc hoặc bấm Space để chạy / dừng · ${prevKey} tua lại · lăn chuột để cuộn tay · S: cài đặt`
               : allMode
-                ? "Đang hiện cả bài trên một màn hình · đổi lại trong “Kiểu sách”"
-                : `Lật trang: ${nextKey} / ${prevKey}, lăn chuột, vuốt hoặc chạm mép phải / trái · Space: tự lật`}
+                ? "Đang hiện cả bài trên một màn hình · đổi lại trong Cài đặt › Kiểu sách"
+                : `Lật trang: ${nextKey} / ${prevKey}, lăn chuột, vuốt hoặc chạm mép phải / trái · Space: tự lật · S: cài đặt`}
           </p>
         </footer>
       )}
@@ -755,10 +672,55 @@ export function Stage({
             onOpenChange={setFingerOpen}
             onOpenChart={openChart}
             onPointerDownOutside={onFingerOutside}
+            instrument={fingeringInstrument}
           />
-          <FingeringChartDialog open={chartOpen} onOpenChange={setChartOpen} highlight={chartHighlight} />
+          <FingeringChartDialog
+            open={chartOpen}
+            onOpenChange={setChartOpen}
+            highlight={chartHighlight}
+            instrument={fingeringInstrument}
+          />
         </>
       )}
+      <SettingsDrawer
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        returnFocusRef={settingsBtnRef}
+        stageTheme={stageTheme}
+        onStageTheme={(t) => update({ theme: t })}
+        transpose={
+          hasTranspose
+            ? {
+                value: transpose,
+                onChange: changeTranspose,
+                autoOctaveValue,
+                rangeSummary,
+                notice: hasText ? undefined : "Bài dạng ảnh không dịch nốt được — chỉ hiện tone cho kèn.",
+              }
+            : undefined
+        }
+        fingering={hasNoteRows ? { on: fingeringOn, onToggle: toggleFingering } : undefined}
+        fontScale={prefs.fontScale}
+        onZoomIn={zoomIn}
+        onZoomOut={zoomOut}
+        colored={hasText ? { on: prefs.colored, onToggle: () => update({ colored: !prefs.colored }) } : undefined}
+        notes={{ has: hasNotes, visible: prefs.showNotes, onOpen: () => setNoteDialog(true) }}
+        book={
+          isScroll
+            ? undefined
+            : {
+                columns: prefs.columns,
+                autoCols: cols,
+                turnBy: prefs.turnBy,
+                onColumns: (c) => update({ columns: c }),
+                onTurnBy: (t) => update({ turnBy: t }),
+              }
+        }
+        audio={{ audio, horn: hasTranspose ? horn : undefined, tonicPc: keyRootPc(songKey) ?? undefined }}
+        onOpenKeyMap={() => setKeyDialog(true)}
+        fullscreen={fs.supported ? { isFull: fs.isFull, onToggle: fs.toggle } : undefined}
+        onSaveDefaults={canSaveDefaults && onSaveDefaults ? saveDefaults : undefined}
+      />
       <NotesDialog
         open={noteDialog}
         onOpenChange={setNoteDialog}

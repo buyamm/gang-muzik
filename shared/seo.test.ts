@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { homeSeo, PRACTICE_SEO, songSeo, songJsonLd, truncate } from "./seo";
+import { FINGERING_SEO, homeSeo, PRACTICE_SEO, songSeo, songJsonLd, truncate } from "./seo";
 
 const song = {
   id: "abc",
@@ -26,6 +26,12 @@ describe("seo", () => {
     expect(m.title).toContain("Nối vòng tay lớn — Trịnh Công Sơn");
     expect(m.description).toContain("Guitar, Sáo");
     expect(m.description.length).toBeLessThanOrEqual(160);
+  });
+
+  it("fingering page meta", () => {
+    expect(FINGERING_SEO.path).toBe("/fingering");
+    expect(FINGERING_SEO.title).toContain("thế bấm");
+    expect(FINGERING_SEO.description.length).toBeLessThanOrEqual(160);
   });
 
   it("homeSeo theo nhạc cụ, bỏ qua giá trị lạ", () => {
