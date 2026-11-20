@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import type { Song } from "@shared/types";
-import type { TransposeSetting } from "@/lib/notation/transpose";
+import type { ResolvedShift } from "@/lib/notation/range";
 import { autoColumns, fitGrid, paginateBook } from "@/lib/stage/math";
 import type { NotesData } from "./SongNotes";
 import { StageContent } from "./StageContent";
@@ -54,9 +54,7 @@ export function BookView({
   onLayout: (l: { pageCount: number; cols: number }) => void;
   onStep: (dir: 1 | -1) => void;
   notes?: NotesData | null;
-  transpose?: TransposeSetting;
-  /** stored song key, used for accidental spelling when transposing */
-  songKey?: string;
+  transpose?: ResolvedShift | null;
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);

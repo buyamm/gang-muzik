@@ -34,13 +34,16 @@ import { useWakeLock } from "@/hooks/useWakeLock";
 import { formatDuration, speedFromDuration } from "@/lib/stage/math";
 import { readPref, removePref, writePref } from "@/lib/prefs";
 import { cn } from "@/lib/utils";
+import { parseNotation } from "@/lib/notation/parse";
+import { bestOctave, resolveShift, summarizeRange } from "@/lib/notation/range";
 import {
   formatKeyName,
+  hornPreset,
+  isSaxPreset,
   keyMajorPc,
   keyRootPc,
   normalizeTranspose,
   NO_TRANSPOSE,
-  resolveSpelling,
   transposeBadge,
   transposeKeyName,
   type TransposeSetting,
@@ -139,12 +142,25 @@ export function Stage({
   const [keyDialog, setKeyDialog] = useState(false);
   const [noteDialog, setNoteDialog] = useState(false);
   const [transposeOpen, setTransposeOpen] = useState(false);
-  // bản lưu cũ có thể thiếu / sai — luôn chuẩn hoá trước khi dùng
+  // stored values may be legacy / malformed: always normalize before use
   const transpose = useMemo(() => normalizeTranspose(prefs.transpose), [prefs.transpose]);
   const changeTranspose = (t: TransposeSetting) => {
     update({ transpose: t });
     writePref(TRANSPOSE_KEY, t);
   };
+  const sections = useMemo(() => parseNotation(song.textContent), [song.textContent]);
+  // auto octave, spelling and horn range for this song
+  const shift = useMemo(() => resolveShift(transpose, sections), [transpose, sections]);
+  const rangeSummary = useMemo(() => summarizeRange(sections, shift), [sections, shift]);
+  const autoOctaveValue = useMemo(
+    () => (isSaxPreset(transpose.preset) ? bestOctave(sections, transpose.semitones) : undefined),
+    [sections, transpose.preset, transpose.semitones],
+  );
+  const horn = useMemo(() => {
+    if (!shift || shift.semitones % 12 === 0) return undefined;
+    const name = hornPreset(shift.preset)?.name ?? `nhạc cụ (${shift.semitones > 0 ? "+" : "−"}${Math.abs(shift.semitones)})`;
+    return { label: name, semitones: shift.semitones, spelling: shift.spelling };
+  }, [shift]);
   const [audioOpen, setAudioOpen] = useState(false);
   const [personalNote, setPersonalNote] = usePersonalNote(song.id);
   const authorNote = song.note ?? "";
@@ -373,6 +389,8 @@ export function Stage({
           value={transpose}
           onChange={changeTranspose}
           onOpenChange={setTransposeOpen}
+          autoOctaveValue={autoOctaveValue}
+          rangeSummary={rangeSummary}
           notice={hasText ? undefined : "Bài dạng ảnh không dịch nốt được — chỉ hiện tone cho kèn."}
         />
       )}
@@ -389,7 +407,12 @@ export function Stage({
       >
         <StickyNote />
       </IconBtn>
-      <MetronomePanel audio={audio} onOpenChange={setAudioOpen} tonicPc={keyRootPc(songKey) ?? undefined} />
+      <MetronomePanel
+        audio={audio}
+        onOpenChange={setAudioOpen}
+        horn={hasText || songKey ? horn : undefined}
+        tonicPc={keyRootPc(songKey) ?? undefined}
+      />
       <IconBtn label="Pedal & phím tắt" onClick={() => setKeyDialog(true)}>
         <Keyboard />
       </IconBtn>
@@ -490,7 +513,7 @@ export function Stage({
               className="h-full overflow-y-auto overscroll-contain [scrollbar-width:thin]"
             >
               <div className="pt-8 pb-[70vh] sm:pt-10">
-                <StageContent song={song} scale={prefs.fontScale} colored={prefs.colored} notes={notes} transpose={transpose} songKey={songKey} />
+                <StageContent song={song} scale={prefs.fontScale} colored={prefs.colored} notes={notes} transpose={shift} />
               </div>
             </div>
             {/* vạch đọc */}
@@ -514,8 +537,7 @@ export function Stage({
             onLayout={onBookLayout}
             onStep={onBookStep}
             notes={notes}
-            transpose={transpose}
-            songKey={songKey}
+            transpose={shift}
           />
         )}
 
