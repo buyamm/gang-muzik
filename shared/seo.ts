@@ -84,6 +84,23 @@ export const LEGAL_SEO = {
   terms: { title: `Điều khoản sử dụng · ${SITE_NAME}`, description: "Điều khoản khi dùng và đóng góp bài cho Gang Muzik.", path: "/terms" },
 } satisfies Record<string, SeoMeta>;
 
+/** fingering lookup page (saxophone + sáo trúc) */
+export const FINGERING_SEO = {
+  title: `Tra thế bấm saxophone & sáo trúc · ${SITE_NAME}`,
+  description:
+    "Tra thế bấm từng nốt cho saxophone (alto, tenor, soprano, baritone) và sáo trúc 6 lỗ: đủ cách bấm chính, bấm phụ, nghe âm mẫu.",
+  path: "/fingering",
+  type: "website",
+} satisfies SeoMeta;
+
+export const PRACTICE_SEO = {
+  title: `Luyện tập cùng gam · ${SITE_NAME}`,
+  description:
+    "Luyện âm giai, hợp âm rải và nốt dài cho saxophone, kèn, sáo… theo giọng Concert, Sib, Mib — có máy đếm nhịp, nốt tham chiếu và drone chủ âm.",
+  path: "/practice",
+  type: "website",
+} satisfies SeoMeta;
+
 export const notFoundSeo = (path: string): SeoMeta => ({
   title: `Không tìm thấy · ${SITE_NAME}`,
   description: DEFAULT_DESCRIPTION,

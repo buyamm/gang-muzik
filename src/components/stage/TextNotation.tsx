@@ -1,5 +1,5 @@
 import { memo, useMemo } from "react";
-import { isChordToken, parseNotation, splitInlineChords, type NoteName, type Row, type Token } from "@/lib/notation/parse";
+import { isChordToken, parseNotation, splitInlineChords, type Row, type Token } from "@/lib/notation/parse";
 import { isOutOfRange, type ResolvedShift } from "@/lib/notation/range";
 import {
   noteToSemitone,
@@ -9,21 +9,12 @@ import {
   type NoteValue,
 } from "@/lib/notation/transpose";
 import { cn } from "@/lib/utils";
+import { NOTE_CLASS } from "@/lib/notation/colors";
 
 /** transposition resolved for the whole song (null = shown as written) */
 type Shift = ResolvedShift;
 
 const ACCIDENTAL_GLYPH = { "#": "♯", b: "♭" } as const;
-
-const NOTE_CLASS: Record<NoteName, string> = {
-  Do: "text-note-do",
-  Re: "text-note-re",
-  Mi: "text-note-mi",
-  Fa: "text-note-fa",
-  Sol: "text-note-sol",
-  La: "text-note-la",
-  Si: "text-note-si",
-};
 
 const toValue = (n: NoteValue): NoteValue =>
   n.accidental ? { note: n.note, octave: n.octave, accidental: n.accidental } : { note: n.note, octave: n.octave };
@@ -40,14 +31,6 @@ function NoteToken({ t, colored, shift }: { t: Token; colored: boolean; shift: S
     return <span className="mx-[0.06em] text-stage-lyric/70">{t.text}</span>;
   }
   if (t.type === "text") return <span className="text-stage-fg/80">{t.text}</span>;
-  // Breath mark: never transposed, rendered as a small superscript V
-  if (t.type === "breath") {
-    return (
-      <sup title="Lấy hơi" aria-label="Lấy hơi" className="mx-[0.12em] text-[0.6em] font-extrabold text-primary">
-        V
-      </sup>
-    );
-  }
   if (shift) {
     const { written: v, outside } = writtenNote(t, shift);
     return (

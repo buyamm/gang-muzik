@@ -16,7 +16,12 @@ import { isChordToken, splitInlineChords, type Accidental, type NoteName, type S
 export type Spelling = "sharp" | "flat";
 export type SpellingPref = Spelling | "auto";
 
-export type HornPreset = "concert" | "soprano" | "alto" | "tenor" | "baritone" | "custom";
+export type SaoPreset = "sao-c" | "sao-d" | "sao-e" | "sao-f" | "sao-g" | "sao-a" | "sao-bb";
+
+export type HornPreset = "concert" | "soprano" | "alto" | "tenor" | "baritone" | SaoPreset | "custom";
+
+/** instrument family of a preset: decides range check, auto octave and the fingering diagram */
+export type PresetFamily = "concert" | "sax" | "sao" | "custom";
 
 export interface TransposeSetting {
   /** semitones, −11..+11 */
@@ -41,17 +46,53 @@ export interface HornPresetInfo {
   /** name used inside sentences, e.g. "kèn alto" */
   name: string;
   semitones: number;
-  /** saxophone: gets a range check and auto octave */
+  /** saxophone (kept for compatibility; prefer `family`) */
   sax: boolean;
+  family: Exclude<PresetFamily, "custom">;
+}
+
+/**
+ * Sáo trúc 6 lỗ, named after the note sounded with all six holes closed (= written Do1).
+ * `tonic` is that note's pitch class; `concert` its usual sounding pitch in semitones from C4
+ * (sáo Đô = C5, Rê = D5, Mi = E5, Fa = F4, Sol = G4, La = A4, Sib = Bb4; sources: saotruchoanganh.com,
+ * hocthoisao.com). Other sizes of the same key only differ by an octave, which auto octave absorbs.
+ */
+export const SAO_KEYS: readonly { id: SaoPreset; solfege: string; tonic: number; concert: number }[] = [
+  { id: "sao-c", solfege: "Đô", tonic: 0, concert: 12 },
+  { id: "sao-d", solfege: "Rê", tonic: 2, concert: 14 },
+  { id: "sao-e", solfege: "Mi", tonic: 4, concert: 16 },
+  { id: "sao-f", solfege: "Fa", tonic: 5, concert: 5 },
+  { id: "sao-g", solfege: "Sol", tonic: 7, concert: 7 },
+  { id: "sao-a", solfege: "La", tonic: 9, concert: 9 },
+  { id: "sao-bb", solfege: "Sib", tonic: 10, concert: 10 },
+];
+
+/** written = concert − tonic, folded into −6..+5 (sáo Rê −2, sáo Sol +5); the octave is chosen automatically */
+export function saoSemitones(tonic: number): number {
+  const n = (((-tonic % 12) + 12) % 12);
+  return n > 5 ? n - 12 : n;
+}
+
+function saoPresets(): HornPresetInfo[] {
+  return SAO_KEYS.map((k) => ({
+    id: k.id,
+    label: `Sáo ${k.solfege}`,
+    badge: `Sáo ${k.solfege}`,
+    name: `sáo ${k.solfege}`,
+    semitones: saoSemitones(k.tonic),
+    sax: false,
+    family: "sao" as const,
+  }));
 }
 
 /** instrument presets, in UI order */
 export const HORN_PRESETS: HornPresetInfo[] = [
-  { id: "concert", label: "Concert (C)", badge: "C", name: "concert", semitones: 0, sax: false },
-  { id: "alto", label: "Alto sax (Mib)", badge: "Alto", name: "kèn alto", semitones: 9, sax: true },
-  { id: "tenor", label: "Tenor sax (Sib)", badge: "Tenor", name: "kèn tenor", semitones: 2, sax: true },
-  { id: "soprano", label: "Soprano sax (Sib)", badge: "Sop", name: "kèn soprano", semitones: 2, sax: true },
-  { id: "baritone", label: "Baritone sax (Mib)", badge: "Bari", name: "kèn baritone", semitones: 9, sax: true },
+  { id: "concert", label: "Concert (C)", badge: "C", name: "concert", semitones: 0, sax: false, family: "concert" },
+  { id: "alto", label: "Alto sax (Mib)", badge: "Alto", name: "kèn alto", semitones: 9, sax: true, family: "sax" },
+  { id: "tenor", label: "Tenor sax (Sib)", badge: "Tenor", name: "kèn tenor", semitones: 2, sax: true, family: "sax" },
+  { id: "soprano", label: "Soprano sax (Sib)", badge: "Sop", name: "kèn soprano", semitones: 2, sax: true, family: "sax" },
+  { id: "baritone", label: "Baritone sax (Mib)", badge: "Bari", name: "kèn baritone", semitones: 9, sax: true, family: "sax" },
+  ...saoPresets(),
 ];
 
 /** preset info; null for "custom" / unknown */
@@ -61,6 +102,21 @@ export function hornPreset(id: HornPreset | undefined): HornPresetInfo | null {
 
 export function isSaxPreset(id: HornPreset | undefined): boolean {
   return hornPreset(id)?.sax ?? false;
+}
+
+export function isSaoPreset(id: HornPreset | undefined): boolean {
+  return hornPreset(id)?.family === "sao";
+}
+
+/** family of a preset; missing / unknown ids count as "custom" */
+export function familyOf(id: HornPreset | undefined): PresetFamily {
+  return hornPreset(id)?.family ?? "custom";
+}
+
+/** presets with a fixed playable range, so they get a range check and auto octave (sax and sáo) */
+export function hasRangeCheck(id: HornPreset | undefined): boolean {
+  const f = familyOf(id);
+  return f === "sax" || f === "sao";
 }
 
 /** preset for a legacy value that only stored semitones */
@@ -90,7 +146,7 @@ export function clampOctave(n: number) {
   return Math.min(1, Math.max(-1, Math.round(n) || 0));
 }
 
-const PRESET_IDS: HornPreset[] = ["concert", "soprano", "alto", "tenor", "baritone", "custom"];
+const PRESET_IDS: HornPreset[] = [...HORN_PRESETS.map((p) => p.id), "custom"];
 
 /**
  * Normalize a value read from localStorage (fields may be missing / of the wrong type).
@@ -123,10 +179,11 @@ export function presetOf(semitones: number): PresetId | null {
  * With auto octave there is no arrow (the octave depends on the song).
  */
 export function transposeBadge(t: TransposeSetting): string | null {
-  if (isIdentity(t)) return null;
+  // a sáo Đô transposes nothing but is still a chosen instrument (with a range check)
+  if (isIdentity(t) && !hasRangeCheck(t.preset)) return null;
   const preset = hornPreset(t.preset ?? legacyPreset(t.semitones));
   const base = preset ? preset.badge : t.semitones > 0 ? `+${t.semitones}` : t.semitones < 0 ? `−${-t.semitones}` : "0";
-  if (t.autoOctave && preset?.sax) return base;
+  if (t.autoOctave && hasRangeCheck(preset?.id)) return base;
   return base + (t.octave > 0 ? "↑" : t.octave < 0 ? "↓" : "");
 }
 
@@ -294,4 +351,15 @@ export function transposeKeyName(key: string, semitones: number, spelling: Spell
 /** display form of a key name with music glyphs: "F#m" → "F♯m", "Bb" → "B♭" */
 export function formatKeyName(key: string): string {
   return key.replace(/^([A-G])#/, "$1♯").replace(/^([A-G])b/, "$1♭");
+}
+
+/**
+ * Sáo trúc that plays a song in its home position (written Do = the song's tonic):
+ * major X → sáo X, minor → its relative major (Am → sáo Đô). Null for an unknown key
+ * or a key with no common sáo (e.g. C#, Eb, F#, Ab, B).
+ */
+export function suggestSaoKey(songKey: string | null | undefined): SaoPreset | null {
+  const pc = keyMajorPc(songKey);
+  if (pc === null) return null;
+  return SAO_KEYS.find((k) => k.tonic === pc)?.id ?? null;
 }

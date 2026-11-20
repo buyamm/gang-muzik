@@ -97,6 +97,9 @@ export function KeyMapDialog({
               ))}
             </div>
           </div>
+          <p className="px-1 text-xs text-muted-foreground">
+            Phím <kbd className="rounded border bg-muted px-1 font-mono">S</kbd>: mở / đóng bảng Cài đặt (trừ khi bạn gán S cho pedal).
+          </p>
           <Button variant="ghost" size="sm" onClick={() => onChange(DEFAULT_KEYMAP)}>
             Khôi phục mặc định
           </Button>

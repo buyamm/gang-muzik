@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils";
 
 const EXAMPLES = {
   "Cảm âm": `Đường về chiều mưa rơi, Thấy anh cùng ai bước chung
-Sol La Si Re2 Re2. V Si La Sol-Re La Re2 Si`,
+Sol La Si Re2 Re2. Si La Sol-Re La Re2 Si`,
   "Hợp âm": `Am            C              G
 Đường về chiều mưa rơi, thấy anh cùng ai
 
@@ -596,7 +596,7 @@ export function SongEditor() {
                 placeholder={"Dán bản nhạc dạng chữ, ví dụ cảm âm:\n" + SAMPLE + "\n\n(dòng trống = sang đoạn mới)"}
               />
               <p className="text-xs text-muted-foreground">
-                <b>Cảm âm:</b> dòng lời rồi dòng nốt Do Re Mi… (thêm số cho quãng tám: Re2, D2); viết V giữa các nốt để đánh dấu chỗ lấy hơi. <b>Hợp âm:</b> dòng hợp âm
+                <b>Cảm âm:</b> dòng lời rồi dòng nốt Do Re Mi… (thêm số cho quãng tám: Re2, D2). <b>Hợp âm:</b> dòng hợp âm
                 (Am C G7) đặt trên dòng lời, hoặc chèn ngay trong lời như [Am]Đường về. <b>Tab:</b> các dòng e|--0--|. Dòng
                 trống để ngắt đoạn — lật trang sẽ ưu tiên ngắt ở đây.
               </p>
