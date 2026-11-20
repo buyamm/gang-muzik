@@ -10,6 +10,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { LogoMark, SongMotif } from "@/components/brand/Staff";
 import { api } from "@/lib/api";
 import { STUDIO_URL } from "@/lib/links";
+import { SiteCredit } from "@/components/SiteCredit";
 import { cn } from "@/lib/utils";
 import { useSeo } from "@/lib/seo";
 import { homeSeo } from "@shared/seo";
@@ -190,6 +191,9 @@ export function Library() {
               Studio
             </a>
           </span>
+        </div>
+        <div className="mx-auto max-w-6xl px-4 pb-6 sm:px-6">
+          <SiteCredit />
         </div>
       </footer>
     </div>
