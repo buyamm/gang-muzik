@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { TextNotation } from "@/components/stage/TextNotation";
 import { parseNotation } from "./parse";
+import { resolveShift } from "./range";
 import { formatKeyName, guessKeyName, keyMajorPc, keyRootPc, transposeKeyName, type TransposeSetting } from "./transpose";
 
 describe("keyMajorPc / keyRootPc", () => {
@@ -77,8 +78,12 @@ describe("TextNotation spelling with a stored key", () => {
   const altoSax: TransposeSetting = { semitones: 9, octave: 0, spelling: "auto" };
   // cảm âm only, no chords: without a key the song is assumed to be in C
   const text = "Do Re Mi Fa Sol";
+  const sections = parseNotation(text);
+  // Stage resolves the shift with the stored key, then TextNotation renders it
   const render = (songKey?: string) =>
-    renderToStaticMarkup(createElement(TextNotation, { text, transpose: altoSax, songKey }));
+    renderToStaticMarkup(
+      createElement(TextNotation, { text, transpose: resolveShift(altoSax, sections, keyMajorPc(songKey) ?? undefined) }),
+    );
 
   it("falls back to C (sharps for Eb instruments) without a key", () => {
     const html = render();

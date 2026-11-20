@@ -150,7 +150,12 @@ export function Stage({
   };
   const sections = useMemo(() => parseNotation(song.textContent), [song.textContent]);
   // auto octave, spelling and horn range for this song
-  const shift = useMemo(() => resolveShift(transpose, sections), [transpose, sections]);
+  // the stored song key (if valid) decides accidental spelling before the first-chord guess
+  const songKey = keyMajorPc(song.settings.key) !== null ? song.settings.key : undefined;
+  const shift = useMemo(
+    () => resolveShift(transpose, sections, keyMajorPc(songKey) ?? undefined),
+    [transpose, sections, songKey],
+  );
   const rangeSummary = useMemo(() => summarizeRange(sections, shift), [sections, shift]);
   const autoOctaveValue = useMemo(
     () => (isSaxPreset(transpose.preset) ? bestOctave(sections, transpose.semitones) : undefined),
@@ -197,14 +202,13 @@ export function Stage({
   const stepSize = prefs.turnBy === "page" ? 1 : cols;
   const maxFirst = prefs.turnBy === "page" ? Math.max(0, pageCount - cols) : Math.floor((pageCount - 1) / cols) * cols;
   const hasText = !!song.textContent.trim();
-  const songKey = keyMajorPc(song.settings.key) !== null ? song.settings.key : undefined;
+  // "Tone Am · Alto: F♯m": the key as written for the horn, spelled like the transposed notes
   const songKeyLabel = useMemo(() => {
     if (!songKey) return null;
     const badge = transposeBadge(transpose);
-    if (!badge || !transpose.semitones) return `Tone ${formatKeyName(songKey)}`;
-    const spelling = resolveSpelling(transpose.spelling, transpose.semitones, keyMajorPc(songKey) ?? 0);
-    return `Tone ${formatKeyName(songKey)} · ${badge}: ${formatKeyName(transposeKeyName(songKey, transpose.semitones, spelling))}`;
-  }, [songKey, transpose]);
+    if (!badge || !shift?.semitones) return `Tone ${formatKeyName(songKey)}`;
+    return `Tone ${formatKeyName(songKey)} · ${badge}: ${formatKeyName(transposeKeyName(songKey, shift.semitones, shift.spelling))}`;
+  }, [songKey, transpose, shift]);
   /** chế độ sách hiện tất cả trang trên một màn hình — không có gì để lật */
   const allMode = !isScroll && prefs.columns === "all";
 

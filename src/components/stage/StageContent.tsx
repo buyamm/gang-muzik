@@ -12,7 +12,6 @@ export const StageContent = memo(function StageContent({
   fit = false,
   notes,
   transpose,
-  songKey,
 }: {
   song: Song;
   scale: number;
@@ -46,7 +45,7 @@ export const StageContent = memo(function StageContent({
       )}
       {song.textContent.trim() && (
         <div className={song.pages.length ? (fit ? "pt-6" : "pt-10") : ""}>
-          <TextNotation text={song.textContent} colored={colored} compact={fit} transpose={transpose} songKey={songKey} />
+          <TextNotation text={song.textContent} colored={colored} compact={fit} transpose={transpose} />
         </div>
       )}
     </div>

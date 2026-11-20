@@ -95,7 +95,6 @@ export const TextNotation = memo(function TextNotation({
   colored = true,
   compact = false,
   transpose,
-  songKey,
 }: {
   text: string;
   colored?: boolean;
