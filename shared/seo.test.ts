@@ -41,7 +41,7 @@ describe("seo", () => {
     expect(crumbs.itemListElement[1].item).toBe("https://x.test/s/abc");
   });
 
-  it("trang luyện tập có đường dẫn và mô tả không quá 160 ký tự", () => {
+  it("practice page has its path and a description of at most 160 chars", () => {
     expect(PRACTICE_SEO.path).toBe("/practice");
     expect(PRACTICE_SEO.description.length).toBeLessThanOrEqual(160);
   });

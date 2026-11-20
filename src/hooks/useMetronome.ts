@@ -7,7 +7,7 @@ export interface UseMetronomeOptions {
   subdivision?: number;
   /** 0..1 */
   volume: number;
-  /** gọi lúc LÊN LỊCH mỗi tiếng (cả tiếng chia nhỏ) — `time` theo audioNow(), dùng để phát nốt khớp nhịp */
+  /** called when each click (subdivisions included) is SCHEDULED; `time` is on the audioNow() clock, for notes in sync */
   onSchedule?: (beatIndex: number, time: number, sub: number) => void;
 }
 

@@ -6,7 +6,7 @@ import { useMetronome } from "./useMetronome";
 
 export const BEATS_PER_BAR = 4;
 
-/** trạng thái hiển thị: đếm vào (còn `left` phách) / đang chơi nốt `index` / nghỉ */
+/** display state: count-in (`left` beats to go) / playing note `index` / resting */
 export type RunnerStep =
   | { phase: "countin"; left: number }
   | { phase: "note"; index: number; beat: number }
@@ -26,9 +26,9 @@ export interface PracticeRunnerOptions {
 }
 
 /**
- * Chạy bài tập theo máy đếm nhịp: mỗi tiếng click (lúc lên lịch) → tính bước, phát nốt tham chiếu đúng thời điểm
- * click, rồi hẹn giờ cập nhật nốt sáng trên màn hình khi tiếng đó thực sự kêu.
- * Tự dừng khi unmount / ẩn tab (useMetronome lo phần đó; ở đây dọn nốt tham chiếu và trạng thái).
+ * Drives an exercise from the metronome: on every scheduled click, work out the step, play the reference tone
+ * exactly at the click time, then set a timer to highlight the note when that click is actually heard.
+ * Stops on unmount / hidden tab (useMetronome handles that; here we clean up reference tones and state).
  */
 export function usePracticeRunner(o: PracticeRunnerOptions) {
   const cfg = useRef(o);
@@ -105,13 +105,13 @@ export function usePracticeRunner(o: PracticeRunnerOptions) {
 
   const toggle = useCallback(() => (running ? stop() : start()), [running, start, stop]);
 
-  // metronome tự dừng (ẩn tab / unmount) → dọn luôn nốt và trạng thái
+  // metronome stopped by itself (hidden tab / unmount) → clear tones and state too
   useEffect(() => {
     if (!running) clear();
   }, [running, clear]);
   useEffect(() => clear, [clear]);
 
-  // đổi chế độ / số nốt mỗi phách / dãy nốt giữa chừng → chạy lại từ đầu cho khớp phách
+  // mode / notes per beat / sequence changed mid-run → restart from the top to stay on the beat
   const structure = `${o.mode}|${subdivision}|${o.seq.length}|${o.hold}|${o.rest}`;
   const lastStructure = useRef(structure);
   useEffect(() => {

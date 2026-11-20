@@ -1,6 +1,6 @@
 import type { NoteName } from "./parse";
 
-/** màu cảm âm theo tên nốt (biến CSS --note-*) — dùng chung cho TextNotation và trang luyện tập */
+/** cảm âm colour per note name (CSS vars --note-*), shared by TextNotation and the practice page */
 export const NOTE_CLASS: Record<NoteName, string> = {
   Do: "text-note-do",
   Re: "text-note-re",

@@ -1,4 +1,4 @@
-/** cài đặt trang luyện tập (lưu `gm:practice`) + chuẩn hoá giá trị đọc từ localStorage */
+/** practice page settings (stored as `gm:practice`) + normalisation of values read from localStorage */
 import { clampBpm } from "@/lib/audio/math";
 import { EXERCISES, PATTERNS, SCALE_TYPES, type Exercise, type Pattern, type ScaleType } from "./scales";
 
@@ -9,24 +9,24 @@ export const REST_OPTIONS = [0, 1, 2, 4] as const;
 
 export interface PracticeSettings {
   mode: PracticeMode;
-  /** chủ âm theo giọng viết, 0..11 */
+  /** tonic in the written key, 0..11 */
   tonic: number;
   type: ScaleType;
   exercise: Exercise;
   octaves: 1 | 2;
   pattern: Pattern;
-  /** dịch quãng tám bắt đầu (viết) −1..1 */
+  /** written start octave shift −1..1 */
   octaveShift: number;
   bpm: number;
   notesPerBeat: 1 | 2;
   countIn: boolean;
-  /** phát nốt tham chiếu cho từng nốt */
+  /** play a reference tone for every note */
   refTone: boolean;
-  /** drone chủ âm (concert) */
+  /** tonic drone (concert) */
   drone: boolean;
   hold: (typeof HOLD_OPTIONS)[number];
   rest: (typeof REST_OPTIONS)[number];
-  /** âm lượng nốt tham chiếu 0..1 */
+  /** reference tone volume 0..1 */
   toneVolume: number;
 }
 

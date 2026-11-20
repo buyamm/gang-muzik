@@ -6,7 +6,7 @@ import { NoteLabel } from "./NoteChips";
 const R = 88;
 const CIRC = 2 * Math.PI * R;
 
-/** nốt dài: chữ thật lớn + vòng tiến độ (đủ vòng = hết số phách giữ) */
+/** long tone: very large note name + progress ring (full ring = all hold beats done) */
 export function LongToneDisplay({
   seq,
   step,

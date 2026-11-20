@@ -39,7 +39,7 @@ export interface AudioPrefs {
 const AUDIO_KEY = "gm:audio";
 const AUDIO_DEFAULTS: AudioPrefs = { metroVolume: 0.8, droneVolume: 0.5, droneNote: 0, droneOctave: 3, countIn: true };
 
-/** đọc / ghi cài đặt âm thanh chung (`gm:audio`) — trang luyện tập dùng chung âm lượng */
+/** read / write the shared audio prefs (`gm:audio`); the practice page shares these volumes */
 export const loadAudioPrefs = () => readPref(AUDIO_KEY, AUDIO_DEFAULTS);
 export const saveAudioPrefs = (p: AudioPrefs) => writePref(AUDIO_KEY, p);
 
