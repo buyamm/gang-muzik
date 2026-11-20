@@ -2,7 +2,7 @@ import { memo } from "react";
 import type { Song } from "@shared/types";
 import type { TransposeSetting } from "@/lib/notation/transpose";
 import { NotesBox, type NotesData } from "./SongNotes";
-import { TextNotation } from "./TextNotation";
+import { TextNotation, type NoteClickHandler } from "./TextNotation";
 
 /** nội dung bài (ảnh sheet + nhạc dạng chữ). `scale` phóng to/thu nhỏ. */
 export const StageContent = memo(function StageContent({
@@ -12,6 +12,7 @@ export const StageContent = memo(function StageContent({
   fit = false,
   notes,
   transpose,
+  onNoteClick,
 }: {
   song: Song;
   scale: number;
@@ -22,6 +23,8 @@ export const StageContent = memo(function StageContent({
   notes?: NotesData | null;
   /** dịch giọng cho nhạc cụ (chỉ áp dụng nhạc dạng chữ) */
   transpose?: TransposeSetting;
+  /** tap a note (cảm âm) to look it up, e.g. its saxophone fingering */
+  onNoteClick?: NoteClickHandler;
 }) {
   return (
     <div className="text-stage-fg" style={{ fontSize: `${scale * 1.25}rem` }}>
@@ -45,7 +48,7 @@ export const StageContent = memo(function StageContent({
       )}
       {song.textContent.trim() && (
         <div className={song.pages.length ? (fit ? "pt-6" : "pt-10") : ""}>
-          <TextNotation text={song.textContent} colored={colored} compact={fit} transpose={transpose} />
+          <TextNotation text={song.textContent} colored={colored} compact={fit} transpose={transpose} onNoteClick={onNoteClick} />
         </div>
       )}
     </div>

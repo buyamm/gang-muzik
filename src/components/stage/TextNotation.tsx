@@ -7,6 +7,7 @@ import {
   transposeChord,
   transposeChordLine,
   transposeNote,
+  type NoteValue,
   type Spelling,
   type TransposeSetting,
 } from "@/lib/notation/transpose";
@@ -56,6 +57,40 @@ function NoteToken({ t, colored, shift }: { t: Token; colored: boolean; shift: S
   );
 }
 
+/** tap a note to look it up (e.g. its saxophone fingering): written = displayed note, concert = original token */
+export type NoteClickHandler = (written: NoteValue, concert: NoteValue, el: HTMLElement) => void;
+
+const toValue = (n: NoteValue): NoteValue =>
+  n.accidental ? { note: n.note, octave: n.octave, accidental: n.accidental } : { note: n.note, octave: n.octave };
+
+/** wraps a rendered note in a button; stops propagation so the stage tap (play / turn page) does not fire */
+function NoteButton({
+  t,
+  shift,
+  onNoteClick,
+  children,
+}: {
+  t: NoteValue;
+  shift: Shift | null;
+  onNoteClick: NoteClickHandler;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        const concert = toValue(t);
+        const written = shift ? transposeNote(concert, shift.semitones, shift.spelling, shift.octave) : concert;
+        onNoteClick(written, concert, e.currentTarget);
+      }}
+      className="cursor-pointer rounded-[0.15em] underline decoration-current/35 decoration-dotted decoration-[0.07em] underline-offset-[0.2em] hover:decoration-current/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+    >
+      {children}
+    </button>
+  );
+}
+
 function Lyric({ row, shift }: { row: Row; shift: Shift | null }) {
   const text = row.lyric ?? "";
   const inline = splitInlineChords(text);
@@ -91,12 +126,15 @@ export const TextNotation = memo(function TextNotation({
   colored = true,
   compact = false,
   transpose,
+  onNoteClick,
 }: {
   text: string;
   colored?: boolean;
   compact?: boolean;
   /** dịch giọng cho nhạc cụ (Bb, Eb...); bỏ trống / 0 = nguyên bản */
   transpose?: TransposeSetting;
+  /** when set, notes become buttons (fingering lookup) */
+  onNoteClick?: NoteClickHandler;
 }) {
   const sections = useMemo(() => parseNotation(text), [text]);
   const semitones = transpose?.semitones ?? 0;
@@ -124,9 +162,15 @@ export const TextNotation = memo(function TextNotation({
               )}
               {row.notes && (
                 <p className="text-[1.55em] leading-[1.25] font-bold tracking-tight text-stage-fg">
-                  {row.notes.map((t, k) => (
-                    <NoteToken key={k} t={t} colored={colored} shift={shift} />
-                  ))}
+                  {row.notes.map((t, k) =>
+                    onNoteClick && t.type === "note" ? (
+                      <NoteButton key={k} t={t} shift={shift} onNoteClick={onNoteClick}>
+                        <NoteToken t={t} colored={colored} shift={shift} />
+                      </NoteButton>
+                    ) : (
+                      <NoteToken key={k} t={t} colored={colored} shift={shift} />
+                    ),
+                  )}
                 </p>
               )}
             </div>
