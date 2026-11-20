@@ -1,6 +1,6 @@
 import { memo } from "react";
 import type { Song } from "@shared/types";
-import type { TransposeSetting } from "@/lib/notation/transpose";
+import type { ResolvedShift } from "@/lib/notation/range";
 import { NotesBox, type NotesData } from "./SongNotes";
 import { TextNotation, type NoteClickHandler } from "./TextNotation";
 
@@ -21,8 +21,8 @@ export const StageContent = memo(function StageContent({
   fit?: boolean;
   /** ghi chú hiện trên đầu bài (null = ẩn) */
   notes?: NotesData | null;
-  /** dịch giọng cho nhạc cụ (chỉ áp dụng nhạc dạng chữ) */
-  transpose?: TransposeSetting;
+  /** transposition resolved for this song (text notation only; null = as written) */
+  transpose?: ResolvedShift | null;
   /** tap a note (cảm âm) to look it up, e.g. its saxophone fingering */
   onNoteClick?: NoteClickHandler;
 }) {

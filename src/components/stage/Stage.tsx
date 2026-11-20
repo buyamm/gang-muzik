@@ -37,7 +37,20 @@ import { formatDuration, speedFromDuration } from "@/lib/stage/math";
 import { readPref, removePref, writePref } from "@/lib/prefs";
 import { cn } from "@/lib/utils";
 import { parseNotation } from "@/lib/notation/parse";
-import { normalizeTranspose, NO_TRANSPOSE, type NoteValue, type TransposeSetting } from "@/lib/notation/transpose";
+import { bestOctave, resolveShift, summarizeRange } from "@/lib/notation/range";
+import {
+  formatKeyName,
+  hornPreset,
+  isSaxPreset,
+  keyMajorPc,
+  keyRootPc,
+  normalizeTranspose,
+  NO_TRANSPOSE,
+  transposeBadge,
+  transposeKeyName,
+  type NoteValue,
+  type TransposeSetting,
+} from "@/lib/notation/transpose";
 import { BookSettings } from "./BookSettings";
 import { BookView, type ColumnsPref } from "./BookView";
 import { KeyMapDialog } from "./KeyMapDialog";
@@ -136,17 +149,35 @@ export function Stage({
   const [keyDialog, setKeyDialog] = useState(false);
   const [noteDialog, setNoteDialog] = useState(false);
   const [transposeOpen, setTransposeOpen] = useState(false);
-  // bản lưu cũ có thể thiếu / sai — luôn chuẩn hoá trước khi dùng
+  // stored values may be legacy / malformed: always normalize before use
   const transpose = useMemo(() => normalizeTranspose(prefs.transpose), [prefs.transpose]);
   const changeTranspose = (t: TransposeSetting) => {
     update({ transpose: t });
     writePref(TRANSPOSE_KEY, t);
   };
+  const sections = useMemo(() => parseNotation(song.textContent), [song.textContent]);
+  // auto octave, spelling and horn range for this song
+  // the stored song key (if valid) decides accidental spelling before the first-chord guess
+  const songKey = keyMajorPc(song.settings.key) !== null ? song.settings.key : undefined;
+  const shift = useMemo(
+    () => resolveShift(transpose, sections, keyMajorPc(songKey) ?? undefined),
+    [transpose, sections, songKey],
+  );
+  const rangeSummary = useMemo(() => summarizeRange(sections, shift), [sections, shift]);
+  const autoOctaveValue = useMemo(
+    () => (isSaxPreset(transpose.preset) ? bestOctave(sections, transpose.semitones) : undefined),
+    [sections, transpose.preset, transpose.semitones],
+  );
+  const horn = useMemo(() => {
+    if (!shift || shift.semitones % 12 === 0) return undefined;
+    const name = hornPreset(shift.preset)?.name ?? `nhạc cụ (${shift.semitones > 0 ? "+" : "−"}${Math.abs(shift.semitones)})`;
+    return { label: name, semitones: shift.semitones, spelling: shift.spelling };
+  }, [shift]);
   const [audioOpen, setAudioOpen] = useState(false);
   // ---------- fingering lookup ----------
   const hasNoteRows = useMemo(
-    () => parseNotation(song.textContent).some((sec) => sec.rows.some((r) => r.notes?.some((t) => t.type === "note"))),
-    [song.textContent],
+    () => sections.some((sec) => sec.rows.some((r) => r.notes?.some((t) => t.type === "note"))),
+    [sections],
   );
   const [fingeringPref, setFingeringPref] = useState(() => readPref(FINGERING_KEY, FINGERING_DEFAULT));
   const fingeringOn = hasNoteRows && fingeringPref.on;
@@ -213,6 +244,13 @@ export function Stage({
   const stepSize = prefs.turnBy === "page" ? 1 : cols;
   const maxFirst = prefs.turnBy === "page" ? Math.max(0, pageCount - cols) : Math.floor((pageCount - 1) / cols) * cols;
   const hasText = !!song.textContent.trim();
+  // "Tone Am · Alto: F♯m": the key as written for the horn, spelled like the transposed notes
+  const songKeyLabel = useMemo(() => {
+    if (!songKey) return null;
+    const badge = transposeBadge(transpose);
+    if (!badge || !shift?.semitones) return `Tone ${formatKeyName(songKey)}`;
+    return `Tone ${formatKeyName(songKey)} · ${badge}: ${formatKeyName(transposeKeyName(songKey, shift.semitones, shift.spelling))}`;
+  }, [songKey, transpose, shift]);
   /** chế độ sách hiện tất cả trang trên một màn hình — không có gì để lật */
   const allMode = !isScroll && prefs.columns === "all";
 
@@ -393,7 +431,16 @@ export function Stage({
           <Palette />
         </IconBtn>
       )}
-      {hasText && <TransposeSettings value={transpose} onChange={changeTranspose} onOpenChange={setTransposeOpen} />}
+      {(hasText || songKey) && (
+        <TransposeSettings
+          value={transpose}
+          onChange={changeTranspose}
+          onOpenChange={setTransposeOpen}
+          autoOctaveValue={autoOctaveValue}
+          rangeSummary={rangeSummary}
+          notice={hasText ? undefined : "Bài dạng ảnh không dịch nốt được — chỉ hiện tone cho kèn."}
+        />
+      )}
       {hasNoteRows && (
         <IconBtn
           label={fingeringOn ? "Thế bấm (đang bật: chạm vào nốt)" : "Thế bấm"}
@@ -416,7 +463,12 @@ export function Stage({
       >
         <StickyNote />
       </IconBtn>
-      <MetronomePanel audio={audio} onOpenChange={setAudioOpen} />
+      <MetronomePanel
+        audio={audio}
+        onOpenChange={setAudioOpen}
+        horn={hasText || songKey ? horn : undefined}
+        tonicPc={keyRootPc(songKey) ?? undefined}
+      />
       <IconBtn label="Pedal & phím tắt" onClick={() => setKeyDialog(true)}>
         <Keyboard />
       </IconBtn>
@@ -468,7 +520,13 @@ export function Stage({
           )}
           <div className="min-w-0 flex-1">
             <h1 className="truncate font-display text-xl leading-tight font-bold">{song.title}</h1>
-            {song.artist && <p className="truncate text-xs text-stage-lyric">{song.artist}</p>}
+            {(song.artist || songKeyLabel) && (
+              <p className="truncate text-xs text-stage-lyric">
+                {song.artist}
+                {song.artist && songKeyLabel && " · "}
+                {songKeyLabel}
+              </p>
+            )}
           </div>
           <div className="flex shrink-0 rounded-full bg-stage-fg/8 p-1 text-sm font-medium" role="radiogroup" aria-label="Chế độ xem">
             {(["scroll", "pages"] as const).map((m) => (
@@ -516,7 +574,7 @@ export function Stage({
                   scale={prefs.fontScale}
                   colored={prefs.colored}
                   notes={notes}
-                  transpose={transpose}
+                  transpose={shift}
                   onNoteClick={fingeringOn ? onNoteClick : undefined}
                 />
               </div>
@@ -542,7 +600,7 @@ export function Stage({
             onLayout={onBookLayout}
             onStep={onBookStep}
             notes={notes}
-            transpose={transpose}
+            transpose={shift}
             onNoteClick={fingeringOn ? onNoteClick : undefined}
           />
         )}

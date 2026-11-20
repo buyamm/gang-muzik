@@ -9,6 +9,7 @@ export const settingsSchema = z
     fontScale: z.number().min(0.5).max(4).optional(),
     pageSeconds: z.number().min(1).max(600).optional(),
     bpm: z.number().min(20).max(400).optional(),
+    key: z.string().regex(/^[A-G][#b]?m?$/).optional(),
   })
   .strict();
 

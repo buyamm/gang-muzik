@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import { parseNotation } from "./parse";
 import {
   detectKeyPc,
+  HORN_PRESETS,
+  hornPreset,
   isIdentity,
+  isSaxPreset,
   keyFromChord,
   normalizeTranspose,
   noteToSemitone,
@@ -163,21 +166,74 @@ describe("cài đặt dịch giọng", () => {
     expect(presetOf(4)).toBeNull();
   });
 
-  it("nhãn nút", () => {
+  it("horn presets: sax semitones and labels", () => {
+    expect(HORN_PRESETS.map((p) => [p.id, p.semitones, p.badge])).toEqual([
+      ["concert", 0, "C"],
+      ["alto", 9, "Alto"],
+      ["tenor", 2, "Tenor"],
+      ["soprano", 2, "Sop"],
+      ["baritone", 9, "Bari"],
+    ]);
+    expect(hornPreset("alto")?.label).toBe("Alto sax (Mib)");
+    expect(hornPreset("custom")).toBeNull();
+    expect(isSaxPreset("baritone")).toBe(true);
+    expect(isSaxPreset("concert")).toBe(false);
+    expect(isSaxPreset("custom")).toBe(false);
+    expect(isSaxPreset(undefined)).toBe(false);
+  });
+
+  it("badge (legacy values without preset)", () => {
     expect(transposeBadge({ semitones: 0, octave: 0, spelling: "auto" })).toBeNull();
-    expect(transposeBadge({ semitones: 9, octave: 0, spelling: "auto" })).toBe("Eb");
-    expect(transposeBadge({ semitones: 2, octave: -1, spelling: "flat" })).toBe("Bb↓");
+    expect(transposeBadge({ semitones: 9, octave: 0, spelling: "auto" })).toBe("Alto");
+    expect(transposeBadge({ semitones: 2, octave: -1, spelling: "flat" })).toBe("Tenor↓");
     expect(transposeBadge({ semitones: -3, octave: 0, spelling: "auto" })).toBe("−3");
     expect(transposeBadge({ semitones: 0, octave: 1, spelling: "auto" })).toBe("C↑");
   });
 
-  it("chuẩn hoá giá trị lưu", () => {
-    expect(normalizeTranspose(undefined)).toEqual({ semitones: 0, octave: 0, spelling: "auto" });
+  it("badge uses the preset label; auto octave shows no arrow", () => {
+    expect(transposeBadge({ semitones: 2, octave: 0, spelling: "auto", preset: "soprano" })).toBe("Sop");
+    expect(transposeBadge({ semitones: 9, octave: -1, spelling: "auto", preset: "baritone", autoOctave: true })).toBe("Bari");
+    expect(transposeBadge({ semitones: 9, octave: -1, spelling: "auto", preset: "baritone", autoOctave: false })).toBe("Bari↓");
+    expect(transposeBadge({ semitones: 9, octave: 0, spelling: "auto", preset: "custom" })).toBe("+9");
+    expect(transposeBadge({ semitones: 3, octave: 1, spelling: "auto", preset: "custom" })).toBe("+3↑");
+  });
+
+  it("normalizes stored values", () => {
+    expect(normalizeTranspose(undefined)).toEqual({ semitones: 0, octave: 0, spelling: "auto", preset: "concert", autoOctave: false });
     expect(normalizeTranspose({ semitones: 40, octave: -5, spelling: "flat" })).toEqual({
       semitones: 11,
       octave: -1,
       spelling: "flat",
+      preset: "custom",
+      autoOctave: false,
     });
     expect(isIdentity(normalizeTranspose({ semitones: 0, octave: 0 }))).toBe(true);
+  });
+
+  it("legacy values: preset from semitones, keep the stored octave", () => {
+    expect(normalizeTranspose({ semitones: 9, octave: -1, spelling: "auto" })).toEqual({
+      semitones: 9,
+      octave: -1,
+      spelling: "auto",
+      preset: "alto",
+      autoOctave: false,
+    });
+    expect(normalizeTranspose({ semitones: 2, octave: 0 }).preset).toBe("tenor");
+    expect(normalizeTranspose({ semitones: 0, octave: 1 }).preset).toBe("concert");
+    expect(normalizeTranspose({ semitones: 5, octave: 0 }).preset).toBe("custom");
+  });
+
+  it("new values: keep preset & autoOctave, fixed presets force their semitones", () => {
+    expect(normalizeTranspose({ semitones: 2, octave: 0, spelling: "auto", preset: "soprano", autoOctave: true })).toEqual({
+      semitones: 2,
+      octave: 0,
+      spelling: "auto",
+      preset: "soprano",
+      autoOctave: true,
+    });
+    expect(normalizeTranspose({ semitones: 4, octave: 0, preset: "alto", autoOctave: true }).semitones).toBe(9);
+    expect(normalizeTranspose({ semitones: 9, octave: 0, preset: "custom" })).toMatchObject({ semitones: 9, preset: "custom" });
+    // unknown preset → treated as legacy
+    expect(normalizeTranspose({ semitones: 9, octave: 0, preset: "oboe" as never })).toMatchObject({ preset: "alto", autoOctave: false });
   });
 });
