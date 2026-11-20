@@ -2,6 +2,7 @@ import { Hono, type Context } from "hono";
 import type { AppEnv } from "./env";
 import { getPages, getSongRow, toSong, type SongRow } from "@shared/server/db";
 import {
+  FINGERING_SEO,
   INSTRUMENT_PATHS,
   LEGAL_SEO,
   SITE_NAME,
@@ -110,6 +111,11 @@ export const seo = new Hono<AppEnv>()
       `</main>`;
     return render(c, m, { jsonLd: songJsonLd(song, origin), body });
   })
+  .get("/fingering", (c) =>
+    render(c, FINGERING_SEO, {
+      body: `${MAIN_OPEN}<h1>${esc(FINGERING_SEO.title)}</h1><p>${esc(FINGERING_SEO.description)}</p></main>`,
+    }),
+  )
   .get("/privacy", (c) => render(c, LEGAL_SEO.privacy))
   .get("/terms", (c) => render(c, LEGAL_SEO.terms))
   .get("/robots.txt", (c) => {
@@ -129,6 +135,7 @@ export const seo = new Hono<AppEnv>()
       [
         url("/", latest),
         ...INSTRUMENT_PATHS.map((p) => url(p)),
+        url(FINGERING_SEO.path),
         ...songs.map((s) => url(`/s/${s.id}`, s.updated_at)),
         url(LEGAL_SEO.privacy.path),
         url(LEGAL_SEO.terms.path),

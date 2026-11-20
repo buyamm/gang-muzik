@@ -6,7 +6,7 @@ import {
   clampOctave,
   clampSemitones,
   HORN_PRESETS,
-  isSaxPreset,
+  hasRangeCheck,
   SEMITONE_MAX,
   SEMITONE_MIN,
   transposeBadge,
@@ -75,7 +75,7 @@ const formatSemitones = (n: number) => (n === 0 ? "0" : `${n > 0 ? "+" : "−"}$
 /** transpose controls (instrument presets, custom interval, octave, spelling) without a trigger */
 export function TransposePanel({ value, onChange, autoOctaveValue, rangeSummary, notice, className }: TransposePanelProps) {
   const preset = value.preset ?? "custom";
-  const sax = isSaxPreset(preset);
+  const sax = hasRangeCheck(preset);
   const auto = sax && !!value.autoOctave;
   const set = (patch: Partial<TransposeSetting>) => onChange({ ...value, ...patch });
   const n = value.semitones;
@@ -95,7 +95,7 @@ export function TransposePanel({ value, onChange, autoOctaveValue, rangeSummary,
             <Choice
               key={p.id}
               active={preset === p.id}
-              onClick={() => set({ preset: p.id, semitones: p.semitones, autoOctave: p.sax })}
+              onClick={() => set({ preset: p.id, semitones: p.semitones, autoOctave: hasRangeCheck(p.id) })}
             >
               <span className="flex items-center justify-between gap-2">
                 <span>{p.label}</span>
