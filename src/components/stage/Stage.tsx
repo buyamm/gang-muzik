@@ -35,6 +35,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import { formatDuration, speedFromDuration } from "@/lib/stage/math";
 import { readPref, removePref, writePref } from "@/lib/prefs";
+import { instrumentForPreset, readLearnInstrument } from "@/lib/learnInstrument";
 import { cn } from "@/lib/utils";
 import { parseNotation } from "@/lib/notation/parse";
 import { bestOctave, rangeFor, resolveShift, summarizeRange } from "@/lib/notation/range";
@@ -183,6 +184,9 @@ export function Stage({
   );
   const [fingeringPref, setFingeringPref] = useState(() => readPref(FINGERING_KEY, FINGERING_DEFAULT));
   const fingeringOn = hasNoteRows && fingeringPref.on;
+  // sax / sáo presets pick their own diagram; concert and custom use the stored learning instrument
+  const [learnInstrument] = useState(readLearnInstrument);
+  const fingeringInstrument = instrumentForPreset(transpose.preset, learnInstrument);
   const [fingerTarget, setFingerTarget] = useState<FingeringTarget | null>(null);
   const [fingerOpen, setFingerOpen] = useState(false);
   const [chartOpen, setChartOpen] = useState(false);
@@ -757,8 +761,14 @@ export function Stage({
             onOpenChange={setFingerOpen}
             onOpenChart={openChart}
             onPointerDownOutside={onFingerOutside}
+            instrument={fingeringInstrument}
           />
-          <FingeringChartDialog open={chartOpen} onOpenChange={setChartOpen} highlight={chartHighlight} />
+          <FingeringChartDialog
+            open={chartOpen}
+            onOpenChange={setChartOpen}
+            highlight={chartHighlight}
+            instrument={fingeringInstrument}
+          />
         </>
       )}
       <NotesDialog
