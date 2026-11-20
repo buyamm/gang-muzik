@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { BPM_MAX, BPM_MIN, pushTap, tapTempo } from "@/lib/audio/engine";
-import { presetOf, TRANSPOSE_PRESETS, type SpellingPref, type TransposeSetting } from "@/lib/notation/transpose";
+import { HORN_PRESETS, isSaxPreset, type HornPreset, type SpellingPref, type TransposeSetting } from "@/lib/notation/transpose";
+import { selectPreset } from "@/lib/practice/instrument";
 import { keyName, noteText, scaleDef, type ScaleType } from "@/lib/practice/scales";
 import { cn } from "@/lib/utils";
 
@@ -20,7 +21,7 @@ export function Field({ label, hint, children }: { label: string; hint?: React.R
   );
 }
 
-/** nhóm nút chọn một (aria-pressed) */
+/** single-choice button group (aria-pressed) */
 export function Segmented<T extends string | number>({
   value,
   options,
@@ -89,36 +90,40 @@ export function VolumeRow({ label, value, onChange }: { label: string; value: nu
   );
 }
 
-const INSTRUMENT_LABEL: Record<string, string> = { C: "Concert (C)", Bb: "Sib (B♭)", Eb: "Mib (E♭)" };
-
-/** giọng kèn: preset C / Bb / Eb (+ tuỳ chỉnh đang dùng từ trang bài), quãng tám, kiểu dấu */
+/**
+ * Horn picker: every `HORN_PRESETS` entry (+ the custom shift set on a song page, when in use), then the
+ * octave (concert / custom only: sax presets play at the horn's real pitch) and the spelling.
+ */
 export function InstrumentPicker({ value, onChange }: { value: TransposeSetting; onChange: (t: TransposeSetting) => void }) {
-  const preset = presetOf(value.semitones);
-  const options = TRANSPOSE_PRESETS.map((p) => ({ value: String(p.semitones), label: INSTRUMENT_LABEL[p.id], title: p.label }));
-  if (preset === null)
-    options.push({ value: String(value.semitones), label: `Tuỳ chỉnh ${value.semitones > 0 ? "+" : ""}${value.semitones}`, title: "Đặt ở trang bài" });
+  const preset: HornPreset = value.preset ?? "custom";
+  const options: { value: HornPreset; label: string; title?: string }[] = HORN_PRESETS.map((p) => ({ value: p.id, label: p.label }));
+  if (preset === "custom")
+    options.push({ value: "custom", label: `Tuỳ chỉnh ${value.semitones > 0 ? "+" : ""}${value.semitones}`, title: "Đặt ở trang bài" });
   return (
     <div className="space-y-3">
       <Field label="Giọng kèn" hint="Nốt hiện theo giọng viết của nhạc cụ; tiếng phát ra là cao độ thật (concert).">
         <Segmented
           label="Giọng kèn"
-          value={String(value.semitones)}
+          value={preset}
           options={options}
-          onChange={(v) => onChange({ ...value, semitones: Number(v) })}
+          onChange={(id) => onChange(selectPreset(value, id))}
+          className="grid grid-cols-2 sm:grid-cols-3"
         />
       </Field>
-      <Field label="Quãng tám của kèn" hint="Tenor / baritone sax kêu thấp hơn thêm 1 quãng tám: chọn “Thấp hơn 1”.">
-        <Segmented
-          label="Quãng tám của kèn"
-          value={value.octave}
-          options={[
-            { value: -1, label: "Cao hơn 1" },
-            { value: 0, label: "Giữ nguyên" },
-            { value: 1, label: "Thấp hơn 1" },
-          ]}
-          onChange={(v) => onChange({ ...value, octave: v })}
-        />
-      </Field>
+      {!isSaxPreset(preset) && (
+        <Field label="Quãng tám của kèn" hint="Nhạc cụ kêu thấp hơn nốt viết 1 quãng tám: chọn “Thấp hơn 1”.">
+          <Segmented
+            label="Quãng tám của kèn"
+            value={value.octave}
+            options={[
+              { value: -1, label: "Cao hơn 1" },
+              { value: 0, label: "Giữ nguyên" },
+              { value: 1, label: "Thấp hơn 1" },
+            ]}
+            onChange={(v) => onChange({ ...value, octave: v, autoOctave: false })}
+          />
+        </Field>
+      )}
       <Field label="Kiểu dấu">
         <Segmented<SpellingPref>
           label="Kiểu dấu"
@@ -135,7 +140,7 @@ export function InstrumentPicker({ value, onChange }: { value: TransposeSetting;
   );
 }
 
-/** 12 chủ âm theo giọng viết, kèm tên concert khi kèn dịch giọng */
+/** the 12 tonics in the written key, with the concert name when the horn transposes */
 export function TonicPicker({
   value,
   type,
@@ -202,7 +207,7 @@ function BpmInput({ bpm, onCommit }: { bpm: number; onCommit: (v: number) => voi
   );
 }
 
-/** BPM: −/+ (giữ Shift = ±5), ô nhập, gõ nhịp */
+/** BPM: −/+ (Shift = ±5), number input, tap tempo */
 export function BpmControl({ bpm, onChange }: { bpm: number; onChange: (v: number) => void }) {
   const [taps, setTaps] = useState<number[]>([]);
   const onTap = () => {

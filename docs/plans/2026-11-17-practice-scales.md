@@ -30,7 +30,19 @@ Trang luyện âm giai / nốt dài cho người chơi kèn (sax…), dùng lạ
 
 ## SEO
 - `PRACTICE_SEO` trong `shared/seo.ts`, route trong `worker/seo.ts`, sitemap, `run_worker_first` thêm `/practice`, `useSeo` phía client.
-- Link "Luyện tập" trên header thư viện.
+- ~~Link "Luyện tập" trên header thư viện~~ — bỏ (2026-11-20): nav chung `SiteHeader` (nhánh `feat/sax-sao-focus`) sẽ link `/practice`.
+
+## Cập nhật 2026-11-20 (đồng bộ `main`, xem `2026-11-20-sax-sao-learning.md` mục 4)
+- Chọn giọng kèn theo `HORN_PRESETS` (Concert, Alto, Tenor, Soprano, Baritone + Tuỳ chỉnh nếu đang dùng), lưu chung pref `gm:transpose`
+  (`TransposeSetting` có `preset`) — thay cho `TRANSPOSE_PRESETS` C/Bb/Eb (đã @deprecated).
+- `src/lib/practice/instrument.ts`:
+  - `practiceRange(preset)` — chỗ DUY NHẤT tra tầm âm: sax → `SAX_WRITTEN_RANGE` (`range.ts`), concert/tuỳ chỉnh → null.
+    Khi có `rangeFor(preset)` (sáo trúc 0..24) chỉ cần đổi thân hàm thành `return rangeFor(preset)`.
+  - `practiceTranspose(t)` — preset sax phát đúng cao độ thật của kèn (tenor/baritone thấp thêm 1 quãng tám), không dùng quãng tám lưu cho Stage;
+    concert/tuỳ chỉnh giữ nguyên bán cung + quãng tám.
+  - `selectPreset(t, id)` — ghi đúng dạng mà Stage ghi (`preset`, `semitones`, `autoOctave`).
+- Quãng tám bắt đầu = quãng thấp nhất mà chủ âm còn nằm trong tầm (sax: Sib/Si quãng 0, còn lại quãng 1); nốt ngoài tầm hiện ô viền đứt + dòng cảnh báo.
+- Ô "Quãng tám của kèn" chỉ hiện với concert/tuỳ chỉnh.
 
 ## Kiểm tra
 - `npm test`, `npm run typecheck`, `npm run build`.

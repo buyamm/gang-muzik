@@ -20,7 +20,8 @@ import { loadKeyMap, usePedalKeys, type KeyMap } from "@/hooks/usePedalKeys";
 import { BEATS_PER_BAR, usePracticeRunner } from "@/hooks/usePracticeRunner";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import { clampBpm, isAudioSupported, playTone } from "@/lib/audio/engine";
-import { normalizeTranspose, NO_TRANSPOSE, type TransposeSetting } from "@/lib/notation/transpose";
+import { hornPreset, normalizeTranspose, NO_TRANSPOSE, type TransposeSetting } from "@/lib/notation/transpose";
+import { practiceRange, practiceTranspose } from "@/lib/practice/instrument";
 import {
   concertKeyName,
   droneFrequency,
@@ -48,10 +49,10 @@ import { useSeo } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 import { PRACTICE_SEO } from "@shared/seo";
 
-/** giọng kèn chọn gần nhất — dùng chung với trang bài */
+/** last chosen horn, shared with the song page (Stage) */
 const TRANSPOSE_KEY = "gm:transpose";
 
-/** sơ đồ pedal của Stage, luôn có thêm Space để bắt đầu / dừng */
+/** the Stage pedal map, always with Space to start / stop */
 function practiceKeyMap(): KeyMap {
   const m = loadKeyMap();
   return { ...m, toggle: m.toggle.includes(" ") ? m.toggle : [...m.toggle, " "] };
@@ -85,17 +86,21 @@ export function Practice() {
       return next;
     });
 
+  // what is actually played (sax presets at the horn's real pitch) and the written range to check against
+  const horn = practiceTranspose(transpose);
+  const range = practiceRange(transpose.preset);
   const scaleOpts = {
     tonic: s.tonic,
     type: s.type,
     exercise: s.exercise,
     octaves: s.octaves,
     pattern: s.pattern,
-    transpose,
+    transpose: horn,
     octaveShift: s.octaveShift,
+    range,
   };
   const optsKey = JSON.stringify([scaleOpts, s.mode]);
-  // dãy nốt chỉ tính lại khi cài đặt đổi thật (scaleOpts là object mới mỗi lần render)
+  // recompute the sequence only when the settings really change (scaleOpts is a new object every render)
   const seq = useMemo(() => (s.mode === "longtone" ? longToneSequence(scaleOpts) : practiceSequence(scaleOpts)), [optsKey]);
 
   const runner = usePracticeRunner({
@@ -133,8 +138,9 @@ export function Practice() {
   );
 
   const def = scaleDef(s.type);
-  const written = keyName(s.tonic, def.minor, transpose.spelling);
-  const concert = concertKeyName(s.tonic, s.type, transpose);
+  const written = keyName(s.tonic, def.minor, horn.spelling);
+  const concert = concertKeyName(s.tonic, s.type, horn);
+  const outOfRange = seq.filter((n) => n.outOfRange).length;
   const title = scaleTitle(written, s.type, s.exercise);
   const step = runner.step;
   const activeIndex = step && step.phase !== "countin" ? step.index : null;
@@ -173,12 +179,12 @@ export function Practice() {
           className="rounded-lg bg-muted p-1 [&>button]:min-h-10"
         />
 
-        {/* ===== màn hình chính ===== */}
+        {/* ===== main display ===== */}
         <section className="rounded-2xl border bg-card p-4 sm:p-6" aria-label="Bài tập">
           <div className="mb-4 text-center">
             <div className="font-display text-2xl font-bold">{title}</div>
             <div className="text-sm text-muted-foreground">
-              {transpose.semitones !== 0 ? (
+              {horn.semitones !== 0 ? (
                 <>
                   Concert: {noteText(concert)} ({letterText(concert)}) ·{" "}
                 </>
@@ -206,6 +212,12 @@ export function Practice() {
             </>
           )}
 
+          {outOfRange > 0 && (
+            <p className="mt-3 text-center text-xs text-muted-foreground">
+              {outOfRange} nốt ngoài tầm của {hornPreset(transpose.preset)?.name ?? "kèn"} (ô viền đứt) — thử đổi “Bắt đầu từ”.
+            </p>
+          )}
+
           <div className="mt-6 hidden justify-center sm:flex">
             <StartButton running={runner.running} onClick={toggle} />
           </div>
@@ -214,14 +226,14 @@ export function Practice() {
           </p>
         </section>
 
-        {/* ===== cài đặt ===== */}
+        {/* ===== settings ===== */}
         <section className="space-y-5" aria-label="Cài đặt bài tập">
           <Field label="Nhịp độ">
             <BpmControl bpm={s.bpm} onChange={(v) => set({ bpm: clampBpm(v) })} />
           </Field>
 
-          <Field label="Chủ âm" hint={transpose.semitones !== 0 ? "Theo giọng viết của kèn; dòng nhỏ là cao độ concert." : undefined}>
-            <TonicPicker value={s.tonic} type={s.type} transpose={transpose} onChange={(tonic) => set({ tonic })} />
+          <Field label="Chủ âm" hint={horn.semitones !== 0 ? "Theo giọng viết của kèn; dòng nhỏ là cao độ concert." : undefined}>
+            <TonicPicker value={s.tonic} type={s.type} transpose={horn} onChange={(tonic) => set({ tonic })} />
           </Field>
 
           <Field label="Loại gam">
@@ -341,7 +353,7 @@ export function Practice() {
         </section>
       </main>
 
-      {/* nút bắt đầu dính đáy trên điện thoại */}
+      {/* start button pinned to the bottom on phones */}
       <div className="fixed inset-x-0 bottom-0 z-10 border-t bg-background/90 p-3 backdrop-blur-md sm:hidden">
         <StartButton running={runner.running} onClick={toggle} />
       </div>
@@ -374,7 +386,7 @@ function BeatDots({ beat }: { beat: number }) {
   );
 }
 
-/** drone chạy khi bật công tắc VÀ bài tập đang chạy */
+/** the drone runs while its switch is on AND the exercise is running */
 function useSyncDrone(want: boolean, drone: ReturnType<typeof useDrone>) {
   const { running, start, stop } = drone;
   useEffect(() => {

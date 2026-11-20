@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 const GLYPH = { "#": "♯", b: "♭" } as const;
 
-/** tên cảm âm có màu: Si♭ + số quãng tám nhỏ phía trên (giống TextNotation, quãng 1 không ghi số) */
+/** coloured cảm âm name: Si♭ + small octave number above (like TextNotation; octave 1 has no number) */
 export function NoteLabel({ n, colored = true, className }: { n: NoteValue; colored?: boolean; className?: string }) {
   return (
     <span className={cn("whitespace-nowrap", colored && NOTE_CLASS[n.note], className)}>
@@ -17,7 +17,7 @@ export function NoteLabel({ n, colored = true, className }: { n: NoteValue; colo
   );
 }
 
-/** dãy nốt của bài tập: chip lớn, nốt đang chơi được tô sáng; bấm một nốt (khi đang dừng) để nghe */
+/** the exercise notes as large chips; the current note is highlighted, out-of-range notes are dimmed; tap a note (while stopped) to hear it */
 export const NoteChips = memo(function NoteChips({
   seq,
   activeIndex,
@@ -37,10 +37,12 @@ export const NoteChips = memo(function NoteChips({
               type="button"
               onClick={() => onPick?.(i)}
               aria-current={active ? "step" : undefined}
-              aria-label={`Nốt ${i + 1}: ${n.written.note}${n.written.accidental === "#" ? " thăng" : n.written.accidental === "b" ? " giáng" : ""} quãng ${n.written.octave}`}
+              title={n.outOfRange ? "Ngoài tầm của kèn" : undefined}
+              aria-label={`Nốt ${i + 1}: ${n.written.note}${n.written.accidental === "#" ? " thăng" : n.written.accidental === "b" ? " giáng" : ""} quãng ${n.written.octave}${n.outOfRange ? " (ngoài tầm kèn)" : ""}`}
               className={cn(
                 "flex h-12 min-w-12 items-center justify-center rounded-xl border px-2 font-display text-xl font-bold transition-all duration-75 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:h-14 sm:min-w-14 sm:text-2xl",
                 n.degree === 1 ? "border-foreground/30 bg-card" : "border-transparent bg-muted/60",
+                n.outOfRange && "border-dashed border-destructive/60 opacity-50",
                 active && "scale-110 border-primary bg-primary/15 shadow-md ring-2 ring-primary",
               )}
             >
