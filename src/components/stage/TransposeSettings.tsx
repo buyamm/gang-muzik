@@ -1,5 +1,8 @@
 import { Minus, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@astryxdesign/core/Button";
+import { Icon } from "@astryxdesign/core/Icon";
+import { IconButton } from "@astryxdesign/core/IconButton";
+import { List, ListItem } from "@astryxdesign/core/List";
 import { formatNote, type RangeSummary } from "@/lib/notation/range";
 import {
   clampOctave,
@@ -55,14 +58,10 @@ function Stepper({
   incDisabled?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-1 rounded-md bg-muted p-1">
-      <Button type="button" variant="ghost" size="icon" className="size-8" aria-label={`Giảm ${label}`} disabled={decDisabled} onClick={onDec}>
-        <Minus />
-      </Button>
+    <div className="flex items-center gap-1 rounded-lg border border-border p-1">
+      <IconButton variant="ghost" size="sm" label={`Giảm ${label}`} icon={<Icon icon={Minus} />} isDisabled={decDisabled} onClick={onDec} />
       <div className="flex-1 text-center text-sm font-semibold tabular-nums">{value}</div>
-      <Button type="button" variant="ghost" size="icon" className="size-8" aria-label={`Tăng ${label}`} disabled={incDisabled} onClick={onInc}>
-        <Plus />
-      </Button>
+      <IconButton variant="ghost" size="sm" label={`Tăng ${label}`} icon={<Icon icon={Plus} />} isDisabled={incDisabled} onClick={onInc} />
     </div>
   );
 }
@@ -97,18 +96,12 @@ export function TransposePanel({ value, onChange, autoOctaveValue, rangeSummary,
     <div className={cn("space-y-4", className)}>
       {notice && <p className="text-xs text-muted-foreground">{notice}</p>}
       {songKey && saoHint && (
-        <div className="flex items-center justify-between gap-2 rounded-md bg-primary/10 px-2 py-1.5 text-xs">
+        <div className="flex items-center justify-between gap-2 rounded-lg bg-muted px-2 py-1.5 text-xs">
           <span>
             Bài tone {formatKeyName(songKey)} → hợp <span className="font-semibold">{saoHint.name}</span>
           </span>
           {preset !== saoHint.id && (
-            <button
-              type="button"
-              onClick={() => pick(saoHint)}
-              className="shrink-0 rounded-md bg-primary px-2 py-0.5 font-semibold text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-            >
-              Dùng {saoHint.name}
-            </button>
+            <Button size="sm" variant="primary" label={`Dùng ${saoHint.name}`} onClick={() => pick(saoHint)} />
           )}
         </div>
       )}
@@ -123,15 +116,23 @@ export function TransposePanel({ value, onChange, autoOctaveValue, rangeSummary,
         {PRESET_GROUPS.map((g) => (
           <div key={g.family} className="space-y-1">
             <div className="text-xs font-medium text-muted-foreground">{g.label}</div>
-            <div className="flex flex-col gap-1">
-              {HORN_PRESETS.filter((p) => p.family === g.family).map((p) => (
-                <Choice key={p.id} active={preset === p.id} onClick={() => pick(p)}>
-                  <span className="flex items-center justify-between gap-2">
-                    <span>{p.label}</span>
-                    <span className="text-xs opacity-75">{formatSemitones(p.semitones)}</span>
-                  </span>
-                </Choice>
-              ))}
+            <div className="overflow-hidden rounded-lg border border-border">
+              <List density="compact" hasDividers edge="padded">
+                {HORN_PRESETS.filter((p) => p.family === g.family).map((p) => (
+                  <ListItem
+                    key={p.id}
+                    label={p.label}
+                    isSelected={preset === p.id}
+                    onClick={() => pick(p)}
+                    endContent={
+                      <span className="flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
+                        {formatSemitones(p.semitones)}
+                        {preset === p.id && <Icon icon="check" size="sm" color="accent" />}
+                      </span>
+                    }
+                  />
+                ))}
+              </List>
             </div>
           </div>
         ))}

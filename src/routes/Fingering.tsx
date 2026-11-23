@@ -1,10 +1,21 @@
 import { useMemo } from "react";
 import { useSearchParams } from "react-router";
 import { Link2, TriangleAlert, Volume2, Wind } from "lucide-react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { SiteHeader } from "@/components/SiteHeader";
-import { SiteFooter } from "@/components/SiteFooter";
+import { Badge } from "@astryxdesign/core/Badge";
+import { Banner } from "@astryxdesign/core/Banner";
+import { Button } from "@astryxdesign/core/Button";
+import { Card } from "@astryxdesign/core/Card";
+import { Divider } from "@astryxdesign/core/Divider";
+import { Grid } from "@astryxdesign/core/Grid";
+import { Layout, LayoutContent, LayoutPanel } from "@astryxdesign/core/Layout";
+import { Selector } from "@astryxdesign/core/Selector";
+import { HStack, StackItem, VStack } from "@astryxdesign/core/Stack";
+import { Heading } from "@astryxdesign/core/Heading";
+import { Icon } from "@astryxdesign/core/Icon";
+import { SegmentedControl, SegmentedControlItem } from "@astryxdesign/core/SegmentedControl";
+import { Text } from "@astryxdesign/core/Text";
+import { useToast } from "@astryxdesign/core/Toast";
+import { AppFrame } from "@/components/AppFrame";
 import { SaxFingeringDiagram, describeFingering } from "@/components/stage/SaxFingeringDiagram";
 import { SaoFingeringDiagram } from "@/components/fingering/SaoFingeringDiagram";
 import { playTone } from "@/lib/audio/engine";
@@ -52,7 +63,7 @@ function concertLabel(abs: number) {
 
 const INSTRUMENTS: { id: LearnInstrument; label: string; hint: string }[] = [
   { id: "sax", label: "Saxophone", hint: "Sib0 – Fa♯3" },
-  { id: "sao", label: "Sáo trúc 6 lỗ", hint: "Đô1 – Đô3" },
+  { id: "sao", label: "Sáo trúc", hint: "sáo 6 lỗ, Đô1 – Đô3" },
 ];
 
 /** one fingering (main or alternate) shown as a card */
@@ -109,149 +120,148 @@ export function Fingering() {
   const concertAbs = semi + typeInfo.offset;
   const { cards, note } = optionsFor(instrument, semi);
 
+  const showToast = useToast();
   const copyLink = async () => {
     const url = `${location.origin}/fingering${fingeringSearch(state)}`;
     try {
       await navigator.clipboard.writeText(url);
-      toast.success("Đã sao chép liên kết");
+      showToast({ body: "Đã sao chép liên kết", uniqueID: "copy-link" });
     } catch {
-      toast(url);
+      showToast({ body: url, isAutoHide: false });
     }
   };
 
+  const controls = (
+    <VStack gap={6}>
+      <VStack gap={2}>
+        <Text type="label" weight="semibold">
+          Nhạc cụ
+        </Text>
+        <SegmentedControl label="Nhạc cụ" layout="fill" value={instrument} onChange={(v) => go({ instrument: v as LearnInstrument })}>
+          {INSTRUMENTS.map((i) => (
+            <SegmentedControlItem key={i.id} value={i.id} label={i.label} />
+          ))}
+        </SegmentedControl>
+        <Text type="supporting" color="secondary">
+          Tầm nốt: {INSTRUMENTS.find((i) => i.id === instrument)?.hint}
+        </Text>
+      </VStack>
+      <Selector
+        label={instrument === "sax" ? "Loại kèn" : "Cây sáo"}
+        description={
+          instrument === "sax"
+            ? "Thế bấm giống nhau cho mọi loại kèn; loại kèn chỉ đổi âm thanh thật."
+            : "Thế bấm giống nhau cho mọi cây sáo 6 lỗ. Bịt kín 6 lỗ là nốt Đô của sáo."
+        }
+        options={types.map((t) => ({ value: t.id, label: instrument === "sax" ? `${t.label} (${t.key})` : t.label }))}
+        value={typeInfo.id}
+        onChange={(v) => v && go({ type: v })}
+      />
+      <NotePicker instrument={instrument} value={semi} onChange={(s) => go({ semi: s })} />
+    </VStack>
+  );
+
   return (
-    <div className="min-h-full">
-      <SiteHeader containerClassName="max-w-5xl" />
-      <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+    <AppFrame>
+      <Layout
+        height="auto"
+        start={
+          <div className="hidden md:block">
+            <LayoutPanel hasDivider padding={6} width={340} label="Chọn nhạc cụ và nốt">
+              {controls}
+            </LayoutPanel>
+          </div>
+        }
+        content={
+          <LayoutContent padding={8} role="main">
+            <VStack gap={8}>
+              <VStack gap={2}>
+                <Heading level={1}>Tra thế bấm</Heading>
+                <Text color="secondary">
+                  Cách bấm chuẩn và mọi cách bấm phụ của từng nốt, kèm lúc nào nên dùng. Nốt viết theo cảm âm của nhạc cụ (đọc thẳng trên bản
+                  nhạc đã dịch giọng).
+                </Text>
+              </VStack>
 
-        <div className="mb-6">
-          <h1 className="font-display text-3xl font-bold sm:text-4xl">Tra thế bấm</h1>
-          <p className="mt-1 max-w-2xl text-muted-foreground">
-            Chọn nhạc cụ và nốt để xem cách bấm chuẩn cùng mọi cách bấm phụ, kèm lúc nào nên dùng. Nốt viết theo cảm âm của nhạc cụ
-            (đọc thẳng trên bản nhạc đã dịch giọng).
-          </p>
-        </div>
+              {/* phones: the controls panel sits above the result */}
+              <div className="md:hidden">
+                <Card padding={4}>{controls}</Card>
+              </div>
 
-        {/* instrument + type */}
-        <section className="space-y-4 rounded-xl border bg-card p-4 sm:p-5" aria-label="Chọn nhạc cụ">
-          <div role="radiogroup" aria-label="Nhạc cụ" className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1 sm:inline-grid sm:w-auto">
-            {INSTRUMENTS.map((i) => {
-              const active = i.id === instrument;
-              return (
-                <button
-                  key={i.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  onClick={() => go({ instrument: i.id })}
-                  className={cn(
-                    "rounded-md px-4 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                    active ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground",
+              <section aria-live="polite">
+                <VStack gap={6}>
+                  <HStack gap={6} vAlign="end" wrap="wrap">
+                    <StackItem size="fill">
+                      <VStack gap={1}>
+                        <Text type="supporting" color="secondary">
+                          {instrument === "sax" ? `Saxophone ${typeInfo.label}` : `Sáo trúc · ${typeInfo.label}`}
+                        </Text>
+                        <span className={cn("font-display text-6xl leading-none font-bold", NOTE_TEXT[written.note])}>{fmt(written)}</span>
+                        <Text color="secondary">
+                          Âm thanh thật: <b className="text-foreground">{concertLabel(concertAbs)}</b>
+                        </Text>
+                      </VStack>
+                    </StackItem>
+                    <HStack gap={2} wrap="wrap">
+                      <Button
+                        variant="primary"
+                        label="Nghe âm mẫu"
+                        icon={<Icon icon={Volume2} />}
+                        onClick={() => playTone(concertFrequency(instrument, typeInfo.id, semi), 1.4)}
+                      />
+                      <Button label="Sao chép liên kết" icon={<Icon icon={Link2} />} onClick={copyLink} />
+                    </HStack>
+                  </HStack>
+
+                  {note && <Banner status="warning" title={note} icon={<Icon icon={TriangleAlert} />} />}
+
+                  <Divider />
+
+                  {cards.length > 0 && (
+                    <VStack gap={4}>
+                      <Heading level={2}>Cách bấm chuẩn</Heading>
+                      <OptionView card={cards[0]} noteName={fmt(written)} hero />
+                    </VStack>
                   )}
-                >
-                  <span className="block text-sm font-semibold">{i.label}</span>
-                  <span className="block text-xs text-muted-foreground">{i.hint}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          <div>
-            <div className="mb-1.5 text-sm font-semibold">{instrument === "sax" ? "Loại kèn" : "Cây sáo"}</div>
-            <div role="radiogroup" aria-label={instrument === "sax" ? "Loại kèn" : "Cây sáo"} className="flex flex-wrap gap-1.5">
-              {types.map((t) => {
-                const active = t.id === typeInfo.id;
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={active}
-                    onClick={() => go({ type: t.id })}
-                    className={cn(
-                      "rounded-full border px-3 py-1 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                      active ? "border-primary bg-primary text-primary-foreground" : "hover:border-foreground/40",
-                    )}
-                  >
-                    {instrument === "sax" ? `${t.label} (${t.key})` : t.label}
-                  </button>
-                );
-              })}
-            </div>
-            <p className="mt-1.5 text-xs text-muted-foreground">
-              {instrument === "sax"
-                ? "Thế bấm giống nhau cho mọi loại kèn; loại kèn chỉ đổi âm thanh thật (concert)."
-                : "Thế bấm giống nhau cho mọi cây sáo 6 lỗ; cây sáo chỉ đổi âm thanh thật. Bịt kín 6 lỗ là nốt Đô của sáo."}
-            </p>
-          </div>
-
-          <NotePicker instrument={instrument} value={semi} onChange={(s) => go({ semi: s })} />
-        </section>
-
-        {/* selected note */}
-        <section className="mt-6" aria-live="polite">
-          <div className="mb-4 flex flex-wrap items-end gap-x-6 gap-y-3">
-            <div>
-              <div className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                {instrument === "sax" ? `Saxophone ${typeInfo.label}` : `Sáo trúc · ${typeInfo.label}`}
-              </div>
-              <div className={cn("font-display text-6xl leading-none font-bold", NOTE_TEXT[written.note])}>{fmt(written)}</div>
-              <div className="mt-1 text-sm text-muted-foreground">
-                Âm thanh thật: <span className="font-semibold text-foreground">{concertLabel(concertAbs)}</span>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" onClick={() => playTone(concertFrequency(instrument, typeInfo.id, semi), 1.4)}>
-                <Volume2 /> Nghe âm mẫu
-              </Button>
-              <Button type="button" variant="outline" onClick={copyLink}>
-                <Link2 /> Sao chép liên kết
-              </Button>
-            </div>
-          </div>
-
-          {note && (
-            <p className="mb-4 flex items-start gap-2 rounded-md bg-amber-500/10 p-2 text-sm">
-              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-500" />
-              {note}
-            </p>
-          )}
-
-          <div className={cn("grid gap-4", instrument === "sax" ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1 md:grid-cols-2")}>
-            {cards.map((c) => (
-              <OptionView key={c.label} card={c} noteName={fmt(written)} />
-            ))}
-          </div>
-          {cards.length > 1 && (
-            <p className="mt-3 text-sm text-muted-foreground">Nốt này có {cards.length} cách bấm — chọn theo nốt đứng trước và sau trong câu nhạc.</p>
-          )}
-        </section>
-      </div>
-      <SiteFooter />
-    </div>
+                  {cards.length > 1 && (
+                    <VStack gap={4}>
+                      <HStack gap={2} vAlign="center">
+                        <Heading level={2}>Cách bấm phụ</Heading>
+                        <Badge label={cards.length - 1} />
+                      </HStack>
+                      <Text color="secondary">Chọn theo nốt đứng trước và sau trong câu nhạc.</Text>
+                      <Grid columns={{ minWidth: 260, max: 3 }} gap={4}>
+                        {cards.slice(1).map((c) => (
+                          <OptionView key={c.label} card={c} noteName={fmt(written)} />
+                        ))}
+                      </Grid>
+                    </VStack>
+                  )}
+                </VStack>
+              </section>
+            </VStack>
+          </LayoutContent>
+        }
+      />
+    </AppFrame>
   );
 }
 
-function OptionView({ card, noteName }: { card: OptionCard; noteName: string }) {
+function OptionView({ card, noteName, hero = false }: { card: OptionCard; noteName: string; hero?: boolean }) {
   return (
-    <article
-      className={cn(
-        "flex flex-col rounded-xl border p-4",
-        card.primary ? "border-primary/50 bg-primary/5" : "bg-card",
-      )}
-    >
+    <Card padding={hero ? 6 : 4} height="100%">
+    <article className="flex h-full flex-col">
       <div className="mb-3 flex items-center gap-2">
-        <h2 className="font-display text-lg font-semibold">{card.label}</h2>
-        {card.primary && <span className="rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground">Chuẩn</span>}
+        {!hero && <Heading level={3}>{card.label}</Heading>}
         {card.sao?.uncertain && (
-          <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-300" title="Chưa đối chiếu đủ nguồn — nên kiểm tra bằng máy lên dây">
-            Tham khảo
+          <span title="Chưa đối chiếu đủ nguồn — nên kiểm tra bằng máy lên dây">
+            <Badge variant="warning" label="Tham khảo" />
           </span>
         )}
       </div>
-      <div className="flex flex-1 items-center justify-center rounded-lg bg-muted/40 px-2 py-4 text-foreground">
+      <div className="flex flex-1 items-center justify-center rounded-lg bg-muted px-2 py-4 text-foreground">
         {card.sax && (
-          <SaxFingeringDiagram keys={card.sax} height={280} accent label={`${noteName}, ${card.label}. ${describeFingering(card.sax)}`} />
+          <SaxFingeringDiagram keys={card.sax} height={hero ? 340 : 260} accent label={`${noteName}, ${card.label}. ${describeFingering(card.sax)}`} />
         )}
         {card.sao && (
           <SaoFingeringDiagram
@@ -272,6 +282,7 @@ function OptionView({ card, noteName }: { card: OptionCard; noteName: string }) 
       {card.sax && card.sax.length === 0 && <p className="mt-3 text-sm text-muted-foreground">Không bấm phím nào (thả hết ngón).</p>}
       {card.description && <p className="mt-2 text-sm text-muted-foreground">{card.description}</p>}
     </article>
+    </Card>
   );
 }
 
@@ -291,12 +302,14 @@ function NotePicker({ instrument, value, onChange }: { instrument: LearnInstrume
 
   return (
     <div>
-      <div className="mb-1.5 text-sm font-semibold">Nốt</div>
+      <Text type="label" weight="semibold" display="block">
+        <span className="mb-1.5 block">Nốt</span>
+      </Text>
       <div className="space-y-2" role="radiogroup" aria-label="Chọn nốt">
         {rows.map(([octave, notes]) => (
           <div key={octave} className="flex items-center gap-2">
-            <span className="w-14 shrink-0 text-xs text-muted-foreground">Quãng {octave}</span>
-            <div className="-mx-1 flex min-w-0 flex-1 gap-1 overflow-x-auto px-1 py-0.5">
+            <span className="w-14 shrink-0 self-start pt-2 text-xs text-muted-foreground">Quãng {octave}</span>
+            <div className="flex min-w-0 flex-1 flex-wrap gap-1 py-0.5">
               {notes.map(({ semi, n }) => {
                 const active = semi === value;
                 const accidental = !!n.accidental;
@@ -314,8 +327,8 @@ function NotePicker({ instrument, value, onChange }: { instrument: LearnInstrume
                       active
                         ? "border-primary bg-primary text-primary-foreground"
                         : accidental
-                          ? "border-dashed bg-muted/50 text-muted-foreground hover:text-foreground"
-                          : cn("bg-background hover:border-foreground/40", NOTE_TEXT[n.note]),
+                          ? "border-dashed border-border bg-muted text-muted-foreground hover:text-foreground"
+                          : cn("border-border bg-background hover:bg-accent", NOTE_TEXT[n.note]),
                     )}
                   >
                     {name(n)}

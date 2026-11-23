@@ -1,8 +1,15 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Hand, Minus, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
+import { Button } from "@astryxdesign/core/Button";
+import { IconButton } from "@astryxdesign/core/IconButton";
+import { Icon } from "@astryxdesign/core/Icon";
+import { NumberInput } from "@astryxdesign/core/NumberInput";
+import { SegmentedControl, SegmentedControlItem } from "@astryxdesign/core/SegmentedControl";
+import { Slider } from "@astryxdesign/core/Slider";
+import { Switch } from "@astryxdesign/core/Switch";
+import { Text } from "@astryxdesign/core/Text";
+import { ToggleButton } from "@astryxdesign/core/ToggleButton";
+import { VStack } from "@astryxdesign/core/VStack";
 import { BPM_MAX, BPM_MIN, pushTap, tapTempo } from "@/lib/audio/engine";
 import { HORN_PRESETS, hasRangeCheck, type HornPreset, type HornPresetInfo, type SpellingPref, type TransposeSetting } from "@/lib/notation/transpose";
 import { selectPreset } from "@/lib/practice/instrument";
@@ -11,17 +18,22 @@ import { cn } from "@/lib/utils";
 
 export function Field({ label, hint, children }: { label: string; hint?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="space-y-1.5">
-      <div>
-        <div className="text-sm font-semibold">{label}</div>
-        {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
-      </div>
+    <VStack gap={2}>
+      <VStack gap={0.5}>
+        <Text type="label" weight="semibold">
+          {label}
+        </Text>
+        {hint && <Text type="supporting" color="secondary">{hint}</Text>}
+      </VStack>
       {children}
-    </div>
+    </VStack>
   );
 }
 
-/** single-choice button group (aria-pressed) */
+/**
+ * Single choice. Short option lists render as an Astryx SegmentedControl;
+ * pass `className` with a grid (e.g. "grid grid-cols-4") for long lists, which renders pressed ToggleButtons in that grid.
+ */
 export function Segmented<T extends string | number>({
   value,
   options,
@@ -35,23 +47,40 @@ export function Segmented<T extends string | number>({
   label: string;
   className?: string;
 }) {
+  const byKey = (k: string) => options.find((o) => String(o.value) === k)?.value;
+  const text = (o: (typeof options)[number]) => (typeof o.label === "string" ? o.label : (o.title ?? String(o.value)));
+  if (className)
+    return (
+      <div role="group" aria-label={label} className={cn("gap-1", className)}>
+        {options.map((o) => (
+          <ToggleButton
+            key={String(o.value)}
+            label={text(o)}
+            tooltip={o.title}
+            isPressed={value === o.value}
+            onPressedChange={() => onChange(o.value)}
+            className="w-full"
+          >
+            {o.label}
+          </ToggleButton>
+        ))}
+      </div>
+    );
   return (
-    <div role="group" aria-label={label} className={cn("flex flex-wrap gap-1", className)}>
-      {options.map((o) => (
-        <button
-          key={String(o.value)}
-          type="button"
-          title={o.title}
-          aria-pressed={value === o.value}
-          onClick={() => onChange(o.value)}
-          className={cn(
-            "min-h-9 flex-1 rounded-md px-2 py-1.5 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-            value === o.value ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {o.label}
-        </button>
-      ))}
+    <div className="-mx-1 overflow-x-auto px-1 [scrollbar-width:none]">
+      <SegmentedControl
+        label={label}
+        layout="fill"
+        value={String(value)}
+        onChange={(k) => {
+          const v = byKey(k);
+          if (v !== undefined) onChange(v);
+        }}
+      >
+        {options.map((o) => (
+          <SegmentedControlItem key={String(o.value)} value={String(o.value)} label={text(o)} />
+        ))}
+      </SegmentedControl>
     </div>
   );
 }
@@ -68,25 +97,23 @@ export function ToggleRow({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <label className="flex items-center justify-between gap-3 text-sm">
-      <span>
-        <span className="font-medium">{label}</span>
-        {hint && <span className="block text-xs text-muted-foreground">{hint}</span>}
-      </span>
-      <Switch checked={checked} onCheckedChange={onChange} aria-label={label} />
-    </label>
+    <Switch label={label} description={hint} value={checked} onChange={(v) => onChange(v)} labelPosition="start" labelSpacing="spread" width="100%" />
   );
 }
 
 export function VolumeRow({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
   return (
-    <div className="space-y-1.5">
-      <div className="flex justify-between text-xs text-muted-foreground">
-        <span>{label}</span>
-        <span className="tabular-nums">{Math.round(value * 100)}%</span>
-      </div>
-      <Slider min={0} max={1} step={0.05} value={[value]} onValueChange={([v]) => onChange(v)} aria-label={label} />
-    </div>
+    <Slider
+      label={label}
+      min={0}
+      max={1}
+      step={0.05}
+      value={value}
+      onChange={(v: number) => onChange(v)}
+      formatValue={(v) => `${Math.round(v * 100)}%`}
+      valueDisplay="text"
+      width="100%"
+    />
   );
 }
 
@@ -117,13 +144,15 @@ export function InstrumentPicker({ value, onChange }: { value: TransposeSetting;
         <div className="space-y-2">
           {groups.map((g) => (
             <div key={g.family} className="space-y-1">
-              <div className="text-xs font-medium text-muted-foreground">{g.label}</div>
+              <Text type="supporting" color="secondary" weight="medium" display="block">
+                {g.label}
+              </Text>
               <Segmented
                 label={g.label}
                 value={preset}
                 options={g.options}
                 onChange={(id) => onChange(selectPreset(value, id))}
-                className={g.family === "sao" ? "grid grid-cols-4 sm:grid-cols-7" : "grid grid-cols-2 sm:grid-cols-4"}
+                className={g.family === "sao" ? "grid grid-cols-4 @lg:grid-cols-7" : "grid grid-cols-2 @lg:grid-cols-4"}
               />
             </div>
           ))}
@@ -174,26 +203,25 @@ export function TonicPicker({
   const minor = scaleDef(type).minor;
   const shifted = transpose.semitones !== 0;
   return (
-    <div role="group" aria-label="Chủ âm" className="grid grid-cols-4 gap-1 sm:grid-cols-6">
+    <div role="group" aria-label="Chủ âm" className="grid grid-cols-4 gap-1 @lg:grid-cols-6">
       {Array.from({ length: 12 }, (_, pc) => {
         const written = keyName(pc, minor, transpose.spelling);
         const concert = keyName(pc - transpose.semitones, minor, transpose.spelling);
         const active = value === pc;
         return (
-          <button
+          <ToggleButton
             key={pc}
-            type="button"
-            aria-pressed={active}
-            onClick={() => onChange(pc)}
-            title={shifted ? `Viết ${noteText(written)} = concert ${noteText(concert)}` : noteText(written)}
-            className={cn(
-              "flex min-h-12 flex-col items-center justify-center rounded-md px-1 py-1 leading-tight transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-              active ? "bg-primary text-primary-foreground" : "bg-muted text-foreground hover:bg-muted/70",
-            )}
+            size="lg"
+            label={shifted ? `Viết ${noteText(written)} = concert ${noteText(concert)}` : noteText(written)}
+            isPressed={active}
+            onPressedChange={() => onChange(pc)}
+            className={cn("w-full", shifted && "h-auto! py-1.5")}
           >
-            <span className="text-base font-bold">{noteText(written)}</span>
-            {shifted && <span className="text-[11px] opacity-75">concert {noteText(concert)}</span>}
-          </button>
+            <span className="flex flex-col items-center leading-tight">
+              <span className="text-base font-bold">{noteText(written)}</span>
+              {shifted && <span className="text-[11px] opacity-75">concert {noteText(concert)}</span>}
+            </span>
+          </ToggleButton>
         );
       })}
     </div>
@@ -201,28 +229,20 @@ export function TonicPicker({
 }
 
 function BpmInput({ bpm, onCommit }: { bpm: number; onCommit: (v: number) => void }) {
-  const [text, setText] = useState(String(bpm));
-  useEffect(() => setText(String(bpm)), [bpm]);
-  const commit = () => {
-    const n = Number(text);
-    if (Number.isFinite(n) && text.trim()) onCommit(n);
-    else setText(String(bpm));
-  };
   return (
-    <input
-      type="number"
-      inputMode="numeric"
-      min={BPM_MIN}
-      max={BPM_MAX}
-      value={text}
-      aria-label="Nhịp độ (BPM)"
-      onChange={(e) => setText(e.target.value)}
-      onBlur={commit}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") commit();
-      }}
-      className="h-10 w-16 rounded-md border bg-transparent text-center font-display text-xl font-bold tabular-nums [appearance:textfield] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-    />
+    <div className="w-20">
+      <NumberInput
+        label="Nhịp độ (BPM)"
+        isLabelHidden
+        size="lg"
+        min={BPM_MIN}
+        max={BPM_MAX}
+        isIntegerOnly
+        value={bpm}
+        onChange={onCommit}
+        entryErrorBehavior="blur-or-enter"
+      />
+    </div>
   );
 }
 
@@ -237,17 +257,15 @@ export function BpmControl({ bpm, onChange }: { bpm: number; onChange: (v: numbe
   };
   return (
     <div className="flex items-center gap-1.5">
-      <Button type="button" variant="outline" size="icon" className="size-10" aria-label="Chậm hơn" title="Chậm hơn (Shift: −5)" onClick={(e) => onChange(bpm - (e.shiftKey ? 5 : 1))}>
-        <Minus />
-      </Button>
+      <IconButton size="lg" label="Chậm hơn" tooltip="Chậm hơn (Shift: −5)" icon={<Icon icon={Minus} />} onClick={(e) => onChange(bpm - (e.shiftKey ? 5 : 1))} />
       <BpmInput bpm={bpm} onCommit={onChange} />
-      <Button type="button" variant="outline" size="icon" className="size-10" aria-label="Nhanh hơn" title="Nhanh hơn (Shift: +5)" onClick={(e) => onChange(bpm + (e.shiftKey ? 5 : 1))}>
-        <Plus />
-      </Button>
-      <span className="text-xs text-muted-foreground">BPM</span>
-      <Button type="button" variant="secondary" size="sm" className="ml-auto h-10 gap-1.5" onClick={onTap} title="Gõ liên tục theo nhịp để đo BPM">
-        <Hand /> {taps.length >= 2 ? "Gõ tiếp" : "Gõ nhịp"}
-      </Button>
+      <IconButton size="lg" label="Nhanh hơn" tooltip="Nhanh hơn (Shift: +5)" icon={<Icon icon={Plus} />} onClick={(e) => onChange(bpm + (e.shiftKey ? 5 : 1))} />
+      <Text type="supporting" color="secondary">
+        BPM
+      </Text>
+      <span className="ml-auto">
+        <Button size="lg" label={taps.length >= 2 ? "Gõ tiếp" : "Gõ nhịp"} tooltip="Gõ liên tục theo nhịp để đo BPM" icon={<Icon icon={Hand} />} onClick={onTap} />
+      </span>
     </div>
   );
 }

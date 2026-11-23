@@ -1,42 +1,50 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+/*
+ * Cascade-layer order must be declared before anything else (Astryx + Tailwind v4).
+ * This file is the first stylesheet both entries load.
+ */
+@layer reset, theme, base, astryx-base, astryx-theme, components, utilities;
 
-/* quét class ở cả site công khai lẫn Studio (dùng chung component) */
+@import "tailwindcss";
+@import "@astryxdesign/core/reset.css";
+@import "@astryxdesign/core/astryx.css";
+
+/* scan classes in both the public site and Studio (shared components) */
 @source "./";
 @source "../studio/src";
 
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Theme "Khuông nhạc đêm" — mực xanh đêm + giấy lạnh, nhấn bằng màu nốt Đô.
- * Biến màu theo chuẩn shadcn/tweakcn (đổi theme:
- *   npx shadcn@latest add https://tweakcn.com/r/themes/<theme>.json)
+ * App palette = Astryx tokens (theme "gang" extends Neutral, see src/theme/gangTheme.ts).
+ * The shadcn-style names below are kept as aliases so existing utilities
+ * (bg-background, text-muted-foreground…) follow the active Astryx theme;
+ * every --color-* token already switches light/dark via light-dark().
+ * Only music-specific colors (stage, the seven notes) are app-owned.
  */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(0.972 0.006 265);
-  --foreground: oklch(0.24 0.05 272);
-  --card: oklch(0.995 0.002 265);
-  --card-foreground: oklch(0.24 0.05 272);
-  --popover: oklch(0.995 0.002 265);
-  --popover-foreground: oklch(0.24 0.05 272);
-  --primary: oklch(0.58 0.2 17);
-  --primary-foreground: oklch(0.99 0.005 17);
-  --secondary: oklch(0.93 0.014 268);
-  --secondary-foreground: oklch(0.28 0.05 272);
-  --muted: oklch(0.94 0.01 268);
-  --muted-foreground: oklch(0.5 0.035 272);
-  --accent: oklch(0.925 0.022 268);
-  --accent-foreground: oklch(0.24 0.05 272);
-  --destructive: oklch(0.55 0.21 27);
-  --border: oklch(0.88 0.016 268);
-  --input: oklch(0.86 0.02 268);
-  --ring: oklch(0.58 0.2 17);
-  --staff: oklch(0.24 0.05 272 / 13%);
-  --stage-bg: oklch(0.975 0.006 265);
-  --stage-fg: oklch(0.22 0.05 272);
-  --stage-lyric: oklch(0.48 0.035 272);
-  --stage-paper: oklch(1 0 0);
+  --background: var(--color-background-body);
+  --foreground: var(--color-text-primary);
+  --card: var(--color-background-card);
+  --card-foreground: var(--color-text-primary);
+  --popover: var(--color-background-popover);
+  --popover-foreground: var(--color-text-primary);
+  --primary: var(--color-accent);
+  --primary-foreground: var(--color-on-accent);
+  --secondary: var(--color-background-muted);
+  --secondary-foreground: var(--color-text-primary);
+  --muted: var(--color-background-muted);
+  --muted-foreground: var(--color-text-secondary);
+  --accent: var(--color-overlay-hover);
+  --accent-foreground: var(--color-text-primary);
+  --destructive: var(--color-error);
+  --border: var(--color-border);
+  --input: var(--color-border-emphasized);
+  --ring: var(--color-accent);
+  --staff: color-mix(in srgb, var(--color-text-primary) 12%, transparent);
+  --stage-bg: var(--color-background-body);
+  --stage-fg: var(--color-text-primary);
+  --stage-lyric: var(--color-text-secondary);
+  --stage-paper: var(--color-background-surface);
   --stage-note: oklch(0.62 0.15 72);
   --note-do: oklch(0.55 0.2 22);
   --note-re: oklch(0.6 0.16 52);
@@ -47,30 +55,9 @@
   --note-si: oklch(0.52 0.2 325);
 }
 
+/* the Stage can be dark on a light site: Astryx tokens use light-dark(), so color-scheme flips them */
 .dark {
-  --background: oklch(0.185 0.035 272);
-  --foreground: oklch(0.95 0.012 265);
-  --card: oklch(0.225 0.04 272);
-  --card-foreground: oklch(0.95 0.012 265);
-  --popover: oklch(0.235 0.042 272);
-  --popover-foreground: oklch(0.95 0.012 265);
-  --primary: oklch(0.7 0.18 17);
-  --primary-foreground: oklch(0.17 0.035 272);
-  --secondary: oklch(0.27 0.045 272);
-  --secondary-foreground: oklch(0.95 0.012 265);
-  --muted: oklch(0.255 0.04 272);
-  --muted-foreground: oklch(0.73 0.03 268);
-  --accent: oklch(0.29 0.05 272);
-  --accent-foreground: oklch(0.96 0.01 265);
-  --destructive: oklch(0.66 0.2 25);
-  --border: oklch(0.85 0.04 268 / 12%);
-  --input: oklch(0.85 0.04 268 / 16%);
-  --ring: oklch(0.7 0.18 17);
-  --staff: oklch(0.9 0.03 268 / 12%);
-  --stage-bg: oklch(0.16 0.032 272);
-  --stage-fg: oklch(0.96 0.01 265);
-  --stage-lyric: oklch(0.72 0.03 268);
-  --stage-paper: oklch(0.21 0.038 272);
+  color-scheme: dark;
   --stage-note: oklch(0.86 0.15 90);
   --note-do: oklch(0.74 0.17 22);
   --note-re: oklch(0.8 0.15 58);
@@ -81,15 +68,10 @@
   --note-si: oklch(0.77 0.16 322);
 }
 
-/* Stage "giấy" sáng — dùng khi đọc ngoài trời / sheet nền trắng */
+/* light "paper" Stage — for reading outdoors / white sheets, even when the site is dark */
 .stage-light {
-  --stage-bg: oklch(0.975 0.006 265);
-  --stage-fg: oklch(0.22 0.05 272);
-  --stage-lyric: oklch(0.48 0.035 272);
-  --stage-paper: oklch(1 0 0);
+  color-scheme: light;
   --stage-note: oklch(0.62 0.15 72);
-  --primary: oklch(0.58 0.2 17);
-  --primary-foreground: oklch(0.99 0.005 17);
   --note-do: oklch(0.55 0.2 22);
   --note-re: oklch(0.6 0.16 52);
   --note-mi: oklch(0.6 0.14 100);
@@ -100,13 +82,14 @@
 }
 
 @theme inline {
-  --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Bricolage Grotesque", "Be Vietnam Pro", ui-sans-serif, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: var(--font-family-body);
+  --font-display: var(--font-family-heading);
+  --font-mono: var(--font-family-code);
+  --radius-sm: var(--radius-inner);
+  --radius-md: var(--radius-element);
+  --radius-lg: var(--radius-element);
+  --radius-xl: var(--radius-container);
+  --radius-2xl: var(--radius-page);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -158,10 +141,9 @@
   }
 }
 
-/* tiêu đề: Bricolage hẹp lại một chút cho chắc, opsz tự theo cỡ chữ */
+/* display headings: slightly tighter tracking */
 .font-display {
-  font-variation-settings: "wdth" 88;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.02em;
 }
 
 /* khuông nhạc 5 dòng — nền trang trí cho tiêu đề */

@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import imageCompression from "browser-image-compression";
-import { toast } from "sonner";
 import { closestCenter, DndContext, PointerSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, ImagePlus, Loader2, Trash2 } from "lucide-react";
 import type { PageImage } from "@shared/types";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import { AlertDialog } from "@astryxdesign/core/AlertDialog";
+import { Icon } from "@astryxdesign/core/Icon";
+import { IconButton } from "@astryxdesign/core/IconButton";
+import { Switch } from "@astryxdesign/core/Switch";
+import { useToast } from "@astryxdesign/core/Toast";
 import { api } from "@studio/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -69,6 +71,9 @@ export function ImageUploader({
   const [busy, setBusy] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [keepOriginal, setKeepOriginal] = useState(false);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const showToast = useToast();
+  const toastError = useCallback((body: string) => showToast({ body, type: "error" }), [showToast]);
   const pagesRef = useRef(pages);
   pagesRef.current = pages;
 
@@ -85,12 +90,12 @@ export function ImageUploader({
           current = [...current, page];
           onChange(current);
         } catch (e) {
-          toast.error(`Lỗi ảnh “${f.name}”: ${(e as Error).message}`);
+          toastError(`Lỗi ảnh “${f.name}”: ${(e as Error).message}`);
         }
       }
       setBusy(null);
     },
-    [songId, onChange, keepOriginal],
+    [songId, onChange, keepOriginal, toastError],
   );
 
   // dán ảnh chụp màn hình bằng Ctrl/Cmd+V
@@ -120,18 +125,18 @@ export function ImageUploader({
     try {
       await api.reorderPages(songId, next.map((p) => p.id));
     } catch (err) {
-      toast.error((err as Error).message);
+      toastError((err as Error).message);
       onChange(pages);
     }
   };
 
   const remove = async (id: string) => {
-    if (!window.confirm("Xoá ảnh này?")) return;
+    setConfirmId(null);
     try {
       await api.deletePage(id);
       onChange(pages.filter((p) => p.id !== id));
     } catch (err) {
-      toast.error((err as Error).message);
+      toastError((err as Error).message);
     }
   };
 
@@ -152,11 +157,11 @@ export function ImageUploader({
         }}
         disabled={!!busy}
         className={cn(
-          "flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-8 text-center transition-colors",
-          dragOver ? "border-primary bg-primary/10" : "hover:border-primary/50 hover:bg-accent/30",
+          "flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border p-8 text-center transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+          dragOver ? "border-primary bg-muted" : "hover:border-input hover:bg-accent",
         )}
       >
-        {busy ? <Loader2 className="size-7 animate-spin text-primary" /> : <ImagePlus className="size-7 text-primary" />}
+        {busy ? <Loader2 className="size-7 animate-spin" /> : <ImagePlus className="size-7" />}
         <span className="font-medium">{busy ?? "Chọn, kéo thả hoặc dán (Ctrl/⌘+V) ảnh"}</span>
         <span className="text-xs text-muted-foreground">
           {keepOriginal
@@ -165,13 +170,17 @@ export function ImageUploader({
           · chọn được nhiều ảnh
         </span>
       </button>
-      <label className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm">
-        <span>
-          <span className="font-medium">Giữ nguyên ảnh gốc</span>
-          <span className="block text-xs text-muted-foreground">Nét tối đa, file nặng hơn — dùng cho sheet chữ nhỏ</span>
-        </span>
-        <Switch checked={keepOriginal} onCheckedChange={setKeepOriginal} />
-      </label>
+      <div className="rounded-lg border border-border px-3 py-2.5">
+        <Switch
+          label="Giữ nguyên ảnh gốc"
+          description="Nét tối đa, file nặng hơn — dùng cho sheet chữ nhỏ"
+          value={keepOriginal}
+          onChange={(v) => setKeepOriginal(v)}
+          labelPosition="start"
+          labelSpacing="spread"
+          width="100%"
+        />
+      </div>
       <input
         ref={inputRef}
         type="file"
@@ -189,12 +198,21 @@ export function ImageUploader({
           <SortableContext items={pages.map((p) => p.id)} strategy={verticalListSortingStrategy}>
             <ol className="space-y-2">
               {pages.map((p, i) => (
-                <SortableItem key={p.id} page={p} index={i} onRemove={() => remove(p.id)} />
+                <SortableItem key={p.id} page={p} index={i} onRemove={() => setConfirmId(p.id)} />
               ))}
             </ol>
           </SortableContext>
         </DndContext>
       )}
+      <AlertDialog
+        isOpen={!!confirmId}
+        onOpenChange={(o) => !o && setConfirmId(null)}
+        title="Xoá ảnh này?"
+        description="Ảnh sẽ bị xoá khỏi bài và không khôi phục được."
+        actionLabel="Xoá ảnh"
+        cancelLabel="Huỷ"
+        onAction={() => confirmId && remove(confirmId)}
+      />
     </div>
   );
 }
@@ -205,7 +223,7 @@ function SortableItem({ page, index, onRemove }: { page: PageImage; index: numbe
     <li
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={cn("flex items-center gap-3 rounded-lg border bg-card p-2", isDragging && "z-10 shadow-lg ring-2 ring-primary")}
+      className={cn("flex items-center gap-3 rounded-lg border border-border bg-card p-2", isDragging && "z-10 shadow-lg ring-2 ring-primary")}
     >
       <button
         type="button"
@@ -221,9 +239,7 @@ function SortableItem({ page, index, onRemove }: { page: PageImage; index: numbe
       <span className="flex-1 text-xs text-muted-foreground">
         {page.width}×{page.height}
       </span>
-      <Button type="button" variant="ghost" size="icon" aria-label="Xoá ảnh" onClick={onRemove}>
-        <Trash2 className="text-destructive" />
-      </Button>
+      <IconButton variant="ghost" label="Xoá ảnh" tooltip="Xoá ảnh" icon={<Icon icon={Trash2} color="error" />} onClick={onRemove} />
     </li>
   );
 }

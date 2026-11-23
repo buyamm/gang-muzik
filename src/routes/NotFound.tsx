@@ -1,17 +1,26 @@
-import { Link, useLocation } from "react-router";
+import { useLocation } from "react-router";
+import { Music2 } from "lucide-react";
+import { Button } from "@astryxdesign/core/Button";
+import { Center } from "@astryxdesign/core/Center";
+import { EmptyState } from "@astryxdesign/core/EmptyState";
+import { Icon } from "@astryxdesign/core/Icon";
+import { AppFrame } from "@/components/AppFrame";
 import { useSeo } from "@/lib/seo";
 import { notFoundSeo } from "@shared/seo";
-import { Button } from "@/components/ui/button";
 
 export function NotFound({ message = "Không tìm thấy trang này." }: { message?: string }) {
   useSeo(notFoundSeo(useLocation().pathname));
   return (
-    <div className="flex min-h-full flex-col items-center justify-center gap-4 p-6 text-center">
-      <p className="staff-lines flex h-[calc(var(--staff-gap)*4+1px)] w-56 items-center justify-center font-display text-7xl font-extrabold text-primary [--staff-gap:16px]">404</p>
-      <p className="text-muted-foreground">{message}</p>
-      <Button asChild variant="outline" className="rounded-full">
-        <Link to="/">Về thư viện</Link>
-      </Button>
-    </div>
+    <AppFrame>
+      <Center padding={10} role="main">
+        <EmptyState
+          headingLevel={1}
+          icon={<Icon icon={Music2} size="lg" />}
+          title="Lạc nhịp rồi (404)"
+          description={message}
+          actions={<Button href="/" variant="primary" label="Về thư viện" />}
+        />
+      </Center>
+    </AppFrame>
   );
 }

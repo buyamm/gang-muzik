@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { ChevronDown, StickyNote } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@astryxdesign/core/Button";
+import { Dialog, DialogHeader } from "@astryxdesign/core/Dialog";
+import { Layout, LayoutContent, LayoutFooter } from "@astryxdesign/core/Layout";
+import { Switch } from "@astryxdesign/core/Switch";
+import { TextArea } from "@astryxdesign/core/TextArea";
 import { readPref, removePref, writePref } from "@/lib/prefs";
 import { cn } from "@/lib/utils";
 
@@ -127,63 +127,69 @@ export function NotesDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Ghi chú</DialogTitle>
-          <DialogDescription>Ghi chú hiện trên đầu bài để bạn nhớ khi chơi.</DialogDescription>
-        </DialogHeader>
+    <Dialog isOpen={open} onOpenChange={onOpenChange} width={520} purpose="form">
+      <Layout
+        height="auto"
+        header={<DialogHeader title="Ghi chú" subtitle="Ghi chú hiện trên đầu bài để bạn nhớ khi chơi." onOpenChange={onOpenChange} />}
+        content={
+          <LayoutContent>
+            <div className="space-y-4">
+              {authorNote.trim() && (
+                <div className="rounded-lg bg-muted px-3 py-2.5 text-sm">
+                  <div className="mb-0.5 text-xs font-semibold text-muted-foreground">Ghi chú của người đăng</div>
+                  <p className="break-words whitespace-pre-line">{authorNote}</p>
+                </div>
+              )}
 
-        {authorNote.trim() && (
-          <div className="rounded-lg bg-muted px-3 py-2.5 text-sm">
-            <div className="mb-0.5 text-xs font-semibold text-muted-foreground">Ghi chú của người đăng</div>
-            <p className="break-words whitespace-pre-line">{authorNote}</p>
-          </div>
-        )}
+              <div
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) save();
+                }}
+              >
+                <TextArea
+                  label="Ghi chú của bạn"
+                  description="Chỉ lưu trên thiết bị này, không ai khác thấy."
+                  value={draft}
+                  onChange={setDraft}
+                  maxLength={PERSONAL_NOTE_MAX}
+                  rows={5}
+                  hasAutoFocus
+                  placeholder="Capo 2 · hạ tone · đoạn điệp khúc đánh chậm lại…"
+                  width="100%"
+                />
+              </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="personal-note">Ghi chú của bạn</Label>
-          <Textarea
-            id="personal-note"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            maxLength={PERSONAL_NOTE_MAX}
-            rows={5}
-            autoFocus
-            placeholder="Capo 2 · hạ tone · đoạn điệp khúc đánh chậm lại…"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) save();
-            }}
-          />
-          <p className="text-xs text-muted-foreground">Chỉ lưu trên thiết bị này, không ai khác thấy.</p>
-        </div>
-
-        <label className="flex items-center justify-between gap-3 text-sm">
-          <span>Hiện ghi chú trên đầu bài</span>
-          <Switch checked={visible} onCheckedChange={onVisible} />
-        </label>
-
-        <DialogFooter className="gap-2 sm:justify-between">
-          {personalNote ? (
-            <Button
-              type="button"
-              variant="ghost"
-              className="text-destructive hover:text-destructive"
-              onClick={() => {
-                onSavePersonal("");
-                onOpenChange(false);
-              }}
-            >
-              Xoá ghi chú của tôi
-            </Button>
-          ) : (
-            <span />
-          )}
-          <Button type="button" onClick={save}>
-            Lưu
-          </Button>
-        </DialogFooter>
-      </DialogContent>
+              <Switch
+                label="Hiện ghi chú trên đầu bài"
+                value={visible}
+                onChange={(v) => onVisible(v)}
+                labelPosition="start"
+                labelSpacing="spread"
+                width="100%"
+              />
+            </div>
+          </LayoutContent>
+        }
+        footer={
+          <LayoutFooter>
+            <div className="flex w-full items-center justify-between gap-2">
+              {personalNote ? (
+                <Button
+                  variant="destructive"
+                  label="Xoá ghi chú của tôi"
+                  onClick={() => {
+                    onSavePersonal("");
+                    onOpenChange(false);
+                  }}
+                />
+              ) : (
+                <span />
+              )}
+              <Button variant="primary" label="Lưu" onClick={save} />
+            </div>
+          </LayoutFooter>
+        }
+      />
     </Dialog>
   );
 }

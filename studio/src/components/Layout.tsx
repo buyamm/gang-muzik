@@ -1,175 +1,122 @@
-import { useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router";
+import { Outlet, useLocation, useNavigate } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Dialog as DialogPrimitive } from "radix-ui";
-import { ExternalLink, Inbox, LibraryBig, LogOut, Menu, Music2, Users as UsersIcon, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ExternalLink, Inbox, LibraryBig, LogOut, Music2, Users as UsersIcon, type LucideIcon } from "lucide-react";
+import { AppShell } from "@astryxdesign/core/AppShell";
+import { Avatar } from "@astryxdesign/core/Avatar";
+import { Badge } from "@astryxdesign/core/Badge";
+import { Icon } from "@astryxdesign/core/Icon";
+import { IconButton } from "@astryxdesign/core/IconButton";
+import { HStack, StackItem, VStack } from "@astryxdesign/core/Layout";
+import { SideNav, SideNavHeading, SideNavItem, SideNavSection } from "@astryxdesign/core/SideNav";
+import { Text } from "@astryxdesign/core/Text";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { CompactFooter } from "@/components/SiteFooter";
 import { LogoMark } from "@/components/brand/Staff";
 import { PUBLIC_URL } from "@/lib/links";
-import { cn } from "@/lib/utils";
 import { api } from "@studio/lib/api";
 import { useMe } from "@studio/hooks/useMe";
 
-interface NavItem {
+interface NavEntry {
   to: string;
   label: string;
-  icon: typeof Music2;
+  icon: LucideIcon;
+  /** match the path exactly (needed for "/") */
   end?: boolean;
   badge?: number;
 }
 
+const isActive = (pathname: string, { to, end }: NavEntry) => (end ? pathname === to : pathname === to || pathname.startsWith(`${to}/`));
+
+/**
+ * Studio frame (Astryx template "AppShell - Side Nav Only"): side nav with the pages,
+ * the signed-in user in its footer and global actions in the footer icons.
+ * Pages own their padding (Astryx page templates); below the breakpoint the nav moves into the drawer.
+ */
 export function Layout() {
-  const { isAdmin } = useMe();
-  const [menuOpen, setMenuOpen] = useState(false);
+  const { user, isAdmin } = useMe();
+  const { pathname } = useLocation();
+  const qc = useQueryClient();
+  const navigate = useNavigate();
   const pending = useQuery({
     queryKey: ["songs", "all", "pending"],
     queryFn: () => api.listSongs({ scope: "all", status: "pending" }),
     enabled: isAdmin,
   });
 
-  const nav: NavItem[] = [
-    { to: "/", label: "Bài của tôi", icon: Music2, end: true },
-    ...(isAdmin
-      ? [
-          { to: "/review", label: "Chờ duyệt", icon: Inbox, badge: pending.data?.length },
-          { to: "/all", label: "Tất cả bài", icon: LibraryBig },
-          { to: "/users", label: "Người dùng", icon: UsersIcon },
-        ]
-      : []),
+  const mine: NavEntry[] = [{ to: "/", label: "Bài của tôi", icon: Music2, end: true }];
+  const admin: NavEntry[] = [
+    {
+      to: "/review",
+      label: "Chờ duyệt",
+      icon: Inbox,
+      badge: pending.data?.length,
+    },
+    { to: "/all", label: "Tất cả bài", icon: LibraryBig },
+    { to: "/users", label: "Người dùng", icon: UsersIcon },
   ];
 
-  return (
-    <div className="min-h-full lg:pl-60">
-      {/* desktop: fixed sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-60 border-r bg-card lg:flex">
-        <SidebarContent nav={nav} />
-      </aside>
-
-      {/* mobile: top bar + slide-in menu */}
-      <DialogPrimitive.Root open={menuOpen} onOpenChange={setMenuOpen}>
-        <header className="sticky top-0 z-20 flex items-center gap-2 border-b bg-background/95 px-3 py-2 backdrop-blur-sm lg:hidden">
-          <DialogPrimitive.Trigger asChild>
-            <Button variant="ghost" size="icon" aria-label="Mở menu">
-              <Menu />
-            </Button>
-          </DialogPrimitive.Trigger>
-          <NavLink to="/" className="flex items-center gap-2 font-display text-base font-bold">
-            <LogoMark className="size-7" />
-            Gang Muzik Studio
-          </NavLink>
-          {!!pending.data?.length && (
-            <NavLink to="/review" className="ml-auto rounded-md bg-primary px-2 py-0.5 text-xs font-bold text-primary-foreground" aria-label={`${pending.data.length} bài chờ duyệt`}>
-              {pending.data.length} chờ duyệt
-            </NavLink>
-          )}
-        </header>
-        <DialogPrimitive.Portal>
-          <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-black/40 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0 lg:hidden" />
-          <DialogPrimitive.Content
-            className="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] border-r bg-card shadow-xl outline-none data-[state=closed]:animate-out data-[state=closed]:slide-out-to-left data-[state=open]:animate-in data-[state=open]:slide-in-from-left lg:hidden"
-          >
-            <DialogPrimitive.Title className="sr-only">Menu Studio</DialogPrimitive.Title>
-            <DialogPrimitive.Description className="sr-only">Chuyển giữa các trang của Studio</DialogPrimitive.Description>
-            <DialogPrimitive.Close asChild>
-              <Button variant="ghost" size="icon" className="absolute top-3 right-2" aria-label="Đóng menu">
-                <X />
-              </Button>
-            </DialogPrimitive.Close>
-            <SidebarContent nav={nav} onNavigate={() => setMenuOpen(false)} />
-          </DialogPrimitive.Content>
-        </DialogPrimitive.Portal>
-      </DialogPrimitive.Root>
-
-      <div className="flex min-h-[calc(100vh-3.25rem)] flex-col lg:min-h-screen">
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-          <Outlet />
-        </main>
-        <footer className="border-t">
-          <div className="mx-auto w-full max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
-            <CompactFooter />
-          </div>
-        </footer>
-      </div>
-    </div>
-  );
-}
-
-function SidebarContent({ nav, onNavigate }: { nav: NavItem[]; onNavigate?: () => void }) {
-  const { user, isAdmin } = useMe();
-  const qc = useQueryClient();
-  const navigate = useNavigate();
-
   const logout = async () => {
-    onNavigate?.();
     await api.logout().catch(() => {});
     qc.clear();
     navigate("/login", { replace: true });
   };
 
+  const item = (n: NavEntry) => (
+    <SideNavItem
+      key={n.to}
+      href={n.to}
+      label={n.label}
+      icon={n.icon}
+      isSelected={isActive(pathname, n)}
+      endContent={n.badge ? <Badge variant="warning" label={n.badge} /> : undefined}
+    />
+  );
+  const displayName = user?.name || user?.email || "";
+
   return (
-    <div className="flex min-h-0 w-full flex-col">
-      <NavLink to="/" onClick={onNavigate} className="flex items-center gap-2.5 px-5 pt-5 pb-6 font-display text-lg font-bold">
-        <LogoMark className="size-8" />
-        Gang Muzik Studio
-      </NavLink>
-
-      <nav aria-label="Studio" className="flex-1 overflow-y-auto px-3">
-        <ul className="space-y-0.5">
-          {nav.map((n) => (
-            <li key={n.to}>
-              <NavLink
-                to={n.to}
-                end={n.end}
-                onClick={onNavigate}
-                className={({ isActive }) =>
-                  cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                    isActive ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
-                  )
-                }
-              >
-                <n.icon className="size-4 shrink-0" />
-                <span className="flex-1">{n.label}</span>
-                {!!n.badge && (
-                  <span className="rounded-md bg-primary px-1.5 text-[11px] font-bold text-primary-foreground tabular-nums">{n.badge}</span>
-                )}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
-      </nav>
-
-      <div className="space-y-1 border-t px-3 py-3">
-        <div className="flex items-center gap-1">
-          <a
-            href={PUBLIC_URL}
-            target="_blank"
-            rel="noreferrer"
-            className="flex flex-1 items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
-          >
-            <ExternalLink className="size-4" /> Mở thư viện
-          </a>
-          <ThemeToggle />
-        </div>
-        <div className="flex items-center gap-2.5 px-3 pt-2">
-          {user?.avatarUrl ? (
-            <img src={user.avatarUrl} alt="" referrerPolicy="no-referrer" className="size-8 shrink-0 rounded-full" />
-          ) : (
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/20 text-sm font-bold">
-              {(user?.name || user?.email || "?")[0]?.toUpperCase()}
-            </div>
-          )}
-          <div className="min-w-0 flex-1 leading-tight">
-            <div className="truncate text-sm font-medium">{user?.name || user?.email}</div>
-            <div className="text-[11px] whitespace-nowrap text-muted-foreground">{isAdmin ? "Quản trị viên" : "Người đóng góp"}</div>
-          </div>
-          <Button variant="ghost" size="icon" title="Đăng xuất" aria-label="Đăng xuất" onClick={logout}>
-            <LogOut />
-          </Button>
-        </div>
-      </div>
-    </div>
+    <AppShell
+      contentPadding={0}
+      sideNav={
+        <SideNav
+          header={<SideNavHeading icon={<LogoMark className="size-7" />} heading="Gang Muzik Studio" headingHref="/" />}
+          footer={
+            <HStack gap={2} vAlign="center" paddingInline={2} paddingBlock={2}>
+              <Avatar src={user?.avatarUrl || undefined} name={displayName || "?"} size="sm" tooltip={false} />
+              <StackItem size="fill">
+                <VStack gap={0}>
+                  <Text weight="medium" maxLines={1}>
+                    {displayName}
+                  </Text>
+                  <Text type="supporting" color="secondary">
+                    {isAdmin ? "Quản trị viên" : "Người đóng góp"}
+                  </Text>
+                </VStack>
+              </StackItem>
+              <IconButton variant="ghost" size="sm" label="Đăng xuất" tooltip="Đăng xuất" icon={<Icon icon={LogOut} />} onClick={logout} />
+            </HStack>
+          }
+          footerIcons={
+            <>
+              <IconButton
+                href={PUBLIC_URL}
+                target="_blank"
+                rel="noreferrer"
+                variant="ghost"
+                label="Mở thư viện"
+                tooltip="Mở thư viện"
+                icon={<Icon icon={ExternalLink} />}
+              />
+              <ThemeToggle />
+            </>
+          }
+        >
+          <SideNavSection title="Đóng góp" isHeaderHidden={!isAdmin}>
+            {mine.map(item)}
+          </SideNavSection>
+          {isAdmin && <SideNavSection title="Quản trị">{admin.map(item)}</SideNavSection>}
+        </SideNav>
+      }
+    >
+      <Outlet />
+    </AppShell>
   );
 }

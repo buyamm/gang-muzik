@@ -1,8 +1,13 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ExternalLink, Hand, TriangleAlert } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
+import { Banner } from "@astryxdesign/core/Banner";
+import { Button } from "@astryxdesign/core/Button";
+import { Dialog, DialogHeader } from "@astryxdesign/core/Dialog";
+import { Icon } from "@astryxdesign/core/Icon";
+import { Layout, LayoutContent } from "@astryxdesign/core/Layout";
+import { Link } from "@astryxdesign/core/Link";
+import { Popover } from "@astryxdesign/core/Popover";
+import { SegmentedControl, SegmentedControlItem } from "@astryxdesign/core/SegmentedControl";
 import { SaoFingeringDiagram } from "@/components/fingering/SaoFingeringDiagram";
 import { fingeringPageUrl } from "@/lib/fingeringPage";
 import type { LearnInstrument } from "@/lib/learnInstrument";
@@ -65,39 +70,59 @@ export function FingeringPopover({
   instrument?: LearnInstrument;
 }) {
   const shown = target;
+  const anchorRef = useRef<HTMLSpanElement>(null);
   const escaped = useRef(false);
+  const isOpen = open && !!target;
 
+  // remember whether Escape closed it: keyboard users get focus back on the note they opened
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") escaped.current = true;
+    };
+    window.addEventListener("keydown", onKey, { capture: true });
+    return () => window.removeEventListener("keydown", onKey, { capture: true });
+  }, [isOpen]);
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next) {
+      if (escaped.current && shown?.el.isConnected) shown.el.focus({ preventScroll: true });
+      // a tap outside closed the popover: let the stage ignore that tap
+      else onPointerDownOutside?.();
+      escaped.current = false;
+    }
+    onOpenChange(next);
+  };
+
+  const rect = target?.rect ?? { left: 0, top: 0, width: 0, height: 0 };
   return (
-    <Popover open={open && !!target} onOpenChange={onOpenChange}>
-      <PopoverAnchor asChild>
-        <span aria-hidden className="pointer-events-none fixed" style={target?.rect ?? { left: 0, top: 0 }} />
-      </PopoverAnchor>
+    <>
+      {/* invisible anchor at the tapped note; Astryx anchors popovers to a button-role element */}
+      <span ref={anchorRef} role="button" tabIndex={-1} aria-hidden className="pointer-events-none fixed" style={rect} />
       {shown && (
-        <PopoverContent
-          side="bottom"
-          collisionPadding={12}
-          className="w-auto max-w-[calc(100vw-1.5rem)] p-4"
-          onClick={(e) => e.stopPropagation()}
-          onPointerDownOutside={() => onPointerDownOutside?.()}
-          onEscapeKeyDown={() => {
-            escaped.current = true;
-          }}
-          onCloseAutoFocus={(e) => {
-            e.preventDefault();
-            // keyboard users get focus back on the note they opened
-            if (escaped.current && shown.el.isConnected) shown.el.focus({ preventScroll: true });
-            escaped.current = false;
-          }}
-        >
-          <FingeringCard
-            key={`${instrument}:${noteToSemitone(shown.written)}:${noteToSemitone(shown.concert)}`}
-            target={shown}
-            instrument={instrument}
-            onOpenChart={onOpenChart}
-          />
-        </PopoverContent>
+        <Popover
+          // re-anchor when another note is tapped
+          key={`${rect.left},${rect.top}`}
+          anchorRef={anchorRef as React.RefObject<HTMLElement>}
+          isOpen={isOpen}
+          onOpenChange={handleOpenChange}
+          label={`${TITLE[instrument]} ${formatNote(shown.written)}`}
+          placement="below"
+          alignment="center"
+          padding={4}
+          content={
+            <div onClick={(e) => e.stopPropagation()}>
+              <FingeringCard
+                key={`${instrument}:${noteToSemitone(shown.written)}:${noteToSemitone(shown.concert)}`}
+                target={shown}
+                instrument={instrument}
+                onOpenChart={onOpenChart}
+              />
+            </div>
+          }
+        />
       )}
-    </Popover>
+    </>
   );
 }
 
@@ -114,27 +139,14 @@ function OptionPicker({
   if (options.length < 2) return null;
   const desc = options[value + 1]?.description;
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       <div className="text-xs font-semibold">Cách bấm</div>
-      <div className="flex flex-col gap-1" role="radiogroup" aria-label="Cách bấm">
-        {options.map((o, i) => {
-          const active = value === i - 1;
-          return (
-            <button
-              key={o.label}
-              type="button"
-              role="radio"
-              aria-checked={active}
-              onClick={() => onChange(i - 1)}
-              className={cn(
-                "rounded-md px-2 py-1 text-left text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {o.label}
-            </button>
-          );
-        })}
+      <div className="-mx-1 overflow-x-auto px-1 [scrollbar-width:none]">
+        <SegmentedControl label="Cách bấm" size="sm" layout="fill" value={String(value)} onChange={(v) => onChange(Number(v))}>
+          {options.map((o, i) => (
+            <SegmentedControlItem key={o.label} value={String(i - 1)} label={o.label} />
+          ))}
+        </SegmentedControl>
       </div>
       {desc && <p className="text-xs text-muted-foreground">{desc}</p>}
     </div>
@@ -169,19 +181,14 @@ function FingeringCard({
     </div>
   );
   const chartBtn = (
-    <Button type="button" variant="outline" size="sm" className="w-full" onClick={() => onOpenChart(found ? semi : null)}>
-      <Hand /> Xem bảng thế bấm
-    </Button>
+    <Button size="sm" width="100%" label="Bảng thế bấm" tooltip="Xem bảng thế bấm đầy đủ" icon={<Icon icon={Hand} />} onClick={() => onOpenChart(found ? semi : null)} />
   );
 
   if (!found) {
     return (
       <div className="w-60 space-y-3">
         {header}
-        <p className="flex items-start gap-2 rounded-md bg-destructive/10 p-2 text-sm text-destructive">
-          <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-          Ngoài tầm {instrument === "sax" ? "kèn" : "sáo"} ({RANGE_TEXT[instrument]})
-        </p>
+        <Banner status="error" title={`Ngoài tầm ${instrument === "sax" ? "kèn" : "sáo"} (${RANGE_TEXT[instrument]})`} />
         {chartBtn}
       </div>
     );
@@ -193,7 +200,7 @@ function FingeringCard({
     return (
       <div className="flex w-72 flex-col gap-3">
         {header}
-        <div className="rounded-lg bg-muted/50 px-2 py-2 text-foreground">
+        <div className="rounded-lg bg-muted px-2 py-2 text-foreground">
           <SaoFingeringDiagram holes={option.holes} width={264} accent numbers />
         </div>
         <p className="text-xs">
@@ -217,7 +224,7 @@ function FingeringCard({
   const options = f.alts?.length ? [{ label: "Chuẩn" }, ...f.alts] : [];
   return (
     <div className="flex items-stretch gap-4">
-      <div className="flex items-center rounded-lg bg-muted/50 px-3 py-2 text-foreground">
+      <div className="flex items-center rounded-lg bg-muted px-3 py-2 text-foreground">
         <SaxFingeringDiagram keys={keys} height={224} accent />
       </div>
       <div className="flex w-40 flex-col gap-3">
@@ -265,28 +272,33 @@ export function FingeringChartDialog({
 }) {
   const sax = instrument === "sax";
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="flex max-h-[88dvh] flex-col gap-3 p-4 sm:max-w-3xl sm:p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <DialogHeader>
-          <DialogTitle>{sax ? "Bảng thế bấm saxophone" : "Bảng thế bấm sáo trúc 6 lỗ"}</DialogTitle>
-          <DialogDescription>
-            {sax
-              ? "Theo nốt viết cho kèn (Sib0–Fa♯3), dùng chung cho soprano, alto, tenor, baritone. Phím tô đậm là phím bấm."
-              : "Theo nốt viết cho sáo (Đô1–Đô3), dùng chung cho mọi cây sáo 6 lỗ. Lỗ tô đậm là bịt, tô nửa là bịt nửa lỗ; lỗ 1 gần lỗ thổi."}
-          </DialogDescription>
-          <a
-            href={pageHref(instrument, highlight ?? null)}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex w-fit items-center gap-1 text-sm font-medium text-primary underline-offset-4 hover:underline"
-          >
-            Mở trang thế bấm <ExternalLink className="size-3.5" />
-          </a>
-        </DialogHeader>
-        <div className="-mx-1 min-h-0 flex-1 space-y-5 overflow-y-auto px-1 pb-1">
+    <Dialog isOpen={open} onOpenChange={onOpenChange} width={768} maxHeight="88dvh">
+      <div className="contents" onClick={(e) => e.stopPropagation()}>
+      <Layout
+        header={
+          <DialogHeader
+            title={sax ? "Bảng thế bấm saxophone" : "Bảng thế bấm sáo trúc 6 lỗ"}
+            subtitle={
+              <span className="flex flex-col gap-1">
+                <span>
+                  {sax
+                    ? "Theo nốt viết cho kèn (Sib0–Fa♯3), dùng chung cho soprano, alto, tenor, baritone. Phím tô đậm là phím bấm."
+                    : "Theo nốt viết cho sáo (Đô1–Đô3), dùng chung cho mọi cây sáo 6 lỗ. Lỗ tô đậm là bịt, tô nửa là bịt nửa lỗ; lỗ 1 gần lỗ thổi."}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <Link href={pageHref(instrument, highlight ?? null)} target="_blank" rel="noreferrer">
+                    Mở trang thế bấm
+                  </Link>
+                  <Icon icon={ExternalLink} size="xsm" />
+                </span>
+              </span>
+            }
+            onOpenChange={onOpenChange}
+          />
+        }
+        content={
+          <LayoutContent>
+        <div className="space-y-5">
           {CHART_ROWS[instrument].map((row) => (
             <section key={row.title}>
               <h3 className="mb-2 flex items-baseline gap-2 text-sm font-semibold">
@@ -297,7 +309,7 @@ export function FingeringChartDialog({
                   const active = semi === highlight;
                   const cell = cn(
                     "flex flex-col items-center gap-1 rounded-md border px-1 pt-1.5 pb-2 text-foreground",
-                    active ? "border-primary bg-primary/10" : "border-border bg-muted/30",
+                    active ? "border-primary bg-muted" : "border-border",
                   );
                   if (!sax) {
                     const f = saoFingeringFor(semi)!;
@@ -334,7 +346,10 @@ export function FingeringChartDialog({
               : "* Thế bấm tham khảo (nửa cung, quãng 3): nên kiểm tra cao độ bằng máy lên dây."}
           </p>
         </div>
-      </DialogContent>
+          </LayoutContent>
+        }
+      />
+      </div>
     </Dialog>
   );
 }
