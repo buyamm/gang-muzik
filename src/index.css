@@ -5,7 +5,6 @@
 @layer reset, theme, base, astryx-base, astryx-theme, components, utilities;
 
 @import "tailwindcss";
-@import "tw-animate-css";
 @import "@astryxdesign/core/reset.css";
 @import "@astryxdesign/core/astryx.css";
 

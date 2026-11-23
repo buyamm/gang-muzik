@@ -4,6 +4,7 @@ import { TopNav, TopNavHeading, TopNavItem } from "@astryxdesign/core/TopNav";
 import { Button } from "@astryxdesign/core/Button";
 import { HStack } from "@astryxdesign/core/HStack";
 import { Icon } from "@astryxdesign/core/Icon";
+import { IconButton } from "@astryxdesign/core/IconButton";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LogoMark } from "@/components/brand/Staff";
 import { STUDIO_URL } from "@/lib/links";
@@ -52,19 +53,24 @@ export function SiteHeader({ className, containerClassName }: { className?: stri
           startContent={<span className="hidden items-center gap-1 sm:flex">{items}</span>}
           endContent={
             <HStack gap={1} vAlign="center">
-              <Button
-                href={STUDIO_URL}
-                variant="ghost"
-                size="sm"
-                label="Đóng góp bài"
-                tooltip="Đăng nhập bằng Google để gửi bài của bạn"
-                icon={<Icon icon={PenLine} />}
-              />
+              <span className="hidden sm:inline-flex">
+                <Button
+                  href={STUDIO_URL}
+                  variant="ghost"
+                  size="sm"
+                  label="Đóng góp bài"
+                  tooltip="Đăng nhập bằng Google để gửi bài của bạn"
+                  icon={<Icon icon={PenLine} />}
+                />
+              </span>
+              <span className="inline-flex sm:hidden">
+                <IconButton href={STUDIO_URL} variant="ghost" label="Đóng góp bài" tooltip="Đóng góp bài" icon={<Icon icon={PenLine} />} />
+              </span>
               <ThemeToggle />
             </HStack>
           }
         />
-        <nav aria-label="Mục chính" className="-mx-2 flex gap-1 overflow-x-auto px-2 pb-2 [scrollbar-width:none] sm:hidden">
+        <nav aria-label="Mục chính" className="-mx-2 flex gap-1 overflow-x-auto px-2 pb-2 whitespace-nowrap [scrollbar-width:none] sm:hidden [&>*]:shrink-0">
           {items}
         </nav>
       </div>

@@ -12,10 +12,11 @@ Web xem sheet nhạc / cảm âm rảnh tay (tự cuộn, tự lật trang, peda
 - Dev login (`DEV_AUTH=1` trong `studio/.dev.vars`, chỉ localhost) để test không cần Google — tuyệt đối không đặt trên production.
 
 ## Frontend
-- Vite + React 19 + Tailwind v4 + shadcn/ui (`src/components/ui`) + Animate UI (`src/components/animate-ui`).
-- Sáng/tối toàn site: `src/hooks/useTheme.ts` (localStorage `gm:theme`, script chống nháy trong `index.html`).
-- Theme: biến CSS kiểu tweakcn trong `src/index.css` (đổi theme: `npx shadcn@latest add https://tweakcn.com/r/themes/<id>.json`).
-- Thêm component Animate UI: `npx shadcn@latest add @animate-ui/<component>` (vd `@animate-ui/components-radix-tabs`).
+- Vite + React 19 + Tailwind v4 + **Astryx** (`@astryxdesign/core`, theme Neutral mở rộng thành `gang` trong `src/theme/gangTheme.ts` — chỉ đổi font sang Be Vietnam Pro vì Figtree thiếu dấu tiếng Việt). Không còn shadcn/Animate UI.
+- Provider chung cho 2 site: `src/theme/Providers.tsx` (i18n `vi-VN` → `Theme` → `LayerProvider` toast → `LinkProvider` qua react-router). Toast: `useToast()`.
+- Tra component trước khi dùng: `npx astryx component <Name>` / `npx astryx search "<từ khoá>"`; kiểm tra: `npx astryx doctor`. Hướng dẫn chi tiết ở khối ASTRYX bên dưới.
+- CSS: `src/index.css` khai báo thứ tự `@layer` trước mọi import; biến kiểu shadcn (`--background`, `--primary`…) chỉ là alias của token Astryx. Màu riêng của app chỉ có stage + 7 nốt.
+- Sáng/tối toàn site: `src/hooks/useTheme.ts` (localStorage `gm:theme`, script chống nháy trong `index.html`) → `mode` của `<Theme>`. Stage tự giữ nền sáng/tối riêng bằng `color-scheme` (`.dark` / `.stage-light`).
 - Lõi: `src/components/stage/Stage.tsx` (chế độ Cuộn & Sách, đếm ngược, wake lock, pedal), `BookView.tsx` (nhiều trang cạnh nhau, lăn chuột/vuốt để lật),
   `src/lib/notation/parse.ts` (parser nhạc dạng chữ: cảm âm, hợp âm, [hợp âm chèn], tab), `src/lib/stage/math.ts` (tốc độ, chia trang).
 - Tốc độ cuộn / tự lật đều suy ra từ **thời lượng bài** (`durationSec`). Người xem chỉnh → localStorage `gm:song:{id}`; admin bấm "Lưu" → ghi vào `songs.settings_json`.

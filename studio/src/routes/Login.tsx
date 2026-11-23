@@ -1,8 +1,13 @@
 import { useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Banner } from "@astryxdesign/core/Banner";
+import { Button } from "@astryxdesign/core/Button";
+import { Card } from "@astryxdesign/core/Card";
+import { Heading } from "@astryxdesign/core/Heading";
+import { Link } from "@astryxdesign/core/Link";
+import { Text } from "@astryxdesign/core/Text";
+import { TextInput } from "@astryxdesign/core/TextInput";
+import { useToast } from "@astryxdesign/core/Toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CompactFooter } from "@/components/SiteFooter";
 import { LogoMark } from "@/components/brand/Staff";
@@ -38,6 +43,7 @@ export function Login() {
   const navigate = useNavigate();
   const [devEmail, setDevEmail] = useState("");
   const error = params.get("error");
+  const showToast = useToast();
 
   if (user) return <Navigate to="/" replace />;
 
@@ -48,7 +54,7 @@ export function Login() {
       await refresh();
       navigate("/", { replace: true });
     } catch (err) {
-      toast.error((err as Error).message);
+      showToast({ body: (err as Error).message, type: "error" });
     }
   };
 
@@ -58,42 +64,58 @@ export function Login() {
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
-      <div className="w-full max-w-sm rounded-2xl border bg-card p-7 text-center shadow-[0_24px_60px_-30px_oklch(0.24_0.05_272/0.35)]">
-        <LogoMark className="mx-auto mb-4 size-12" />
-        <h1 className="font-display text-3xl font-extrabold">Gang Muzik Studio</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Đăng sheet nhạc, cảm âm cho saxophone, sáo trúc và các nhạc cụ khác. Bài của bạn sẽ hiện trên thư viện sau khi được duyệt.
-        </p>
-        {error && <p className="mt-4 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{ERRORS[error] ?? "Đăng nhập thất bại."}</p>}
-        <Button asChild size="lg" variant="outline" className="mt-6 w-full gap-3" disabled={data && !data.googleReady}>
-          <a href="/api/auth/google/start">
-            <GoogleIcon /> Tiếp tục với Google
-          </a>
-        </Button>
-        {data && !data.googleReady && <p className="mt-2 text-xs text-muted-foreground">(Chưa cấu hình Google Client ID)</p>}
-        <p className="mt-4 text-xs text-muted-foreground">
-          Khi đăng nhập, bạn đồng ý với{" "}
-          <a href={`${PUBLIC_URL}/terms`} className="underline underline-offset-2">
-            Điều khoản
-          </a>{" "}
-          và{" "}
-          <a href={`${PUBLIC_URL}/privacy`} className="underline underline-offset-2">
-            Chính sách quyền riêng tư
-          </a>
-          . Chúng tôi chỉ nhận tên, email và ảnh đại diện Google của bạn.
-        </p>
+      <div className="w-full max-w-sm">
+        <Card padding={8} elevation="med">
+          <div className="flex flex-col items-center text-center">
+            <LogoMark className="mb-4 size-12" />
+            <Heading level={1}>Gang Muzik Studio</Heading>
+            <Text color="secondary" as="p">
+              <span className="mt-2 block">
+                Đăng sheet nhạc, cảm âm cho saxophone, sáo trúc và các nhạc cụ khác. Bài của bạn sẽ hiện trên thư viện sau khi được duyệt.
+              </span>
+            </Text>
+          </div>
+          {error && (
+            <div className="mt-4">
+              <Banner status="error" title={ERRORS[error] ?? "Đăng nhập thất bại."} />
+            </div>
+          )}
+          <div className="mt-6">
+            <Button
+              href="/api/auth/google/start"
+              size="lg"
+              width="100%"
+              label="Tiếp tục với Google"
+              icon={<GoogleIcon />}
+              isDisabled={!!data && !data.googleReady}
+            />
+          </div>
+          {data && !data.googleReady && (
+            <p className="mt-2 text-center text-xs text-muted-foreground">(Chưa cấu hình Google Client ID)</p>
+          )}
+          <p className="mt-4 text-center text-xs text-muted-foreground">
+            Khi đăng nhập, bạn đồng ý với <Link href={`${PUBLIC_URL}/terms`}>Điều khoản</Link> và{" "}
+            <Link href={`${PUBLIC_URL}/privacy`}>Chính sách quyền riêng tư</Link>. Chúng tôi chỉ nhận tên, email và ảnh đại diện Google
+            của bạn.
+          </p>
 
-        {data?.devLogin && (
-          <form onSubmit={devLogin} className="mt-6 space-y-2 border-t pt-5 text-left">
-            <div className="text-xs font-semibold text-note-re">Đăng nhập thử (chỉ có khi chạy local)</div>
-            <Input type="email" placeholder="email@vi-du.test" value={devEmail} onChange={(e) => setDevEmail(e.target.value)} required />
-            <Button type="submit" variant="secondary" className="w-full">
-              Đăng nhập thử
-            </Button>
-          </form>
-        )}
+          {data?.devLogin && (
+            <form onSubmit={devLogin} className="mt-6 space-y-3 border-t border-border pt-5">
+              <TextInput
+                type="email"
+                label="Đăng nhập thử (chỉ có khi chạy local)"
+                placeholder="email@vi-du.test"
+                value={devEmail}
+                onChange={setDevEmail}
+                isRequired
+                width="100%"
+              />
+              <Button type="submit" width="100%" label="Đăng nhập thử" />
+            </form>
+          )}
+        </Card>
       </div>
-      <CompactFooter className="mt-8 w-full max-w-3xl border-t pt-4" />
+      <CompactFooter className="mt-8 w-full max-w-3xl border-t border-border pt-4" />
     </div>
   );
 }

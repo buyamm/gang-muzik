@@ -1,15 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link, useNavigate, useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 import { ArrowLeft, Check, ChevronDown, Eye, Lock, Send, Trash2, Undo2, X } from "lucide-react";
 import type { PageImage, Song, SongInput, SongKind, ViewMode } from "@shared/types";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
-import { Textarea } from "@/components/ui/textarea";
+import { AlertDialog } from "@astryxdesign/core/AlertDialog";
+import { Banner } from "@astryxdesign/core/Banner";
+import { Button } from "@astryxdesign/core/Button";
+import { Card } from "@astryxdesign/core/Card";
+import { EmptyState } from "@astryxdesign/core/EmptyState";
+import { Heading } from "@astryxdesign/core/Heading";
+import { Icon } from "@astryxdesign/core/Icon";
+import { IconButton } from "@astryxdesign/core/IconButton";
+import { SegmentedControl, SegmentedControlItem } from "@astryxdesign/core/SegmentedControl";
+import { Selector } from "@astryxdesign/core/Selector";
+import { Slider } from "@astryxdesign/core/Slider";
+import { Text } from "@astryxdesign/core/Text";
+import { TextArea } from "@astryxdesign/core/TextArea";
+import { TextInput } from "@astryxdesign/core/TextInput";
+import { ToggleButton } from "@astryxdesign/core/ToggleButton";
+import { useToast } from "@astryxdesign/core/Toast";
 import { ImageUploader } from "@studio/components/ImageUploader";
 import { StatusBadge } from "@studio/components/StatusBadge";
 import { TextNotation } from "@/components/stage/TextNotation";
@@ -93,20 +103,16 @@ function InstrumentPicker({ value, onToggle }: { value: InstrumentId[]; onToggle
   const chip = (i: (typeof INSTRUMENTS_FOCUS_FIRST)[number], big = false) => {
     const on = value.includes(i.id);
     return (
-      <button
+      <ToggleButton
         key={i.id}
-        type="button"
-        aria-pressed={on}
-        onClick={() => onToggle(i.id)}
-        className={cn(
-          "flex items-center gap-1 rounded-full border text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-          big ? "px-4 py-1.5" : "px-3 py-1",
-          on ? "border-foreground bg-foreground text-background" : "text-muted-foreground hover:border-foreground/40 hover:text-foreground",
-        )}
+        size={big ? "md" : "sm"}
+        label={i.label}
+        isPressed={on}
+        onPressedChange={() => onToggle(i.id)}
+        icon={on ? <Icon icon={Check} size="sm" /> : undefined}
       >
-        {on && <Check className="-ml-0.5 size-3.5" />}
         {i.label}
-      </button>
+      </ToggleButton>
     );
   };
 
@@ -114,20 +120,19 @@ function InstrumentPicker({ value, onToggle }: { value: InstrumentId[]; onToggle
     <div className="space-y-2" role="group" aria-labelledby="instrument-label">
       <div className="flex flex-wrap items-center gap-1.5">
         {FOCUS_CHOICES.map((i) => chip(i, true))}
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          label="Nhạc cụ khác"
           aria-expanded={open}
           aria-controls="instrument-others"
           onClick={() => setOpen((o) => !o)}
-          className="flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          endContent={<Icon icon={ChevronDown} size="sm" className={cn("transition-transform", open && "rotate-180")} />}
         >
-          Nhạc cụ khác
-          {hasOthers && !open && <span className="rounded-full bg-muted px-1.5 text-xs text-foreground tabular-nums">{pickedOthers.length}</span>}
-          <ChevronDown className={cn("size-4 transition-transform", open && "rotate-180")} />
-        </button>
+          {`Nhạc cụ khác${hasOthers && !open ? ` (${pickedOthers.length})` : ""}`}
+        </Button>
       </div>
       {open && (
-        <div id="instrument-others" className="flex flex-wrap gap-1.5 rounded-xl border border-dashed p-2">
+        <div id="instrument-others" className="flex flex-wrap gap-1.5 rounded-xl border border-dashed border-border p-2">
           {OTHER_CHOICES.map((i) => chip(i))}
         </div>
       )}
@@ -135,8 +140,23 @@ function InstrumentPicker({ value, onToggle }: { value: InstrumentId[]; onToggle
   );
 }
 
-const SELECT_CLASS =
-  "h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-2 py-1 text-base shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:bg-input/30";
+const KEY_ROOT_OPTIONS = [{ value: "", label: "Không rõ" }, ...KEY_ROOTS.map((r) => ({ value: r, label: r }))];
+
+/** form field label + optional hint, for custom controls that have no built-in label */
+function FieldLabel({ children, hint, id }: { children: React.ReactNode; hint?: string; id?: string }) {
+  return (
+    <div className="space-y-0.5">
+      <Text type="label" weight="semibold" id={id} display="block">
+        {children}
+      </Text>
+      {hint && (
+        <Text type="supporting" color="secondary" display="block">
+          {hint}
+        </Text>
+      )}
+    </div>
+  );
+}
 
 function fromSong(s: Song): Form {
   return {
@@ -166,6 +186,12 @@ export function SongEditor() {
   const [pages, setPages] = useState<PageImage[]>([]);
   const [saving, setSaving] = useState(false);
   const [previewing, setPreviewing] = useState(false);
+  const [confirm, setConfirm] = useState<"delete" | "unpublish" | null>(null);
+  const showToast = useToast();
+  const toast = {
+    success: (body: string) => showToast({ body }),
+    error: (body: string) => void showToast({ body, type: "error" }),
+  };
 
   const song = useQuery({ queryKey: ["song", id], queryFn: () => api.getSong(id!), enabled: !!id });
   useEffect(() => {
@@ -299,7 +325,8 @@ export function SongEditor() {
   };
 
   const remove = async () => {
-    if (!id || !window.confirm(`Xoá bài “${form.title}” và toàn bộ ảnh? Không thể hoàn tác.`)) return;
+    setConfirm(null);
+    if (!id) return;
     try {
       await api.deleteSong(id);
       qc.invalidateQueries({ queryKey: ["songs"] });
@@ -342,7 +369,7 @@ export function SongEditor() {
   const review = async (decision: "approve" | "reject" | "unpublish") => {
     if (!id) return;
     if (decision === "reject" && !reviewNote.trim()) return toast.error("Ghi lý do từ chối để người đăng biết cần sửa gì");
-    if (decision === "unpublish" && !window.confirm("Gỡ bài khỏi thư viện công khai (chuyển về Nháp)?")) return;
+    setConfirm(null);
     setBusy(true);
     try {
       const s = await api.reviewSong(id, decision, reviewNote.trim() || undefined);
@@ -358,33 +385,31 @@ export function SongEditor() {
   };
 
   if (id && song.isPending) return <div className="p-10 text-center text-muted-foreground">Đang tải…</div>;
-  if (id && song.isError) return <div className="p-10 text-center text-destructive">{song.error.message}</div>;
+  if (id && song.isError) return <Banner status="error" title="Không tải được bài" description={song.error.message} />;
 
   return (
     <div>
       <title>{isNew ? "Bài mới · Gang Muzik Studio" : `${form.title} · Gang Muzik Studio`}</title>
-      <div className="mb-5 flex flex-wrap items-center gap-2">
-        <Button asChild variant="ghost" size="icon">
-          <Link to="/" aria-label="Quay lại">
-            <ArrowLeft />
-          </Link>
-        </Button>
-        <h1 className="font-display text-2xl font-bold">{isNew ? "Bài mới" : editable ? "Sửa bài" : "Xem bài"}</h1>
+      <div className="mb-6 flex flex-wrap items-center gap-2">
+        <IconButton href="/" variant="ghost" label="Quay lại" tooltip="Quay lại" icon={<Icon icon={ArrowLeft} />} />
+        <Heading level={1}>{isNew ? "Bài mới" : editable ? "Sửa bài" : "Xem bài"}</Heading>
         {song.data?.status && <StatusBadge status={song.data.status} />}
         <div className="flex-1" />
-        <Button type="button" variant="outline" size="sm" onClick={openPreview} title="Xem bài trông thế nào trên trang công khai (kể cả thay đổi chưa lưu)">
-          <Eye /> Xem trước
-        </Button>
+        <Button
+          label="Xem trước"
+          tooltip="Xem bài trông thế nào trên trang công khai (kể cả thay đổi chưa lưu)"
+          icon={<Icon icon={Eye} />}
+          onClick={openPreview}
+        />
         {deletable && (
-          <Button variant="ghost" size="icon" aria-label="Xoá bài" title="Xoá bài" onClick={remove}>
-            <Trash2 className="text-destructive" />
-          </Button>
+          <IconButton variant="ghost" label="Xoá bài" tooltip="Xoá bài" icon={<Icon icon={Trash2} color="error" />} onClick={() => setConfirm("delete")} />
         )}
       </div>
 
       {/* trạng thái duyệt */}
       {song.data && (
-        <div className="mb-6 space-y-3 rounded-xl border bg-card p-4">
+        <Card padding={4}>
+        <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-3 text-sm">
             <span className="flex-1">
               {song.data.status === "draft" && "Bài chưa gửi duyệt — chỉ bạn và quản trị viên thấy. Xong thì bấm Gửi duyệt."}
@@ -398,96 +423,99 @@ export function SongEditor() {
               )}
             </span>
             {submittable && (
-              <Button onClick={submit} disabled={busy || !form.title.trim() || settingsInvalid}>
-                <Send /> Gửi duyệt
-              </Button>
+              <Button
+                variant="primary"
+                label="Gửi duyệt"
+                icon={<Icon icon={Send} />}
+                isLoading={busy}
+                isDisabled={!form.title.trim() || settingsInvalid}
+                onClick={submit}
+              />
             )}
-            {!editable && <Lock className="size-4 text-muted-foreground" aria-label="Đã khoá" />}
+            {!editable && <Icon icon={Lock} size="sm" color="secondary" label="Đã khoá" />}
           </div>
           {song.data.reviewNote && song.data.status !== "approved" && (
-            <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-300">
-              <b>Góp ý của quản trị viên:</b> {song.data.reviewNote}
-            </p>
+            <Banner status="error" title="Góp ý của quản trị viên" description={song.data.reviewNote} />
           )}
           {isAdmin && (
-            <div className="space-y-2 border-t pt-3">
-              <div className="text-sm font-semibold">Duyệt bài (quản trị viên)</div>
+            <div className="space-y-3 border-t border-border pt-3">
+              <FieldLabel>Duyệt bài (quản trị viên)</FieldLabel>
               {song.data.status !== "approved" && (
-                <Textarea
+                <TextArea
+                  label="Lý do / góp ý"
+                  isLabelHidden
                   value={reviewNote}
-                  onChange={(e) => setReviewNote(e.target.value)}
+                  onChange={setReviewNote}
                   rows={2}
                   maxLength={1000}
                   placeholder="Lý do / góp ý (bắt buộc khi từ chối)"
+                  width="100%"
                 />
               )}
               <div className="flex flex-wrap gap-2">
                 {song.data.status !== "approved" && (
                   <>
-                    <Button size="sm" onClick={() => review("approve")} disabled={busy} className="bg-emerald-600 text-white hover:bg-emerald-600/90">
-                      <Check /> Duyệt & đăng lên thư viện
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => review("reject")} disabled={busy} className="text-destructive">
-                      <X /> Từ chối
-                    </Button>
+                    <Button
+                      variant="primary"
+                      label="Duyệt & đăng lên thư viện"
+                      icon={<Icon icon={Check} />}
+                      isDisabled={busy}
+                      onClick={() => review("approve")}
+                    />
+                    <Button variant="destructive" label="Từ chối" icon={<Icon icon={X} />} isDisabled={busy} onClick={() => review("reject")} />
                   </>
                 )}
                 {song.data.status === "approved" && (
-                  <Button size="sm" variant="outline" onClick={() => review("unpublish")} disabled={busy}>
-                    <Undo2 /> Gỡ khỏi thư viện
-                  </Button>
+                  <Button label="Gỡ khỏi thư viện" icon={<Icon icon={Undo2} />} isDisabled={busy} onClick={() => setConfirm("unpublish")} />
                 )}
               </div>
             </div>
           )}
         </div>
+        </Card>
       )}
 
-      <form onSubmit={save} className="grid gap-6 lg:grid-cols-2">
+      <form onSubmit={save} className="mt-6 grid gap-6 lg:grid-cols-2">
         <fieldset disabled={!editable} className="min-w-0 space-y-5 disabled:opacity-70">
+          <TextInput label="Tên bài" isRequired value={form.title} onChange={(v) => set("title", v)} width="100%" isDisabled={!editable} />
+          <TextInput label="Ca sĩ / tác giả" value={form.artist} onChange={(v) => set("artist", v)} width="100%" isDisabled={!editable} />
           <div className="space-y-2">
-            <Label htmlFor="title">Tên bài *</Label>
-            <Input id="title" value={form.title} onChange={(e) => set("title", e.target.value)} required maxLength={200} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="artist">Ca sĩ / tác giả</Label>
-            <Input id="artist" value={form.artist} onChange={(e) => set("artist", e.target.value)} maxLength={200} />
-          </div>
-          <div className="space-y-2">
-            <Label id="instrument-label">Nhạc cụ</Label>
-            <p className="text-xs text-muted-foreground">Chọn được nhiều nhạc cụ. Bài sẽ hiện trong từng mục tương ứng ở thư viện.</p>
+            <FieldLabel id="instrument-label" hint="Chọn được nhiều nhạc cụ. Bài sẽ hiện trong từng mục tương ứng ở thư viện.">
+              Nhạc cụ
+            </FieldLabel>
             <InstrumentPicker value={form.instruments} onToggle={toggleInstrument} />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="note">Ghi chú cho người chơi</Label>
-            <p className="text-xs text-muted-foreground">Hiện trên đầu bài cho mọi người xem — vd tone, capo, nhịp, đoạn cần chú ý.</p>
-            <Textarea
-              id="note"
-              value={form.note}
-              onChange={(e) => set("note", e.target.value)}
-              maxLength={2000}
-              rows={3}
-              placeholder="Tone Am · capo 2 · điệp khúc đánh mạnh hơn…"
-            />
-          </div>
+          <TextArea
+            label="Ghi chú cho người chơi"
+            description="Hiện trên đầu bài cho mọi người xem — vd tone, capo, nhịp, đoạn cần chú ý."
+            value={form.note}
+            onChange={(v) => set("note", v)}
+            maxLength={2000}
+            rows={3}
+            placeholder="Tone Am · capo 2 · điệp khúc đánh mạnh hơn…"
+            width="100%"
+            isDisabled={!editable}
+          />
 
           <div className="space-y-2">
-            <Label>Loại nội dung</Label>
+            <FieldLabel hint="Dạng chữ: cảm âm, hợp âm, tab. Ảnh: sheet hoặc bản chụp.">Loại nội dung</FieldLabel>
             <Segmented
+              label="Loại nội dung"
               value={form.kind}
               onChange={(v) => set("kind", v)}
               options={[
-                { value: "text", label: "Dạng chữ (cảm âm, hợp âm, tab)" },
-                { value: "sheet", label: "Ảnh (sheet / bản chụp)" },
+                { value: "text", label: "Dạng chữ" },
+                { value: "sheet", label: "Ảnh / sheet" },
               ]}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Chế độ mặc định</Label>
+              <FieldLabel>Chế độ mặc định</FieldLabel>
               <Segmented
+                label="Chế độ mặc định"
                 value={form.mode}
                 onChange={(v) => set("mode", v)}
                 options={[
@@ -496,85 +524,82 @@ export function SongEditor() {
                 ]}
               />
             </div>
+            <TextInput
+              label="Thời lượng"
+              description="phút:giây"
+              value={form.duration}
+              onChange={(v) => set("duration", v)}
+              placeholder="vd 3:40"
+              status={durationInvalid ? { type: "error", message: "Nhập dạng phút:giây, từ 0:05 đến 60:00." } : undefined}
+              width="100%"
+              isDisabled={!editable}
+            />
+            <TextInput
+              label="Nhịp độ (BPM)"
+              description="Cho máy đếm nhịp"
+              inputMode="numeric"
+              value={form.bpm}
+              onChange={(v) => set("bpm", v)}
+              placeholder="vd 96 (mặc định 80)"
+              status={bpmInvalid ? { type: "error", message: "Nhập số nguyên từ 20 đến 400." } : undefined}
+              width="100%"
+              isDisabled={!editable}
+            />
             <div className="space-y-2">
-              <Label htmlFor="duration">Thời lượng bài (phút:giây)</Label>
-              <Input
-                id="duration"
-                value={form.duration}
-                onChange={(e) => set("duration", e.target.value)}
-                placeholder="vd 3:40 — để trống = tự ước lượng"
-                aria-invalid={durationInvalid}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="bpm">Nhịp độ (BPM) cho máy đếm nhịp</Label>
-              <Input
-                id="bpm"
-                type="number"
-                inputMode="numeric"
-                min={20}
-                max={400}
-                value={form.bpm}
-                onChange={(e) => set("bpm", e.target.value)}
-                placeholder="vd 96 — để trống = 80"
-                aria-invalid={bpmInvalid}
-              />
-              {bpmInvalid && <p className="text-xs text-destructive">Nhập số nguyên từ 20 đến 400.</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="key-root">Tone gốc</Label>
               <div className="flex gap-2">
-                <select id="key-root" className={SELECT_CLASS} value={form.keyRoot} onChange={(e) => set("keyRoot", e.target.value)}>
-                  <option value="">Không rõ</option>
-                  {KEY_ROOTS.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  aria-label="Trưởng hay thứ"
-                  className={SELECT_CLASS}
+                <Selector
+                  label="Tone gốc"
+                  options={KEY_ROOT_OPTIONS}
+                  value={form.keyRoot}
+                  onChange={(v) => set("keyRoot", v ?? "")}
+                  isDisabled={!editable}
+                />
+                <Selector
+                  label="Trưởng / thứ"
+                  options={[
+                    { value: "major", label: "Trưởng" },
+                    { value: "minor", label: "Thứ" },
+                  ]}
                   value={form.keyMinor ? "minor" : "major"}
-                  onChange={(e) => set("keyMinor", e.target.value === "minor")}
-                  disabled={!form.keyRoot}
-                >
-                  <option value="major">Trưởng</option>
-                  <option value="minor">Thứ</option>
-                </select>
+                  onChange={(v) => set("keyMinor", v === "minor")}
+                  isDisabled={!editable || !form.keyRoot}
+                />
               </div>
               {guessedKey && (
-                <Button type="button" variant="outline" size="sm" onClick={() => setForm((f) => ({ ...f, ...keyParts(guessedKey) }))}>
-                  Đoán từ hợp âm: {guessedKey}
-                </Button>
+                <Button size="sm" label={`Đoán từ hợp âm: ${guessedKey}`} onClick={() => setForm((f) => ({ ...f, ...keyParts(guessedKey) }))} />
               )}
             </div>
           </div>
 
-          <div className="space-y-3">
-            <Label>Cỡ chữ / phóng to mặc định: {Math.round(form.fontScale * 100)}%</Label>
-            <Slider min={0.6} max={2.5} step={0.05} value={[form.fontScale]} onValueChange={([v]) => set("fontScale", v)} />
-          </div>
+          <Slider
+            label="Cỡ chữ / phóng to mặc định"
+            min={0.6}
+            max={2.5}
+            step={0.05}
+            value={form.fontScale}
+            onChange={(v: number) => set("fontScale", v)}
+            formatValue={(v) => `${Math.round(v * 100)}%`}
+            valueDisplay="text"
+            width="100%"
+            isDisabled={!editable}
+          />
 
           {form.kind === "text" && (
             <div className="space-y-2">
-              <div className="flex items-end justify-between">
-                <Label htmlFor="text">Nội dung (cảm âm, hợp âm, tab…)</Label>
+              <div className="flex flex-wrap items-end justify-between gap-2">
+                <FieldLabel>Nội dung (cảm âm, hợp âm, tab…)</FieldLabel>
                 <span className="flex items-center gap-1 text-xs">
                   <span className="mr-1 text-muted-foreground">Mẫu:</span>
                   {(Object.keys(EXAMPLES) as (keyof typeof EXAMPLES)[]).map((k) => {
                     const active = form.textContent === EXAMPLES[k];
                     return (
-                      <button
+                      <ToggleButton
                         key={k}
-                        type="button"
-                        aria-pressed={active}
-                        title={`Điền mẫu ${k} vào ô nội dung`}
-                        className={cn(
-                          "rounded-md px-2 py-0.5 font-medium transition-colors",
-                          active ? "bg-primary text-primary-foreground" : "text-primary hover:bg-primary/10",
-                        )}
-                        onClick={() => {
+                        size="sm"
+                        label={k}
+                        tooltip={`Điền mẫu ${k} vào ô nội dung`}
+                        isPressed={active}
+                        onPressedChange={() => {
                           const current = form.textContent.trim();
                           const isExample = Object.values(EXAMPLES).includes(form.textContent);
                           if (current && !isExample && !window.confirm(`Thay nội dung đang nhập bằng mẫu “${k}”?`)) return;
@@ -582,18 +607,22 @@ export function SongEditor() {
                         }}
                       >
                         {k}
-                      </button>
+                      </ToggleButton>
                     );
                   })}
                 </span>
               </div>
-              <Textarea
-                id="text"
+              <TextArea
+                label="Nội dung"
+                isLabelHidden
                 value={form.textContent}
-                onChange={(e) => set("textContent", e.target.value)}
+                onChange={(v) => set("textContent", v)}
                 rows={16}
-                className="font-mono text-sm leading-relaxed"
+                hasSpellCheck={false}
+                controlClassName="font-mono text-sm leading-relaxed"
                 placeholder={"Dán bản nhạc dạng chữ, ví dụ cảm âm:\n" + SAMPLE + "\n\n(dòng trống = sang đoạn mới)"}
+                width="100%"
+                isDisabled={!editable}
               />
               <p className="text-xs text-muted-foreground">
                 <b>Cảm âm:</b> dòng lời rồi dòng nốt Do Re Mi… (thêm số cho quãng tám: Re2, D2). <b>Hợp âm:</b> dòng hợp âm
@@ -606,26 +635,29 @@ export function SongEditor() {
           {editable && (
             <Button
               type="submit"
+              variant="primary"
               size="lg"
-              className="w-full"
-              disabled={saving || !form.title.trim() || settingsInvalid || (isNew && form.kind === "text" && !form.textContent.trim())}
-            >
-              {isNew && form.kind === "text" && <Send />}
-              {saving
-                ? isNew && form.kind === "text"
-                  ? "Đang gửi…"
-                  : "Đang lưu…"
-                : isNew
-                  ? form.kind === "sheet"
-                    ? "Tiếp tục: tải ảnh lên"
-                    : "Gửi duyệt"
-                  : "Lưu thay đổi"}
-            </Button>
+              width="100%"
+              icon={isNew && form.kind === "text" ? <Icon icon={Send} /> : undefined}
+              isLoading={saving}
+              isDisabled={!form.title.trim() || settingsInvalid || (isNew && form.kind === "text" && !form.textContent.trim())}
+              label={
+                saving
+                  ? isNew && form.kind === "text"
+                    ? "Đang gửi…"
+                    : "Đang lưu…"
+                  : isNew
+                    ? form.kind === "sheet"
+                      ? "Tiếp tục: tải ảnh lên"
+                      : "Gửi duyệt"
+                    : "Lưu thay đổi"
+              }
+            />
           )}
         </fieldset>
 
         <div className="space-y-3">
-          <Label>Thẻ bài trên thư viện</Label>
+          <FieldLabel>Thẻ bài trên thư viện</FieldLabel>
           <ul className="max-w-xs">
             <SongCard preview song={{ ...draftSong, pageCount: pages.length, key: songKey }} />
           </ul>
@@ -642,26 +674,26 @@ export function SongEditor() {
           {form.kind === "sheet" ? (
             id ? (
               <>
-                <Label>Ảnh theo thứ tự{editable ? " (kéo để sắp xếp)" : ""}</Label>
+                <FieldLabel>{`Ảnh theo thứ tự${editable ? " (kéo để sắp xếp)" : ""}`}</FieldLabel>
                 {editable ? (
                   <ImageUploader songId={id} pages={pages} onChange={onPagesChange} />
                 ) : (
                   <div className="grid grid-cols-3 gap-2">
                     {pages.map((p) => (
-                      <img key={p.id} src={p.url} alt="" className="rounded border bg-white" />
+                      <img key={p.id} src={p.url} alt="" className="rounded border border-border bg-white" />
                     ))}
                   </div>
                 )}
               </>
             ) : (
-              <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-                Tạo bài trước, sau đó tải ảnh lên tại đây.
-              </div>
+              <Card variant="muted" padding={6}>
+                <EmptyState isCompact title="Chưa tải ảnh được" description="Tạo bài trước, sau đó tải ảnh lên tại đây." />
+              </Card>
             )
           ) : (
             <>
-              <Label>Xem trước</Label>
-              <div className="dark max-h-[75vh] overflow-y-auto rounded-xl border bg-stage-bg py-6 text-stage-fg" style={{ fontSize: `${form.fontScale}rem` }}>
+              <FieldLabel>Xem trước</FieldLabel>
+              <div className="dark max-h-[75vh] overflow-y-auto rounded-xl border border-border bg-stage-bg py-6 text-stage-fg" style={{ fontSize: `${form.fontScale}rem` }}>
                 {form.textContent.trim() ? (
                   <TextNotation text={form.textContent} />
                 ) : (
@@ -672,6 +704,25 @@ export function SongEditor() {
           )}
         </div>
       </form>
+      <AlertDialog
+        isOpen={confirm === "delete"}
+        onOpenChange={(o) => !o && setConfirm(null)}
+        title="Xoá bài này?"
+        description={`Xoá bài “${form.title}” và toàn bộ ảnh. Không thể hoàn tác.`}
+        actionLabel="Xoá bài"
+        cancelLabel="Huỷ"
+        onAction={remove}
+      />
+      <AlertDialog
+        isOpen={confirm === "unpublish"}
+        onOpenChange={(o) => !o && setConfirm(null)}
+        title="Gỡ khỏi thư viện?"
+        description="Bài sẽ không còn hiện trên thư viện công khai và chuyển về Nháp."
+        actionLabel="Gỡ bài"
+        cancelLabel="Huỷ"
+        isActionLoading={busy}
+        onAction={() => review("unpublish")}
+      />
       {previewing &&
         createPortal(
           <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Xem trước bài">
@@ -689,28 +740,18 @@ function Segmented<T extends string>({
   value,
   onChange,
   options,
+  label,
 }: {
   value: T;
   onChange: (v: T) => void;
   options: { value: T; label: string }[];
+  label: string;
 }) {
   return (
-    <div className="flex gap-1 rounded-lg bg-muted p-1" role="radiogroup">
+    <SegmentedControl label={label} layout="fill" value={value} onChange={(v) => onChange(v as T)}>
       {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          role="radio"
-          aria-checked={value === o.value}
-          onClick={() => onChange(o.value)}
-          className={cn(
-            "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-            value === o.value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {o.label}
-        </button>
+        <SegmentedControlItem key={o.value} value={o.value} label={o.label} />
       ))}
-    </div>
+    </SegmentedControl>
   );
 }
