@@ -16,7 +16,11 @@ import type { Song, SongSettings, ViewMode } from "@shared/types";
 import { Button } from "@astryxdesign/core/Button";
 import { Icon } from "@astryxdesign/core/Icon";
 import { IconButton } from "@astryxdesign/core/IconButton";
+import { ProgressBar } from "@astryxdesign/core/ProgressBar";
 import { SegmentedControl, SegmentedControlItem } from "@astryxdesign/core/SegmentedControl";
+import { HStack, VStack } from "@astryxdesign/core/Stack";
+import { Heading, Text } from "@astryxdesign/core/Text";
+import { Toolbar } from "@astryxdesign/core/Toolbar";
 import { useToast } from "@astryxdesign/core/Toast";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { keyLabel, loadKeyMap, saveKeyMap, usePedalKeys, type KeyMap, type PedalAction } from "@/hooks/usePedalKeys";
@@ -431,7 +435,7 @@ export function Stage({
         stageTheme === "light" ? "stage-light" : "dark",
       )}
     >
-      {/* thanh tiến độ trên cùng */}
+      {/* progress line at the very top */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-30 h-[3px] bg-stage-fg/8">
         {isScroll ? (
           <div className="h-full origin-left bg-primary" style={{ transform: `scaleX(${progress})` }} />
@@ -440,47 +444,59 @@ export function Stage({
         )}
       </div>
 
-      {/* ===== header (cố định, không tự ẩn) ===== */}
+      {/* ===== top bar (always shown unless hidden by the user) ===== */}
       {!barsHidden && (
-        <header className="relative z-20 flex shrink-0 items-center gap-1 sm:gap-2 border-b border-stage-fg/10 bg-stage-bg px-2 pt-[max(env(safe-area-inset-top),0.5rem)] pb-2 sm:px-3">
-          <IconButton
-            variant="ghost"
-            label="Quay lại"
-            tooltip="Quay lại"
-            icon={<Icon icon={ArrowLeft} />}
-            className="shrink-0"
-            {...(onBack ? { onClick: onBack } : { href: backTo })}
-          />
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate font-display text-lg leading-tight font-bold sm:text-xl">{song.title}</h1>
-            {(song.artist || songKeyLabel) && (
-              <p className="truncate text-xs text-stage-lyric">
-                {song.artist}
-                {song.artist && songKeyLabel && " · "}
-                {songKeyLabel}
-              </p>
-            )}
-          </div>
-          <SegmentedControl label="Chế độ xem" size="sm" value={prefs.mode} onChange={(m) => switchMode(m as ViewMode)}>
-            <SegmentedControlItem value="scroll" label="Cuộn" />
-            <SegmentedControlItem value="pages" label="Sách" />
-          </SegmentedControl>
-          <SettingsButton
-            ref={settingsBtnRef}
-            open={settingsOpen}
-            onClick={() => setSettingsOpen(true)}
-            badge={transposeChip}
-            audioActive={audio.active}
-            downbeat={audio.metro.running && audio.metro.beat === 0}
-            fingeringOn={fingeringOn}
-          />
-          <IconButton
-            variant="ghost"
-            label="Ẩn thanh điều khiển"
-            tooltip="Ẩn thanh điều khiển để có thêm chỗ đọc"
-            icon={<Icon icon={EyeOff} />}
-            className="shrink-0"
-            onClick={() => setBars(true)}
+        <header className="relative z-20 shrink-0 bg-stage-bg px-2 pt-[env(safe-area-inset-top)] sm:px-3">
+          <Toolbar
+            label="Bài đang xem"
+            size="lg"
+            gap={2}
+            dividers={["bottom"]}
+            startContent={
+              <>
+                <IconButton
+                  variant="ghost"
+                  label="Quay lại"
+                  tooltip="Quay lại"
+                  icon={<Icon icon={ArrowLeft} />}
+                  {...(onBack ? { onClick: onBack } : { href: backTo })}
+                />
+                <VStack gap={0} className="min-w-0">
+                  <Heading level={1} maxLines={1}>
+                    {song.title}
+                  </Heading>
+                  {(song.artist || songKeyLabel) && (
+                    <Text type="supporting" color="secondary" maxLines={1}>
+                      {[song.artist, songKeyLabel].filter(Boolean).join(" · ")}
+                    </Text>
+                  )}
+                </VStack>
+              </>
+            }
+            endContent={
+              <>
+                <SegmentedControl label="Chế độ xem" size="sm" value={prefs.mode} onChange={(m) => switchMode(m as ViewMode)}>
+                  <SegmentedControlItem value="scroll" label="Cuộn" />
+                  <SegmentedControlItem value="pages" label="Sách" />
+                </SegmentedControl>
+                <SettingsButton
+                  ref={settingsBtnRef}
+                  open={settingsOpen}
+                  onClick={() => setSettingsOpen(true)}
+                  badge={transposeChip}
+                  audioActive={audio.active}
+                  downbeat={audio.metro.running && audio.metro.beat === 0}
+                  fingeringOn={fingeringOn}
+                />
+                <IconButton
+                  variant="ghost"
+                  label="Ẩn thanh điều khiển"
+                  tooltip="Ẩn thanh điều khiển để có thêm chỗ đọc"
+                  icon={<Icon icon={EyeOff} />}
+                  onClick={() => setBars(true)}
+                />
+              </>
+            }
           />
         </header>
       )}
@@ -582,76 +598,81 @@ export function Stage({
         )}
       </div>
 
-      {/* ===== footer (cố định, không tự ẩn) ===== */}
+      {/* ===== transport bar ===== */}
       {!barsHidden && (
-        <footer className="relative z-20 shrink-0 border-t border-stage-fg/10 bg-stage-bg px-3 pt-2.5 pb-[max(env(safe-area-inset-bottom),0.625rem)]">
-          <div className="mx-auto flex max-w-4xl items-center gap-2 sm:gap-3">
-            {/* thời lượng bài => tốc độ */}
-            <div className="flex items-center gap-1 rounded-full border border-border p-1" title="Thời lượng cả bài — quyết định tốc độ cuộn / lật">
-              <IconBtn label="Nhanh hơn (bớt 5 giây)" onClick={() => adjustDuration(-5)} size="sm">
-                {Minus}
-              </IconBtn>
-              <div className="w-12 text-center leading-tight sm:w-14">
-                <div className="font-display text-lg leading-none font-bold tabular-nums">{formatDuration(prefs.durationSec)}</div>
-                <div className="mt-0.5 text-[11px] whitespace-nowrap text-stage-lyric">thời lượng</div>
-              </div>
-              <IconBtn label="Chậm hơn (thêm 5 giây)" onClick={() => adjustDuration(5)} size="sm">
-                {Plus}
-              </IconBtn>
-            </div>
-
-            <div className="flex flex-1 items-center justify-center gap-1 sm:gap-2">
-              {allMode ? (
-                <span className="text-center text-sm leading-tight text-stage-lyric">
-                  <span className="sm:hidden">Cả bài trên 1 màn hình</span>
-                  <span className="hidden sm:inline">Đang hiện tất cả các trang — không cần lật</span>
-                </span>
-              ) : (
-              <>
-              <IconBtn
-                label={isScroll ? "Tua lại một đoạn" : "Trang trước"}
-                onClick={() => (isScroll ? scrollBack() : goPrev())}
-                size="lg"
-              >
-                {isScroll ? RotateCcw : ChevronLeft}
-              </IconBtn>
-              <IconButton
-                variant="primary"
-                size="lg"
-                elevation="med"
-                label={playing ? "Dừng" : isScroll ? "Bắt đầu tự cuộn" : "Bắt đầu tự lật trang"}
-                tooltip={playing ? "Dừng" : isScroll ? "Bắt đầu tự cuộn" : "Bắt đầu tự lật trang"}
-                icon={<Icon icon={playing || countdown !== null ? Pause : Play} size="lg" />}
-                onClick={togglePlay}
-                className="size-14! rounded-full! sm:size-16!"
-              />
-              {!isScroll && (
-                <IconBtn label="Trang sau" onClick={goNext} size="lg">
-                  {ChevronRight}
+        <footer className="relative z-20 shrink-0 bg-stage-bg px-3 pb-[env(safe-area-inset-bottom)]">
+          <Toolbar
+            label="Điều khiển phát"
+            size="lg"
+            gap={2}
+            dividers={["top"]}
+            startContent={
+              /* song duration => speed */
+              <HStack gap={1} vAlign="center" className="rounded-full border border-border p-1">
+                <IconBtn label="Nhanh hơn (bớt 5 giây)" onClick={() => adjustDuration(-5)} size="sm">
+                  {Minus}
                 </IconBtn>
-              )}
-              </>
-              )}
-            </div>
-
-            <div className="min-w-14 shrink-0 text-right text-sm">
-              {isScroll ? (
-                <span className="font-display text-lg font-bold tabular-nums text-stage-lyric">{Math.round(progress * 100)}%</span>
-              ) : (
-                <span className="font-display text-lg leading-none font-bold whitespace-nowrap tabular-nums">
-                  {allMode ? `${pageCount} trang` : first + 1}
-                  {allMode ? "" : `${cols > 1 && pageCount > 1 ? `–${Math.min(first + cols, pageCount)}` : ""} / ${pageCount}`}
+                <span className="flex w-16 flex-col items-center leading-tight whitespace-nowrap" title="Thời lượng cả bài — quyết định tốc độ cuộn / lật">
+                  <Text weight="bold" hasTabularNumbers>
+                    {formatDuration(prefs.durationSec)}
+                  </Text>
+                  <Text type="supporting" color="secondary">
+                    thời lượng
+                  </Text>
                 </span>
-              )}
-            </div>
-          </div>
-
-          {/* gợi ý thao tác cho người mới */}
-          <p className="mt-2 hidden text-center text-[11px] text-stage-lyric lg:block">
+                <IconBtn label="Chậm hơn (thêm 5 giây)" onClick={() => adjustDuration(5)} size="sm">
+                  {Plus}
+                </IconBtn>
+              </HStack>
+            }
+            centerContent={
+              allMode ? (
+                <Text type="supporting" color="secondary">
+                  Đang hiện cả bài — không cần lật
+                </Text>
+              ) : (
+                <>
+                  <IconBtn label={isScroll ? "Tua lại một đoạn" : "Trang trước"} onClick={() => (isScroll ? scrollBack() : goPrev())} size="lg">
+                    {isScroll ? RotateCcw : ChevronLeft}
+                  </IconBtn>
+                  <IconButton
+                    variant="primary"
+                    size="lg"
+                    elevation="med"
+                    label={playing ? "Dừng" : isScroll ? "Bắt đầu tự cuộn" : "Bắt đầu tự lật trang"}
+                    tooltip={`${playing ? "Dừng" : isScroll ? "Bắt đầu tự cuộn" : "Bắt đầu tự lật trang"} · Space`}
+                    icon={<Icon icon={playing || countdown !== null ? Pause : Play} size="lg" />}
+                    onClick={togglePlay}
+                    className="size-14! rounded-full!"
+                  />
+                  {!isScroll && (
+                    <IconBtn label="Trang sau" onClick={goNext} size="lg">
+                      {ChevronRight}
+                    </IconBtn>
+                  )}
+                </>
+              )
+            }
+            endContent={
+              isScroll ? (
+                <div className="hidden w-36 sm:block">
+                  <ProgressBar label="Đã cuộn" value={Math.round(progress * 100)} hasValueLabel isLabelHidden />
+                </div>
+              ) : (
+                <Text weight="bold" hasTabularNumbers>
+                  {allMode
+                    ? `${pageCount} trang`
+                    : `${first + 1}${cols > 1 && pageCount > 1 ? `–${Math.min(first + cols, pageCount)}` : ""} / ${pageCount}`}
+                </Text>
+              )
+            }
+          />
+          {/* hint for newcomers */}
+          <p className="hidden pb-2 text-center text-[11px] text-stage-lyric lg:block">
             {isScroll
               ? `Chạm vào bản nhạc hoặc bấm Space để chạy / dừng · ${prevKey} tua lại · lăn chuột để cuộn tay · S: cài đặt`
               : allMode
-                ? "Đang hiện cả bài trên một màn hình · đổi lại trong Cài đặt › Kiểu sách"
+                ? "Đang hiện cả bài trên một màn hình · đổi lại trong Cài đặt › Hiển thị › Kiểu sách"
                 : `Lật trang: ${nextKey} / ${prevKey}, lăn chuột, vuốt hoặc chạm mép phải / trái · Space: tự lật · S: cài đặt`}
           </p>
         </footer>

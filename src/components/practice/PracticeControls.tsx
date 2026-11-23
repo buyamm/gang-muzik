@@ -152,7 +152,7 @@ export function InstrumentPicker({ value, onChange }: { value: TransposeSetting;
                 value={preset}
                 options={g.options}
                 onChange={(id) => onChange(selectPreset(value, id))}
-                className={g.family === "sao" ? "grid grid-cols-4 sm:grid-cols-7" : "grid grid-cols-2 sm:grid-cols-4"}
+                className={g.family === "sao" ? "grid grid-cols-4 @lg:grid-cols-7" : "grid grid-cols-2 @lg:grid-cols-4"}
               />
             </div>
           ))}
@@ -203,7 +203,7 @@ export function TonicPicker({
   const minor = scaleDef(type).minor;
   const shifted = transpose.semitones !== 0;
   return (
-    <div role="group" aria-label="Chủ âm" className="grid grid-cols-4 gap-1 sm:grid-cols-6">
+    <div role="group" aria-label="Chủ âm" className="grid grid-cols-4 gap-1 @lg:grid-cols-6">
       {Array.from({ length: 12 }, (_, pc) => {
         const written = keyName(pc, minor, transpose.spelling);
         const concert = keyName(pc - transpose.semitones, minor, transpose.spelling);

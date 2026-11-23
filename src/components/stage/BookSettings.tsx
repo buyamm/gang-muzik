@@ -52,10 +52,13 @@ export function BookLayoutPanel({ columns, autoCols, turnBy, onColumns, onTurnBy
             Bao nhiêu trang giấy đặt cạnh nhau. Tự động: điện thoại 1, tablet 2, màn hình rộng 3.
           </div>
         </div>
+        <Choice active={columns === "auto"} onClick={() => onColumns("auto")}>
+          {`Tự động${fitAll ? "" : ` (${autoCols} trang)`}`}
+        </Choice>
         <div className="flex gap-1">
-          {COLUMN_OPTIONS.filter((c) => c !== "all").map((c) => (
-            <Choice key={c} active={columns === c} onClick={() => onColumns(c)}>
-              {c === "auto" ? `Tự động (${fitAll ? "" : autoCols})`.replace(" ()", "") : c}
+          {COLUMN_OPTIONS.filter((c) => c !== "all" && c !== "auto").map((c) => (
+            <Choice key={c} active={columns === c} onClick={() => onColumns(c)} label={`${c} trang`}>
+              {c}
             </Choice>
           ))}
         </div>

@@ -13,6 +13,7 @@ Web xem sheet nhạc / cảm âm rảnh tay (tự cuộn, tự lật trang, peda
 
 ## Frontend
 - Vite + React 19 + Tailwind v4 + **Astryx** (`@astryxdesign/core`). Theme trong `src/theme/gangTheme.ts` (`APP_THEMES`: Neutral, Matcha — chỉ đổi font sang Be Vietnam Pro vì font gốc thiếu dấu tiếng Việt). Người xem chọn theme ở nút "Giao diện" (localStorage `gm:palette`, hook `usePalette`); thêm theme thì sửa cả `APP_THEMES` lẫn script chống nháy trong 2 `index.html`. Không còn shadcn/Animate UI.
+- Mỗi trang dựng từ một page template của Astryx (`npx astryx build "<ý tưởng>"` → `npx astryx template <tên>`), giữ khung/gap/padding của template. Site công khai bọc trong `src/components/AppFrame.tsx` (AppShell + SideNav); Thư viện = `library`, Thế bấm = `documentation-design` (panel trái), Luyện gam / ngăn Cài đặt của Stage = `settings-sidebar`, pháp lý = `documentation-technical`. Xem `docs/plans/2026-11-23-astryx-rebuild.md`.
 - Provider chung cho 2 site: `src/theme/Providers.tsx` (i18n `vi-VN` → `Theme` → `LayerProvider` toast → `LinkProvider` qua react-router). Toast: `useToast()`.
 - Tra component trước khi dùng: `npx astryx component <Name>` / `npx astryx search "<từ khoá>"`; kiểm tra: `npx astryx doctor`. Hướng dẫn chi tiết ở khối ASTRYX bên dưới.
 - CSS: `src/index.css` khai báo thứ tự `@layer` trước mọi import; biến kiểu shadcn (`--background`, `--primary`…) chỉ là alias của token Astryx. Màu riêng của app chỉ có stage + 7 nốt.

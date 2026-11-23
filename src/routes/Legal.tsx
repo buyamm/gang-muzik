@@ -1,33 +1,77 @@
-import { Link } from "react-router";
-import { SiteFooter } from "@/components/SiteFooter";
-import { SiteHeader } from "@/components/SiteHeader";
+import { Children, isValidElement, type ReactNode } from "react";
+import { Link as RouterLinkText } from "@astryxdesign/core/Link";
+import { Layout, LayoutContent, LayoutPanel } from "@astryxdesign/core/Layout";
+import { Outline } from "@astryxdesign/core/Outline";
+import { VStack } from "@astryxdesign/core/Stack";
+import { Heading, Text } from "@astryxdesign/core/Text";
+import { AppFrame } from "@/components/AppFrame";
 import { useSeo } from "@/lib/seo";
 import { LEGAL_SEO } from "@shared/seo";
 
 const UPDATED = "10/11/2026";
 const CONTACT = "https://github.com/buyamm/gang-muzik/issues";
 
-function Shell({ title, page, children }: { title: string; page: keyof typeof LEGAL_SEO; children: React.ReactNode }) {
-  useSeo(LEGAL_SEO[page]);
+interface DocSectionProps {
+  id: string;
+  title: string;
+  children: ReactNode;
+}
+
+/** one numbered section of a legal article; its title feeds the outline */
+function DocSection({ id, title, children }: DocSectionProps) {
   return (
-    <div className="min-h-full">
-      <SiteHeader />
-      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
-        <h1 className="font-display text-3xl font-bold sm:text-4xl">{title}</h1>
-        <p className="mt-2 mb-6 text-sm text-muted-foreground">Cập nhật lần cuối: {UPDATED}</p>
-        <div className="space-y-6 leading-relaxed [&_h2]:mb-2 [&_h2]:font-display [&_h2]:text-xl [&_h2]:font-semibold [&_li]:ml-5 [&_li]:list-disc [&_ul]:space-y-1">
-          {children}
-        </div>
+    <VStack gap={2}>
+      <Heading level={2} id={id}>
+        {title}
+      </Heading>
+      <div className="space-y-2 leading-relaxed text-muted-foreground [&_b]:text-foreground [&_li]:ml-5 [&_li]:list-disc [&_ul]:space-y-1">
+        {children}
       </div>
-      <SiteFooter />
-    </div>
+    </VStack>
+  );
+}
+
+/** Legal article (Astryx template "documentation-technical"): article + outline panel on wide screens. */
+function Shell({ title, page, children }: { title: string; page: keyof typeof LEGAL_SEO; children: ReactNode }) {
+  useSeo(LEGAL_SEO[page]);
+  const items = Children.toArray(children)
+    .filter((c): c is React.ReactElement<DocSectionProps> => isValidElement<DocSectionProps>(c) && c.type === DocSection)
+    .map((c) => ({ id: c.props.id, label: c.props.title, level: 2 }));
+  return (
+    <AppFrame>
+      <Layout
+        height="auto"
+        end={
+          <div className="hidden lg:block">
+            <LayoutPanel role="complementary" label="Mục lục" padding={8} width={320}>
+              <Outline items={items} label="Mục lục" density="compact" />
+            </LayoutPanel>
+          </div>
+        }
+        content={
+          <LayoutContent padding={8} role="main">
+            <div className="max-w-3xl">
+              <VStack gap={8}>
+                <VStack gap={2}>
+                  <Heading level={1}>{title}</Heading>
+                  <Text type="supporting" color="secondary">
+                    Cập nhật lần cuối: {UPDATED}
+                  </Text>
+                </VStack>
+                {children}
+              </VStack>
+            </div>
+          </LayoutContent>
+        }
+      />
+    </AppFrame>
   );
 }
 
 const ContactLink = () => (
-  <a href={CONTACT} target="_blank" rel="noreferrer" className="text-primary underline underline-offset-4">
+  <RouterLinkText href={CONTACT} target="_blank" rel="noreferrer">
     trang GitHub của dự án
-  </a>
+  </RouterLinkText>
 );
 
 export function Privacy() {
@@ -37,8 +81,7 @@ export function Privacy() {
         Gang Muzik gồm <b>thư viện công khai</b> (xem sheet nhạc, cảm âm, hợp âm, tab) và <b>Studio</b> (nơi đăng nhập để đóng góp bài).
         Trang này giải thích chúng tôi thu thập gì và dùng vào việc gì.
       </p>
-      <section>
-        <h2>1. Thư viện công khai</h2>
+      <DocSection id="muc-1" title="1. Thư viện công khai">
         <ul>
           <li>Không cần tài khoản, không đặt cookie theo dõi, không quảng cáo, không công cụ phân tích hành vi.</li>
           <li>
@@ -47,9 +90,8 @@ export function Privacy() {
           </li>
           <li>Bài bạn đã mở có thể được lưu tạm trong trình duyệt để xem lại khi mạng yếu.</li>
         </ul>
-      </section>
-      <section>
-        <h2>2. Studio — khi bạn đăng nhập bằng Google</h2>
+      </DocSection>
+      <DocSection id="muc-2" title="2. Studio — khi bạn đăng nhập bằng Google">
         <ul>
           <li>
             Chúng tôi chỉ nhận từ Google: <b>tên, địa chỉ email, ảnh đại diện</b> và mã định danh tài khoản Google. Chúng tôi không truy cập
@@ -63,33 +105,29 @@ export function Privacy() {
           </li>
           <li>Email của bạn chỉ quản trị viên nhìn thấy, không hiển thị trên thư viện công khai.</li>
         </ul>
-      </section>
-      <section>
-        <h2>3. Nội dung bạn đăng</h2>
+      </DocSection>
+      <DocSection id="muc-3" title="3. Nội dung bạn đăng">
         <ul>
           <li>Bài và ảnh bạn tải lên được lưu trên hạ tầng Cloudflare (D1, R2).</li>
           <li>Bài chưa duyệt chỉ bạn và quản trị viên xem được. Bài đã duyệt hiển thị công khai trên thư viện.</li>
         </ul>
-      </section>
-      <section>
-        <h2>4. Chia sẻ dữ liệu</h2>
+      </DocSection>
+      <DocSection id="muc-4" title="4. Chia sẻ dữ liệu">
         <p>
           Chúng tôi không bán, không cho thuê và không chia sẻ dữ liệu cá nhân của bạn cho bên thứ ba. Dữ liệu được xử lý bởi các nhà cung
           cấp hạ tầng cần thiết để vận hành dịch vụ: Cloudflare (lưu trữ, máy chủ — có thể ghi nhật ký kỹ thuật như địa chỉ IP để bảo mật) và
           Google (đăng nhập).
         </p>
-      </section>
-      <section>
-        <h2>5. Quyền của bạn</h2>
+      </DocSection>
+      <DocSection id="muc-5" title="5. Quyền của bạn">
         <p>
           Bạn có thể tự xoá bài chưa duyệt của mình trong Studio. Để xoá tài khoản hoặc toàn bộ dữ liệu của bạn, hãy liên hệ quản trị viên qua{" "}
           <ContactLink />. Bạn cũng có thể gỡ quyền truy cập của Gang Muzik bất cứ lúc nào tại trang quản lý tài khoản Google.
         </p>
-      </section>
-      <section>
-        <h2>6. Thay đổi</h2>
+      </DocSection>
+      <DocSection id="muc-6" title="6. Thay đổi">
         <p>Nếu chính sách thay đổi, chúng tôi sẽ cập nhật trang này và ngày “Cập nhật lần cuối” ở trên.</p>
-      </section>
+      </DocSection>
     </Shell>
   );
 }
@@ -97,15 +135,13 @@ export function Privacy() {
 export function Terms() {
   return (
     <Shell title="Điều khoản sử dụng" page="terms">
-      <section>
-        <h2>1. Dịch vụ</h2>
+      <DocSection id="muc-1" title="1. Dịch vụ">
         <p>
           Gang Muzik là dự án cá nhân, miễn phí, giúp người chơi nhạc xem sheet / cảm âm / hợp âm / tab rảnh tay. Dịch vụ được cung cấp “như
           hiện có”, không cam kết luôn sẵn sàng hay không có lỗi.
         </p>
-      </section>
-      <section>
-        <h2>2. Nội dung bạn đóng góp</h2>
+      </DocSection>
+      <DocSection id="muc-2" title="2. Nội dung bạn đóng góp">
         <ul>
           <li>Chỉ đăng nội dung bạn tự soạn hoặc có quyền chia sẻ. Tôn trọng bản quyền của tác giả và nhà xuất bản.</li>
           <li>Không đăng nội dung vi phạm pháp luật, xúc phạm, quảng cáo, spam hoặc mã độc.</li>
@@ -114,30 +150,25 @@ export function Terms() {
             dung của mình.
           </li>
         </ul>
-      </section>
-      <section>
-        <h2>3. Quyền của quản trị viên</h2>
+      </DocSection>
+      <DocSection id="muc-3" title="3. Quyền của quản trị viên">
         <p>
           Quản trị viên có quyền duyệt, từ chối, chỉnh sửa, gỡ bất kỳ bài nào, và khoá tài khoản vi phạm điều khoản mà không cần báo trước.
         </p>
-      </section>
-      <section>
-        <h2>4. Bản quyền & khiếu nại</h2>
+      </DocSection>
+      <DocSection id="muc-4" title="4. Bản quyền & khiếu nại">
         <p>
           Nếu bạn là chủ sở hữu bản quyền và thấy nội dung của mình bị đăng không được phép, hãy liên hệ qua <ContactLink /> — chúng tôi sẽ gỡ
           sớm nhất có thể.
         </p>
-      </section>
-      <section>
-        <h2>5. Quyền riêng tư</h2>
+      </DocSection>
+      <DocSection id="muc-5" title="5. Quyền riêng tư">
         <p>
           Xem{" "}
-          <Link to="/privacy" className="text-primary underline underline-offset-4">
-            Chính sách quyền riêng tư
-          </Link>
+          <RouterLinkText href="/privacy">Chính sách quyền riêng tư</RouterLinkText>
           .
         </p>
-      </section>
+      </DocSection>
     </Shell>
   );
 }

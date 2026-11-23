@@ -1,7 +1,6 @@
-import { forwardRef, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { forwardRef, useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  BookOpen,
-  ChevronDown,
+  ArrowLeft,
   ChevronRight,
   Hand,
   Keyboard,
@@ -23,26 +22,32 @@ import { Button } from "@astryxdesign/core/Button";
 import { Drawer, DrawerHeader } from "@astryxdesign/core/Drawer";
 import { Icon } from "@astryxdesign/core/Icon";
 import { IconButton } from "@astryxdesign/core/IconButton";
-import { Layout, LayoutContent } from "@astryxdesign/core/Layout";
+import { Badge } from "@astryxdesign/core/Badge";
+import { Card } from "@astryxdesign/core/Card";
+import { useMediaQuery } from "@astryxdesign/core/hooks";
+import { Layout, LayoutContent, LayoutPanel } from "@astryxdesign/core/Layout";
 import { List, ListItem } from "@astryxdesign/core/List";
+import { SegmentedControl, SegmentedControlItem } from "@astryxdesign/core/SegmentedControl";
+import { VStack } from "@astryxdesign/core/Stack";
 import { Switch } from "@astryxdesign/core/Switch";
-import { Text } from "@astryxdesign/core/Text";
+import { Heading, Text } from "@astryxdesign/core/Text";
+import { Toolbar } from "@astryxdesign/core/Toolbar";
 import { Theme } from "@astryxdesign/core/theme";
 import { useAppTheme } from "@/theme/AppTheme";
-import { readPref, writePref } from "@/lib/prefs";
+import { readScalarPref, writePref } from "@/lib/prefs";
 import { transposeBadge } from "@/lib/notation/transpose";
 import { cn } from "@/lib/utils";
-import { BookLayoutPanel, Choice, type BookLayoutPanelProps } from "./BookSettings";
+import { BookLayoutPanel, type BookLayoutPanelProps } from "./BookSettings";
 import { MetronomeControls, type MetronomeControlsProps } from "./MetronomePanel";
 import { TransposePanel, type TransposePanelProps } from "./TransposeSettings";
 
 /** keyboard shortcut that toggles the settings drawer */
 export const SETTINGS_SHORTCUT = "s";
 
-/** which collapsible blocks of the drawer are expanded (shared by all songs) */
-const EXPANDED_KEY = "gm:settings-expanded";
-type BlockId = "transpose" | "audio";
-const EXPANDED_DEFAULT: Record<BlockId, boolean> = { transpose: true, audio: false };
+/** which settings pane is open (shared by all songs) */
+const PANE_KEY = "gm:settings-pane";
+type PaneId = "instrument" | "display" | "practice" | "device";
+const isPaneId = (v: unknown): v is PaneId => v === "instrument" || v === "display" || v === "practice" || v === "device";
 
 const isTypingTarget = (t: EventTarget | null) => {
   const el = t as HTMLElement | null;
@@ -167,13 +172,15 @@ export function SettingsDrawer({
   fullscreen,
   onSaveDefaults,
 }: SettingsDrawerProps) {
-  const [expanded, setExpanded] = useState(() => ({ ...EXPANDED_DEFAULT, ...readPref(EXPANDED_KEY, EXPANDED_DEFAULT) }));
-  const toggleBlock = (id: BlockId) =>
-    setExpanded((prev) => {
-      const next = { ...prev, [id]: !prev[id] };
-      writePref(EXPANDED_KEY, next);
-      return next;
-    });
+  const isNarrow = useMediaQuery("(max-width: 768px)");
+  const [pane, setPaneState] = useState<PaneId>(() => readScalarPref(PANE_KEY, "instrument", isPaneId));
+  // phones: master→detail drill-down (template "settings-sidebar"); wider screens show both side by side
+  const [mobileView, setMobileView] = useState<"nav" | "detail">("nav");
+  const setPane = (id: PaneId) => {
+    setPaneState(id);
+    writePref(PANE_KEY, id);
+    setMobileView("detail");
+  };
 
   // opening another dialog from the drawer: close the drawer first so that dialog owns focus
   const openDialog = (show: () => void) => {
@@ -185,41 +192,55 @@ export function SettingsDrawer({
   const badge = transpose ? transposeBadge(transpose.value) : null;
   const { audio: stageAudio } = audio;
 
-  return (
-    // the drawer follows the Stage background, not the site theme
-    <Theme theme={appTheme} mode={stageTheme}>
-      <Drawer isOpen={open} onOpenChange={onOpenChange} label="Cài đặt" width={400} experimental={{ isFullWidthOnMobile: true }}>
-        <Layout
-          header={
-        <DrawerHeader
-          title="Cài đặt"
-          subtitle={
-            <>
-              Bấm <kbd className="rounded border border-border bg-muted px-1 font-mono text-[10px]">S</kbd> để mở / đóng nhanh
-            </>
-          }
-          onOpenChange={onOpenChange}
-          hasDivider
-        />
-          }
-          content={
-        <LayoutContent>
-        <div className="space-y-6 pb-[env(safe-area-inset-bottom)]">
-          {(transpose || fingering) && (
-            <Section title="Nhạc cụ">
-              {transpose && (
-                <Disclosure
-                  icon={Music2}
-                  label="Giọng nhạc cụ"
-                  description="Dịch cảm âm & hợp âm sang giọng nhạc cụ của bạn — sax hoặc sáo"
-                  summary={<Chip active={!!badge}>{badge ?? "Concert"}</Chip>}
-                  open={expanded.transpose}
-                  onToggle={() => toggleBlock("transpose")}
-                >
-                  <TransposePanel {...transpose} />
-                </Disclosure>
-              )}
-              {fingering && (
+  const panes: { id: PaneId; label: string; icon: LucideIcon; status?: ReactNode; hidden?: boolean }[] = [
+    { id: "instrument", label: "Nhạc cụ", icon: Music2, status: badge ? <Badge label={badge} /> : undefined, hidden: !transpose && !fingering },
+    { id: "display", label: "Hiển thị", icon: Type },
+    {
+      id: "practice",
+      label: "Nhịp & drone",
+      icon: MetronomeIcon,
+      status: stageAudio.active ? <Badge variant="success" label={`${stageAudio.bpm} BPM`} /> : undefined,
+    },
+    { id: "device", label: "Thiết bị", icon: Keyboard },
+  ];
+  const visible = panes.filter((p) => !p.hidden);
+  const current = visible.find((p) => p.id === pane) ?? visible[0];
+
+  const navList = (
+    <VStack gap={2}>
+      <List density="spacious">
+        {visible.map((p) => (
+          <ListItem
+            key={p.id}
+            label={p.label}
+            startContent={<Icon icon={p.icon} />}
+            endContent={
+              <span className="flex items-center gap-2">
+                {p.status}
+                {isNarrow && <Icon icon={ChevronRight} size="sm" color="secondary" />}
+              </span>
+            }
+            isSelected={!isNarrow && current.id === p.id}
+            aria-current={!isNarrow && current.id === p.id ? "page" : undefined}
+            onClick={() => setPane(p.id)}
+          />
+        ))}
+      </List>
+      <Text type="supporting" color="secondary">
+        <span className="block px-3">
+          Bấm <kbd className="rounded border border-border bg-muted px-1 font-mono text-[10px]">S</kbd> để mở / đóng nhanh
+        </span>
+      </Text>
+    </VStack>
+  );
+
+  const detail = (
+    <VStack gap={6}>
+      {current.id === "instrument" && (
+        <>
+          {fingering && (
+            <Card padding={0}>
+              <List>
                 <SwitchRow
                   icon={Hand}
                   label="Thế bấm"
@@ -227,72 +248,61 @@ export function SettingsDrawer({
                   checked={fingering.on}
                   onCheckedChange={fingering.onToggle}
                 />
-              )}
-            </Section>
+              </List>
+            </Card>
           )}
-
-          <Section title="Hiển thị">
-            <Row icon={Type} label="Cỡ chữ" description="Phóng to / thu nhỏ bản nhạc">
-              <div className="flex items-center gap-0.5 rounded-lg border border-border p-0.5">
-                <IconButton variant="ghost" size="sm" label="Thu nhỏ" icon={<Icon icon={Minus} />} onClick={onZoomOut} isDisabled={fontScale <= 0.6} />
-                <span className="w-11 text-center text-sm font-semibold tabular-nums" aria-live="polite">
-                  {Math.round(fontScale * 100)}%
-                </span>
-                <IconButton variant="ghost" size="sm" label="Phóng to" icon={<Icon icon={Plus} />} onClick={onZoomIn} isDisabled={fontScale >= 3} />
-              </div>
-            </Row>
-            {colored && (
-              <SwitchRow
-                icon={Palette}
-                label="Tô màu nốt"
-                description="Mỗi nốt Đô, Rê, Mi… một màu"
-                checked={colored.on}
-                onCheckedChange={colored.onToggle}
+          {transpose && <TransposePanel {...transpose} />}
+        </>
+      )}
+      {current.id === "display" && (
+        <>
+          <Card padding={0}>
+            <List hasDividers>
+              <Row icon={Type} label="Cỡ chữ" description="Phóng to / thu nhỏ bản nhạc">
+                <div className="flex items-center gap-0.5 rounded-lg border border-border p-0.5">
+                  <IconButton variant="ghost" size="sm" label="Thu nhỏ" icon={<Icon icon={Minus} />} onClick={onZoomOut} isDisabled={fontScale <= 0.6} />
+                  <span className="w-11 text-center text-sm font-semibold tabular-nums" aria-live="polite">
+                    {Math.round(fontScale * 100)}%
+                  </span>
+                  <IconButton variant="ghost" size="sm" label="Phóng to" icon={<Icon icon={Plus} />} onClick={onZoomIn} isDisabled={fontScale >= 3} />
+                </div>
+              </Row>
+              {colored && (
+                <SwitchRow
+                  icon={Palette}
+                  label="Tô màu nốt"
+                  description="Mỗi nốt Đô, Rê, Mi… một màu"
+                  checked={colored.on}
+                  onCheckedChange={colored.onToggle}
+                />
+              )}
+              <Row icon={stageTheme === "dark" ? Moon : Sun} label="Nền" description="Sáng khi đọc ngoài trời, tối khi diễn">
+                <SegmentedControl label="Nền" size="sm" value={stageTheme} onChange={(v) => onStageTheme(v as "dark" | "light")}>
+                  <SegmentedControlItem value="light" label="Sáng" />
+                  <SegmentedControlItem value="dark" label="Tối" />
+                </SegmentedControl>
+              </Row>
+              <ActionRow
+                icon={StickyNote}
+                label="Ghi chú"
+                description="Ghi chú của tác giả và của riêng bạn"
+                trailing={notes.has ? <Badge label={notes.visible ? "Đang hiện" : "Đang ẩn"} /> : undefined}
+                onClick={() => openDialog(notes.onOpen)}
               />
-            )}
-            <Row icon={stageTheme === "dark" ? Moon : Sun} label="Nền" description="Sáng khi đọc ngoài trời, tối khi diễn">
-              <div className="flex w-32 gap-1" role="group" aria-label="Nền">
-                <Choice active={stageTheme === "light"} onClick={() => onStageTheme("light")}>
-                  Sáng
-                </Choice>
-                <Choice active={stageTheme === "dark"} onClick={() => onStageTheme("dark")}>
-                  Tối
-                </Choice>
-              </div>
-            </Row>
-            <ActionRow
-              icon={StickyNote}
-              label="Ghi chú"
-              description="Ghi chú của tác giả và của riêng bạn"
-              trailing={notes.has ? <Chip active={notes.visible}>{notes.visible ? "Đang hiện" : "Đang ẩn"}</Chip> : undefined}
-              onClick={() => openDialog(notes.onOpen)}
-            />
-            {book && (
-              <Block icon={BookOpen} label="Kiểu sách" description="Số trang trên màn hình và cách lật">
-                <BookLayoutPanel {...book} />
-              </Block>
-            )}
-          </Section>
-
-          <Section title="Luyện tập">
-            <Disclosure
-              icon={MetronomeIcon}
-              label="Nhịp & drone"
-              description="Máy đếm nhịp và nốt nền để tập"
-              summary={
-                <Chip active={stageAudio.active}>
-                  {stageAudio.active && <span aria-hidden className="size-1.5 rounded-full bg-current" />}
-                  {stageAudio.bpm} BPM
-                </Chip>
-              }
-              open={expanded.audio}
-              onToggle={() => toggleBlock("audio")}
-            >
-              <MetronomeControls {...audio} />
-            </Disclosure>
-          </Section>
-
-          <Section title="Thiết bị">
+            </List>
+          </Card>
+          {book && (
+            <VStack gap={3}>
+              <Heading level={3}>Kiểu sách</Heading>
+              <BookLayoutPanel {...book} />
+            </VStack>
+          )}
+        </>
+      )}
+      {current.id === "practice" && <MetronomeControls {...audio} />}
+      {current.id === "device" && (
+        <Card padding={0}>
+          <List hasDividers>
             <ActionRow
               icon={Keyboard}
               label="Pedal & phím tắt"
@@ -316,9 +326,64 @@ export function SettingsDrawer({
                 onClick={onSaveDefaults}
               />
             )}
-          </Section>
-        </div>
-        </LayoutContent>
+          </List>
+        </Card>
+      )}
+    </VStack>
+  );
+
+  const showNavOnly = isNarrow && mobileView === "nav";
+  return (
+    // the drawer follows the Stage background, not the site theme
+    <Theme theme={appTheme} mode={stageTheme}>
+      <Drawer
+        isOpen={open}
+        onOpenChange={(o) => {
+          if (!o) setMobileView("nav");
+          onOpenChange(o);
+        }}
+        label="Cài đặt"
+        width={760}
+        experimental={{ isFullWidthOnMobile: true }}
+      >
+        <Layout
+          header={<DrawerHeader title="Cài đặt" onOpenChange={onOpenChange} hasDivider />}
+          start={
+            isNarrow ? undefined : (
+              <LayoutPanel hasDivider padding={2} width={240} label="Mục cài đặt">
+                {navList}
+              </LayoutPanel>
+            )
+          }
+          content={
+            <LayoutContent padding={showNavOnly ? 2 : 6}>
+              {showNavOnly ? (
+                navList
+              ) : (
+                <VStack gap={4}>
+                  <Toolbar
+                    label={current.label}
+                    gap={2}
+                    startContent={
+                      <>
+                        {isNarrow && (
+                          <Button
+                            label="Về danh mục cài đặt"
+                            variant="ghost"
+                            size="sm"
+                            isIconOnly
+                            icon={<Icon icon={ArrowLeft} size="sm" />}
+                            onClick={() => setMobileView("nav")}
+                          />
+                        )}
+                        <Heading level={2}>{current.label}</Heading>
+                      </>
+                    }
+                  />
+                  {detail}
+                </VStack>
+              )}
+            </LayoutContent>
           }
         />
       </Drawer>
@@ -328,34 +393,6 @@ export function SettingsDrawer({
 
 // ---------- building blocks ----------
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  const id = useId();
-  return (
-    <section aria-labelledby={id} className="space-y-2">
-      <Text type="supporting" color="secondary" weight="semibold" id={id} display="block">
-        <span className="px-1 tracking-wider uppercase">{title}</span>
-      </Text>
-      <div className="overflow-hidden rounded-xl border border-border bg-card">
-        <List hasDividers density="balanced">
-          {children}
-        </List>
-      </div>
-    </section>
-  );
-}
-
-function Chip({ active, children }: { active?: boolean; children: ReactNode }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap",
-        active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
-      )}
-    >
-      {children}
-    </span>
-  );
-}
 
 function RowIcon({ icon }: { icon: LucideIcon }) {
   return (
@@ -427,56 +464,4 @@ function ActionRow({
   );
 }
 
-/** a row whose controls always show underneath */
-function Block({ icon, label, description, children }: { icon: LucideIcon; label: string; description: string; children: ReactNode }) {
-  return (
-    <>
-      <ListItem startContent={<RowIcon icon={icon} />} label={label} description={desc(description)} />
-      <div className="px-3 pb-4">{children}</div>
-    </>
-  );
-}
 
-/** a row that expands its controls inline */
-function Disclosure({
-  icon,
-  label,
-  description,
-  summary,
-  open,
-  onToggle,
-  children,
-}: {
-  icon: LucideIcon;
-  label: string;
-  description: string;
-  summary?: ReactNode;
-  open: boolean;
-  onToggle: () => void;
-  children: ReactNode;
-}) {
-  const panelId = useId();
-  return (
-    <>
-      <ListItem
-        startContent={<RowIcon icon={icon} />}
-        label={label}
-        description={desc(description)}
-        onClick={onToggle}
-        aria-expanded={open}
-        aria-controls={panelId}
-        endContent={
-          <span className="flex items-center gap-2">
-            {summary}
-            <Icon icon={ChevronDown} size="sm" color="secondary" className={cn("transition-transform", open && "rotate-180")} />
-          </span>
-        }
-      />
-      {open && (
-        <div id={panelId} className="border-t border-dashed border-border px-3 pt-3 pb-4">
-          {children}
-        </div>
-      )}
-    </>
-  );
-}

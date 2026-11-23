@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pause, Play } from "lucide-react";
+import { Pause, Play, SlidersHorizontal } from "lucide-react";
 import { Banner } from "@astryxdesign/core/Banner";
 import { Button } from "@astryxdesign/core/Button";
 import { Card } from "@astryxdesign/core/Card";
+import { BottomSheet } from "@astryxdesign/core/BottomSheet";
 import { Collapsible } from "@astryxdesign/core/Collapsible";
 import { Heading } from "@astryxdesign/core/Heading";
 import { Icon } from "@astryxdesign/core/Icon";
+import { Layout, LayoutContent, LayoutPanel } from "@astryxdesign/core/Layout";
+import { VStack } from "@astryxdesign/core/Stack";
+import { Tab, TabList } from "@astryxdesign/core/TabList";
 import { Text } from "@astryxdesign/core/Text";
-import { SiteHeader } from "@/components/SiteHeader";
+import { AppFrame } from "@/components/AppFrame";
 import { LongToneDisplay } from "@/components/practice/LongToneDisplay";
 import { NoteChips } from "@/components/practice/NoteChips";
 import {
@@ -126,6 +130,7 @@ export function Practice() {
   useSyncDrone(wantDrone, drone);
   useWakeLock(runner.running);
 
+  const [sheet, setSheet] = useState(false);
   const toggle = () => {
     if (runner.running) {
       runner.stop();
@@ -156,75 +161,8 @@ export function Practice() {
     if (n) playTone(n.frequency, 0.8, s.toneVolume);
   };
 
-  return (
-    <div className="min-h-full pb-28 sm:pb-12">
-      <SiteHeader containerClassName="max-w-3xl" />
-
-      <main className="mx-auto max-w-3xl space-y-6 px-4 pt-4 sm:px-6">
-        <Heading level={1}>Luyện tập cùng gam</Heading>
-        {!isAudioSupported() && <Banner status="error" title="Trình duyệt này không hỗ trợ phát âm thanh." />}
-
-        <Segmented
-          label="Chế độ luyện"
-          value={s.mode}
-          options={[
-            { value: "scale", label: "Âm giai" },
-            { value: "longtone", label: "Nốt dài" },
-          ]}
-          onChange={(mode) => set({ mode })}
-        />
-
-        {/* ===== main display ===== */}
-        <Card padding={6}>
-        <section aria-label="Bài tập">
-          <div className="mb-4 flex flex-col items-center text-center">
-            <Heading level={2}>{title}</Heading>
-            <Text type="supporting" color="secondary">
-              {horn.semitones !== 0 ? (
-                <>
-                  Concert: {noteText(concert)} ({letterText(concert)}) ·{" "}
-                </>
-              ) : (
-                <>({letterText(written)}) · </>
-              )}
-              {s.mode === "scale"
-                ? `${s.bpm} BPM · ${s.notesPerBeat} nốt/phách`
-                : `${s.bpm} BPM · giữ ${s.hold}, nghỉ ${s.rest} phách`}
-            </Text>
-          </div>
-
-          {s.mode === "longtone" ? (
-            <LongToneDisplay seq={seq} step={step} hold={s.hold} rest={s.rest} />
-          ) : (
-            <>
-              <div className="mb-3 flex h-8 items-center justify-center" aria-live="polite">
-                {step?.phase === "countin" ? (
-                  <span className="font-display text-2xl font-extrabold tabular-nums">Đếm vào: {step.left}</span>
-                ) : (
-                  <BeatDots beat={runner.running ? runner.beat : -1} />
-                )}
-              </div>
-              <NoteChips seq={seq} activeIndex={activeIndex} onPick={preview} />
-            </>
-          )}
-
-          {outOfRange > 0 && (
-            <p className="mt-3 text-center text-xs text-muted-foreground">
-              {outOfRange} nốt ngoài tầm của {hornPreset(transpose.preset)?.name ?? "kèn"} (ô viền đứt) — thử đổi “Bắt đầu từ”.
-            </p>
-          )}
-
-          <div className="mt-6 hidden justify-center sm:flex">
-            <StartButton running={runner.running} onClick={toggle} />
-          </div>
-          <p className="mt-3 hidden text-center text-xs text-muted-foreground sm:block">
-            Phím Space hoặc pedal để bắt đầu / dừng · ← → đổi chủ âm
-          </p>
-        </section>
-        </Card>
-
-        {/* ===== settings ===== */}
-        <section className="space-y-5" aria-label="Cài đặt bài tập">
+  const settingsPanel = (
+        <section className="@container space-y-6" aria-label="Cài đặt bài tập">
           <Field label="Nhịp độ">
             <BpmControl bpm={s.bpm} onChange={(v) => set({ bpm: clampBpm(v) })} />
           </Field>
@@ -239,7 +177,7 @@ export function Practice() {
               value={s.type}
               options={SCALE_TYPES.map((t) => ({ value: t.id, label: t.label }))}
               onChange={(type) => set({ type })}
-              className="grid grid-cols-2 sm:grid-cols-4"
+              className="grid grid-cols-2 @lg:grid-cols-4"
             />
           </Field>
 
@@ -254,7 +192,7 @@ export function Practice() {
             </Field>
           )}
 
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="grid gap-5 @lg:grid-cols-2">
             <Field label="Số quãng tám">
               <Segmented
                 label="Số quãng tám"
@@ -305,7 +243,7 @@ export function Practice() {
               />
             </Field>
           ) : (
-            <div className="grid gap-5 sm:grid-cols-2">
+            <div className="grid gap-5 @lg:grid-cols-2">
               <Field label="Giữ mỗi nốt">
                 <Segmented
                   label="Số phách giữ mỗi nốt"
@@ -351,13 +289,96 @@ export function Practice() {
           </Collapsible>
           </Card>
         </section>
-      </main>
+  );
 
-      {/* start button pinned to the bottom on phones */}
-      <div className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-background/90 p-3 backdrop-blur-md sm:hidden">
-        <StartButton running={runner.running} onClick={toggle} />
-      </div>
-    </div>
+  return (
+    <AppFrame>
+      <Layout
+        height="auto"
+        end={
+          <div className="hidden xl:block">
+            <LayoutPanel hasDivider padding={6} width={380} label="Cài đặt bài tập">
+              <VStack gap={4}>
+                <Heading level={2}>Cài đặt bài tập</Heading>
+                {settingsPanel}
+              </VStack>
+            </LayoutPanel>
+          </div>
+        }
+        content={
+          <LayoutContent padding={8} role="main">
+            <VStack gap={6}>
+              <VStack gap={2}>
+                <Heading level={1}>Luyện gam</Heading>
+                <Text color="secondary">Chạy âm giai hoặc giữ nốt dài theo nhịp, có nốt tham chiếu và drone chủ âm.</Text>
+              </VStack>
+              {!isAudioSupported() && <Banner status="error" title="Trình duyệt này không hỗ trợ phát âm thanh." />}
+
+              <TabList hasDivider value={s.mode} onChange={(mode) => set({ mode: mode as typeof s.mode })}>
+                <Tab value="scale" label="Âm giai" />
+                <Tab value="longtone" label="Nốt dài" />
+              </TabList>
+
+              <Card padding={8}>
+                <section aria-label="Bài tập">
+                  <VStack gap={6} hAlign="center">
+                    <VStack gap={1} hAlign="center">
+            <Heading level={2}>{title}</Heading>
+            <Text type="supporting" color="secondary">
+              {horn.semitones !== 0 ? (
+                <>
+                  Concert: {noteText(concert)} ({letterText(concert)}) ·{" "}
+                </>
+              ) : (
+                <>({letterText(written)}) · </>
+              )}
+              {s.mode === "scale"
+                ? `${s.bpm} BPM · ${s.notesPerBeat} nốt/phách`
+                : `${s.bpm} BPM · giữ ${s.hold}, nghỉ ${s.rest} phách`}
+            </Text>
+                    </VStack>
+                    <div className="w-full">
+          {s.mode === "longtone" ? (
+            <LongToneDisplay seq={seq} step={step} hold={s.hold} rest={s.rest} />
+          ) : (
+            <>
+              <div className="mb-3 flex h-8 items-center justify-center" aria-live="polite">
+                {step?.phase === "countin" ? (
+                  <span className="font-display text-2xl font-extrabold tabular-nums">Đếm vào: {step.left}</span>
+                ) : (
+                  <BeatDots beat={runner.running ? runner.beat : -1} />
+                )}
+              </div>
+              <NoteChips seq={seq} activeIndex={activeIndex} onPick={preview} />
+            </>
+          )}
+
+          {outOfRange > 0 && (
+            <p className="mt-3 text-center text-xs text-muted-foreground">
+              {outOfRange} nốt ngoài tầm của {hornPreset(transpose.preset)?.name ?? "kèn"} (ô viền đứt) — thử đổi “Bắt đầu từ”.
+            </p>
+          )}
+                    </div>
+                    <StartButton running={runner.running} onClick={toggle} />
+                    <Text type="supporting" color="secondary">
+                      Phím Space hoặc pedal để bắt đầu / dừng · ← → đổi chủ âm
+                    </Text>
+                  </VStack>
+                </section>
+              </Card>
+
+              {/* phones and tablets: settings live in a bottom sheet */}
+              <div className="xl:hidden">
+                <Button width="100%" size="lg" label="Cài đặt bài tập" icon={<Icon icon={SlidersHorizontal} />} onClick={() => setSheet(true)} />
+              </div>
+            </VStack>
+          </LayoutContent>
+        }
+      />
+      <BottomSheet isOpen={sheet} onOpenChange={setSheet} label="Cài đặt bài tập" height="tall" padding={6}>
+        {settingsPanel}
+      </BottomSheet>
+    </AppFrame>
   );
 }
 
