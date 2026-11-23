@@ -1,25 +1,33 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useParams } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Check, ChevronDown, Eye, Lock, Send, Trash2, Undo2, X } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, Eye, Lock, Save, Send, Trash2, Undo2, X } from "lucide-react";
 import type { PageImage, Song, SongInput, SongKind, ViewMode } from "@shared/types";
 import { AlertDialog } from "@astryxdesign/core/AlertDialog";
 import { Banner } from "@astryxdesign/core/Banner";
 import { Button } from "@astryxdesign/core/Button";
 import { Card } from "@astryxdesign/core/Card";
+import { Center } from "@astryxdesign/core/Center";
+import { Divider } from "@astryxdesign/core/Divider";
 import { EmptyState } from "@astryxdesign/core/EmptyState";
-import { Heading } from "@astryxdesign/core/Heading";
+import { Grid } from "@astryxdesign/core/Grid";
 import { Icon } from "@astryxdesign/core/Icon";
 import { IconButton } from "@astryxdesign/core/IconButton";
+import { HStack, Layout, LayoutContent, LayoutHeader, LayoutPanel, VStack } from "@astryxdesign/core/Layout";
+import { Section } from "@astryxdesign/core/Section";
 import { SegmentedControl, SegmentedControlItem } from "@astryxdesign/core/SegmentedControl";
 import { Selector } from "@astryxdesign/core/Selector";
 import { Slider } from "@astryxdesign/core/Slider";
-import { Text } from "@astryxdesign/core/Text";
+import { Spinner } from "@astryxdesign/core/Spinner";
+import { Tab, TabList } from "@astryxdesign/core/TabList";
+import { Heading, Text } from "@astryxdesign/core/Text";
 import { TextArea } from "@astryxdesign/core/TextArea";
 import { TextInput } from "@astryxdesign/core/TextInput";
 import { ToggleButton } from "@astryxdesign/core/ToggleButton";
+import { Toolbar } from "@astryxdesign/core/Toolbar";
 import { useToast } from "@astryxdesign/core/Toast";
+import { useMediaQuery } from "@astryxdesign/core/hooks";
 import { ImageUploader } from "@studio/components/ImageUploader";
 import { StatusBadge } from "@studio/components/StatusBadge";
 import { TextNotation } from "@/components/stage/TextNotation";
@@ -91,7 +99,15 @@ const FOCUS_CHOICES = INSTRUMENTS_FOCUS_FIRST.filter((i) => isFocusInstrument(i.
 const OTHER_CHOICES = INSTRUMENTS_FOCUS_FIRST.filter((i) => !isFocusInstrument(i.id));
 
 /** Saxophone and Sáo up front; the other instruments sit in a collapsible group (opened when one of them is picked) */
-function InstrumentPicker({ value, onToggle }: { value: InstrumentId[]; onToggle: (id: InstrumentId) => void }) {
+function InstrumentPicker({
+  value,
+  onToggle,
+  isDisabled,
+}: {
+  value: InstrumentId[];
+  onToggle: (id: InstrumentId) => void;
+  isDisabled: boolean;
+}) {
   const pickedOthers = value.filter((id) => !isFocusInstrument(id));
   const hasOthers = pickedOthers.length > 0;
   const [open, setOpen] = useState(hasOthers);
@@ -108,6 +124,7 @@ function InstrumentPicker({ value, onToggle }: { value: InstrumentId[]; onToggle
         size={big ? "md" : "sm"}
         label={i.label}
         isPressed={on}
+        isDisabled={isDisabled}
         onPressedChange={() => onToggle(i.id)}
         icon={on ? <Icon icon={Check} size="sm" /> : undefined}
       >
@@ -117,8 +134,8 @@ function InstrumentPicker({ value, onToggle }: { value: InstrumentId[]; onToggle
   };
 
   return (
-    <div className="space-y-2" role="group" aria-labelledby="instrument-label">
-      <div className="flex flex-wrap items-center gap-1.5">
+    <VStack gap={2} role="group" aria-labelledby="instrument-label">
+      <HStack gap={1.5} vAlign="center" wrap="wrap">
         {FOCUS_CHOICES.map((i) => chip(i, true))}
         <Button
           variant="ghost"
@@ -130,22 +147,24 @@ function InstrumentPicker({ value, onToggle }: { value: InstrumentId[]; onToggle
         >
           {`Nhạc cụ khác${hasOthers && !open ? ` (${pickedOthers.length})` : ""}`}
         </Button>
-      </div>
+      </HStack>
       {open && (
-        <div id="instrument-others" className="flex flex-wrap gap-1.5 rounded-xl border border-dashed border-border p-2">
-          {OTHER_CHOICES.map((i) => chip(i))}
-        </div>
+        <Card variant="muted" padding={2}>
+          <HStack gap={1.5} wrap="wrap" id="instrument-others">
+            {OTHER_CHOICES.map((i) => chip(i))}
+          </HStack>
+        </Card>
       )}
-    </div>
+    </VStack>
   );
 }
 
 const KEY_ROOT_OPTIONS = [{ value: "", label: "Không rõ" }, ...KEY_ROOTS.map((r) => ({ value: r, label: r }))];
 
 /** form field label + optional hint, for custom controls that have no built-in label */
-function FieldLabel({ children, hint, id }: { children: React.ReactNode; hint?: string; id?: string }) {
+function FieldLabel({ children, hint, id }: { children: ReactNode; hint?: string; id?: string }) {
   return (
-    <div className="space-y-0.5">
+    <VStack gap={0.5}>
       <Text type="label" weight="semibold" id={id} display="block">
         {children}
       </Text>
@@ -154,9 +173,11 @@ function FieldLabel({ children, hint, id }: { children: React.ReactNode; hint?: 
           {hint}
         </Text>
       )}
-    </div>
+    </VStack>
   );
 }
+
+type EditorTab = "info" | "content" | "review" | "preview";
 
 function fromSong(s: Song): Form {
   return {
@@ -193,7 +214,11 @@ export function SongEditor() {
     error: (body: string) => void showToast({ body, type: "error" }),
   };
 
-  const song = useQuery({ queryKey: ["song", id], queryFn: () => api.getSong(id!), enabled: !!id });
+  const song = useQuery({
+    queryKey: ["song", id],
+    queryFn: () => api.getSong(id!),
+    enabled: !!id,
+  });
   useEffect(() => {
     if (song.data) {
       setForm(fromSong(song.data));
@@ -202,7 +227,12 @@ export function SongEditor() {
   }, [song.data]);
 
   const actor = user!;
-  const ref: SongRef | null = song.data ? { ownerId: song.data.owner?.id ?? null, status: song.data.status ?? "draft" } : null;
+  const ref: SongRef | null = song.data
+    ? {
+        ownerId: song.data.owner?.id ?? null,
+        status: song.data.status ?? "draft",
+      }
+    : null;
   const editable = isNew || (!!ref && canEdit(actor, ref));
   const deletable = !!ref && canDelete(actor, ref);
   const submittable = !!ref && canSubmit(actor, ref);
@@ -259,7 +289,9 @@ export function SongEditor() {
 
   const openPreview = () => {
     if (form.kind === "sheet" && !pages.length)
-      return toast.error(isNew ? "Bài dạng ảnh: bấm “Tiếp tục: tải ảnh lên” rồi tải ảnh trước khi xem trước" : "Tải ít nhất một ảnh lên trước khi xem trước");
+      return toast.error(
+        isNew ? "Bài dạng ảnh: bấm “Tiếp tục: tải ảnh lên” rồi tải ảnh trước khi xem trước" : "Tải ít nhất một ảnh lên trước khi xem trước",
+      );
     if (form.kind === "text" && !form.textContent.trim()) return toast.error("Nhập nội dung bài trước khi xem trước");
     setPreviewing(true);
   };
@@ -287,8 +319,8 @@ export function SongEditor() {
     }
   };
 
-  const save = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const save = async (e?: React.SyntheticEvent) => {
+    e?.preventDefault();
     if (!form.title.trim() || settingsInvalid) return;
     // bài dạng chữ mới: tạo + gửi duyệt luôn, không qua bước nháp
     const direct = isNew && form.kind === "text";
@@ -376,7 +408,9 @@ export function SongEditor() {
       qc.setQueryData(["song", id], s);
       qc.invalidateQueries({ queryKey: ["songs"] });
       setReviewNote("");
-      toast.success(decision === "approve" ? "Đã duyệt — bài đã lên thư viện" : decision === "reject" ? "Đã từ chối" : "Đã gỡ khỏi thư viện");
+      toast.success(
+        decision === "approve" ? "Đã duyệt — bài đã lên thư viện" : decision === "reject" ? "Đã từ chối" : "Đã gỡ khỏi thư viện",
+      );
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -384,44 +418,93 @@ export function SongEditor() {
     }
   };
 
-  if (id && song.isPending) return <div className="p-10 text-center text-muted-foreground">Đang tải…</div>;
-  if (id && song.isError) return <Banner status="error" title="Không tải được bài" description={song.error.message} />;
+  // --- workspace layout (Astryx template "editor"): tabs in the side panel, live canvas beside it ---
+  const isMobile = useMediaQuery("(max-width: 768px)");
+  const [tab, setTab] = useState<EditorTab>("info");
+  // open on the review tab when there is something to act on there (once, when the song loads)
+  const songStatus = song.data?.status;
+  const songLoadedId = song.data?.id;
+  useEffect(() => {
+    if (!songLoadedId) return;
+    if (songStatus === "rejected" || (isAdmin && songStatus === "pending")) setTab("review");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when another song loads
+  }, [songLoadedId]);
+  // the preview tab exists on phones only (desktop shows the canvas beside the panel)
+  useEffect(() => {
+    if (!isMobile && tab === "preview") setTab("info");
+  }, [isMobile, tab]);
 
-  return (
-    <div>
-      <title>{isNew ? "Bài mới · Gang Muzik Studio" : `${form.title} · Gang Muzik Studio`}</title>
-      <div className="mb-6 flex flex-wrap items-center gap-2">
-        <IconButton href="/" variant="ghost" label="Quay lại" tooltip="Quay lại" icon={<Icon icon={ArrowLeft} />} />
-        <Heading level={1}>{isNew ? "Bài mới" : editable ? "Sửa bài" : "Xem bài"}</Heading>
-        {song.data?.status && <StatusBadge status={song.data.status} />}
-        <div className="flex-1" />
-        <Button
-          label="Xem trước"
-          tooltip="Xem bài trông thế nào trên trang công khai (kể cả thay đổi chưa lưu)"
-          icon={<Icon icon={Eye} />}
-          onClick={openPreview}
-        />
-        {deletable && (
-          <IconButton variant="ghost" label="Xoá bài" tooltip="Xoá bài" icon={<Icon icon={Trash2} color="error" />} onClick={() => setConfirm("delete")} />
-        )}
-      </div>
+  if (id && song.isPending)
+    return (
+      <Center axis="both" padding={10}>
+        <Spinner size="xl" label="Đang tải…" />
+      </Center>
+    );
+  if (id && song.isError)
+    return (
+      <VStack padding={4}>
+        <Banner status="error" title="Không tải được bài" description={song.error.message} />
+      </VStack>
+    );
 
-      {/* trạng thái duyệt */}
-      {song.data && (
-        <Card padding={4}>
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-3 text-sm">
-            <span className="flex-1">
-              {song.data.status === "draft" && "Bài chưa gửi duyệt — chỉ bạn và quản trị viên thấy. Xong thì bấm Gửi duyệt."}
-              {song.data.status === "pending" && "Đang chờ quản trị viên duyệt. Bạn vẫn có thể sửa trong lúc chờ."}
-              {song.data.status === "approved" && (isAdmin ? "Bài đang hiện trên thư viện công khai." : "Bài đã được duyệt và đang hiện trên thư viện. Muốn sửa, hãy liên hệ quản trị viên.")}
-              {song.data.status === "rejected" && "Bài bị từ chối. Sửa theo góp ý rồi Gửi duyệt lại."}
-              {song.data.owner && isAdmin && (
-                <span className="mt-1 block text-xs text-muted-foreground">
-                  Người đăng: {song.data.owner.name || song.data.owner.email} ({song.data.owner.email})
-                </span>
-              )}
-            </span>
+  const directSubmit = isNew && form.kind === "text";
+  const saveDisabled = !form.title.trim() || settingsInvalid || (directSubmit && !form.textContent.trim());
+  const saveLabel = saving
+    ? directSubmit
+      ? "Đang gửi…"
+      : "Đang lưu…"
+    : isNew
+      ? form.kind === "sheet"
+        ? "Tiếp tục: tải ảnh lên"
+        : "Gửi duyệt"
+      : "Lưu";
+
+  // --- header toolbar: back, title, status / preview, delete, save + submit ---
+  const header = (
+    <LayoutHeader hasDivider padding={2}>
+      <Toolbar
+        label="Thao tác với bài"
+        startContent={
+          <HStack gap={2} vAlign="center">
+            <IconButton href="/" variant="ghost" label="Quay lại" tooltip="Quay lại" icon={<Icon icon={ArrowLeft} />} />
+            <Heading level={1} maxLines={1}>
+              {isNew ? "Bài mới" : form.title || "Bài chưa đặt tên"}
+            </Heading>
+            {song.data?.status && <StatusBadge status={song.data.status} />}
+            {!editable && <Icon icon={Lock} size="sm" color="secondary" label="Đã khoá" />}
+          </HStack>
+        }
+        endContent={
+          <HStack gap={1} vAlign="center">
+            {deletable && (
+              <IconButton
+                variant="ghost"
+                label="Xoá bài"
+                tooltip="Xoá bài"
+                icon={<Icon icon={Trash2} color="error" />}
+                onClick={() => setConfirm("delete")}
+              />
+            )}
+            {isMobile ? (
+              <IconButton label="Xem trước" tooltip="Xem trước toàn màn hình" icon={<Icon icon={Eye} />} onClick={openPreview} />
+            ) : (
+              <Button
+                label="Xem trước"
+                tooltip="Xem bài trông thế nào trên trang công khai (kể cả thay đổi chưa lưu)"
+                icon={<Icon icon={Eye} />}
+                onClick={openPreview}
+              />
+            )}
+            {editable && (
+              <Button
+                variant={submittable ? "secondary" : "primary"}
+                label={saveLabel}
+                icon={<Icon icon={directSubmit ? Send : Save} />}
+                isLoading={saving}
+                isDisabled={saveDisabled}
+                onClick={save}
+              />
+            )}
             {submittable && (
               <Button
                 variant="primary"
@@ -432,278 +515,371 @@ export function SongEditor() {
                 onClick={submit}
               />
             )}
-            {!editable && <Icon icon={Lock} size="sm" color="secondary" label="Đã khoá" />}
-          </div>
-          {song.data.reviewNote && song.data.status !== "approved" && (
-            <Banner status="error" title="Góp ý của quản trị viên" description={song.data.reviewNote} />
-          )}
-          {isAdmin && (
-            <div className="space-y-3 border-t border-border pt-3">
-              <FieldLabel>Duyệt bài (quản trị viên)</FieldLabel>
-              {song.data.status !== "approved" && (
-                <TextArea
-                  label="Lý do / góp ý"
-                  isLabelHidden
-                  value={reviewNote}
-                  onChange={setReviewNote}
-                  rows={2}
-                  maxLength={1000}
-                  placeholder="Lý do / góp ý (bắt buộc khi từ chối)"
-                  width="100%"
-                />
-              )}
-              <div className="flex flex-wrap gap-2">
-                {song.data.status !== "approved" && (
-                  <>
-                    <Button
-                      variant="primary"
-                      label="Duyệt & đăng lên thư viện"
-                      icon={<Icon icon={Check} />}
-                      isDisabled={busy}
-                      onClick={() => review("approve")}
-                    />
-                    <Button variant="destructive" label="Từ chối" icon={<Icon icon={X} />} isDisabled={busy} onClick={() => review("reject")} />
-                  </>
-                )}
-                {song.data.status === "approved" && (
-                  <Button label="Gỡ khỏi thư viện" icon={<Icon icon={Undo2} />} isDisabled={busy} onClick={() => setConfirm("unpublish")} />
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-        </Card>
+          </HStack>
+        }
+      />
+    </LayoutHeader>
+  );
+
+  // --- tab: song info and default reader settings ---
+  const infoTab = (
+    <VStack gap={5}>
+      <TextInput label="Tên bài" isRequired value={form.title} onChange={(v) => set("title", v)} width="100%" isDisabled={!editable} />
+      <TextInput label="Ca sĩ / tác giả" value={form.artist} onChange={(v) => set("artist", v)} width="100%" isDisabled={!editable} />
+      <VStack gap={2}>
+        <FieldLabel id="instrument-label" hint="Chọn được nhiều nhạc cụ. Bài sẽ hiện trong từng mục tương ứng ở thư viện.">
+          Nhạc cụ
+        </FieldLabel>
+        <InstrumentPicker value={form.instruments} onToggle={toggleInstrument} isDisabled={!editable} />
+      </VStack>
+      <TextArea
+        label="Ghi chú cho người chơi"
+        description="Hiện trên đầu bài cho mọi người xem — vd tone, capo, nhịp, đoạn cần chú ý."
+        value={form.note}
+        onChange={(v) => set("note", v)}
+        maxLength={2000}
+        rows={3}
+        placeholder="Tone Am · capo 2 · điệp khúc đánh mạnh hơn…"
+        width="100%"
+        isDisabled={!editable}
+      />
+      <VStack gap={2}>
+        <FieldLabel hint="Dạng chữ: cảm âm, hợp âm, tab. Ảnh: sheet hoặc bản chụp.">Loại nội dung</FieldLabel>
+        <Segmented
+          label="Loại nội dung"
+          value={form.kind}
+          onChange={(v) => set("kind", v)}
+          isDisabled={!editable}
+          options={[
+            { value: "text", label: "Dạng chữ" },
+            { value: "sheet", label: "Ảnh / sheet" },
+          ]}
+        />
+      </VStack>
+      <Divider />
+      <Heading level={3}>Mặc định khi mở bài</Heading>
+      <VStack gap={2}>
+        <FieldLabel>Chế độ xem</FieldLabel>
+        <Segmented
+          label="Chế độ xem"
+          value={form.mode}
+          onChange={(v) => set("mode", v)}
+          isDisabled={!editable}
+          options={[
+            { value: "scroll", label: "Cuộn" },
+            { value: "pages", label: "Sách" },
+          ]}
+        />
+      </VStack>
+      <Grid columns={2} gap={3}>
+        <TextInput
+          label="Thời lượng"
+          description="phút:giây"
+          value={form.duration}
+          onChange={(v) => set("duration", v)}
+          placeholder="vd 3:40"
+          status={
+            durationInvalid
+              ? {
+                  type: "error",
+                  message: "Nhập dạng phút:giây, từ 0:05 đến 60:00.",
+                }
+              : undefined
+          }
+          width="100%"
+          isDisabled={!editable}
+        />
+        <TextInput
+          label="Nhịp độ (BPM)"
+          description="Cho máy đếm nhịp"
+          inputMode="numeric"
+          value={form.bpm}
+          onChange={(v) => set("bpm", v)}
+          placeholder="vd 96"
+          status={bpmInvalid ? { type: "error", message: "Nhập số nguyên từ 20 đến 400." } : undefined}
+          width="100%"
+          isDisabled={!editable}
+        />
+        <Selector
+          label="Tone gốc"
+          options={KEY_ROOT_OPTIONS}
+          value={form.keyRoot}
+          onChange={(v) => set("keyRoot", v ?? "")}
+          isDisabled={!editable}
+          width="100%"
+        />
+        <Selector
+          label="Trưởng / thứ"
+          options={[
+            { value: "major", label: "Trưởng" },
+            { value: "minor", label: "Thứ" },
+          ]}
+          value={form.keyMinor ? "minor" : "major"}
+          onChange={(v) => set("keyMinor", v === "minor")}
+          isDisabled={!editable || !form.keyRoot}
+          width="100%"
+        />
+      </Grid>
+      {guessedKey && editable && (
+        <Button size="sm" label={`Đoán từ hợp âm: ${guessedKey}`} onClick={() => setForm((f) => ({ ...f, ...keyParts(guessedKey) }))} />
       )}
+      <Slider
+        label="Cỡ chữ / phóng to"
+        min={0.6}
+        max={2.5}
+        step={0.05}
+        value={form.fontScale}
+        onChange={(v: number) => set("fontScale", v)}
+        formatValue={(v) => `${Math.round(v * 100)}%`}
+        valueDisplay="text"
+        width="100%"
+        isDisabled={!editable}
+      />
+    </VStack>
+  );
 
-      <form onSubmit={save} className="mt-6 grid gap-6 lg:grid-cols-2">
-        <fieldset disabled={!editable} className="min-w-0 space-y-5 disabled:opacity-70">
-          <TextInput label="Tên bài" isRequired value={form.title} onChange={(v) => set("title", v)} width="100%" isDisabled={!editable} />
-          <TextInput label="Ca sĩ / tác giả" value={form.artist} onChange={(v) => set("artist", v)} width="100%" isDisabled={!editable} />
-          <div className="space-y-2">
-            <FieldLabel id="instrument-label" hint="Chọn được nhiều nhạc cụ. Bài sẽ hiện trong từng mục tương ứng ở thư viện.">
-              Nhạc cụ
-            </FieldLabel>
-            <InstrumentPicker value={form.instruments} onToggle={toggleInstrument} />
-          </div>
+  // --- tab: the notation text, or the page images for a sheet ---
+  const pickExample = (k: keyof typeof EXAMPLES) => {
+    const current = form.textContent.trim();
+    const isExample = Object.values(EXAMPLES).includes(form.textContent);
+    if (current && !isExample && !window.confirm(`Thay nội dung đang nhập bằng mẫu “${k}”?`)) return;
+    set("textContent", EXAMPLES[k]);
+  };
+  const contentTab =
+    form.kind === "text" ? (
+      <VStack gap={3}>
+        <FieldLabel>Nội dung (cảm âm, hợp âm, tab…)</FieldLabel>
+        {editable && (
+          <HStack gap={1} vAlign="center" wrap="wrap">
+            <Text type="supporting" color="secondary">
+              Mẫu:
+            </Text>
+            {(Object.keys(EXAMPLES) as (keyof typeof EXAMPLES)[]).map((k) => (
+              <ToggleButton
+                key={k}
+                size="sm"
+                label={k}
+                tooltip={`Điền mẫu ${k} vào ô nội dung`}
+                isPressed={form.textContent === EXAMPLES[k]}
+                onPressedChange={() => pickExample(k)}
+              >
+                {k}
+              </ToggleButton>
+            ))}
+          </HStack>
+        )}
+        <TextArea
+          label="Nội dung"
+          isLabelHidden
+          value={form.textContent}
+          onChange={(v) => set("textContent", v)}
+          rows={isMobile ? 14 : 20}
+          hasSpellCheck={false}
+          controlClassName="font-mono text-sm leading-relaxed"
+          placeholder={"Dán bản nhạc dạng chữ, ví dụ cảm âm:\n" + SAMPLE + "\n\n(dòng trống = sang đoạn mới)"}
+          width="100%"
+          isDisabled={!editable}
+        />
+        <Text type="supporting" color="secondary">
+          <Text type="supporting" weight="semibold">
+            Cảm âm:
+          </Text>{" "}
+          dòng lời rồi dòng nốt Do Re Mi… (thêm số cho quãng tám: Re2, D2).{" "}
+          <Text type="supporting" weight="semibold">
+            Hợp âm:
+          </Text>{" "}
+          dòng hợp âm (Am C G7) đặt trên dòng lời, hoặc chèn ngay trong lời như [Am]Đường về.{" "}
+          <Text type="supporting" weight="semibold">
+            Tab:
+          </Text>{" "}
+          các dòng e|--0--|. Dòng trống để ngắt đoạn — lật trang sẽ ưu tiên ngắt ở đây.
+        </Text>
+      </VStack>
+    ) : id ? (
+      <VStack gap={3}>
+        <FieldLabel>{`Ảnh theo thứ tự${editable ? " (kéo để sắp xếp)" : ""}`}</FieldLabel>
+        {editable ? (
+          <ImageUploader songId={id} pages={pages} onChange={onPagesChange} />
+        ) : pages.length ? (
+          <Grid columns={3} gap={2}>
+            {pages.map((p) => (
+              <img key={p.id} src={p.url} alt="" className="rounded border border-border bg-white" />
+            ))}
+          </Grid>
+        ) : (
+          <EmptyState isCompact title="Bài chưa có ảnh" />
+        )}
+      </VStack>
+    ) : (
+      <Card variant="muted" padding={6}>
+        <EmptyState
+          isCompact
+          title="Chưa tải ảnh được"
+          description="Tạo bài trước (nút “Tiếp tục: tải ảnh lên” ở trên), sau đó tải ảnh lên tại đây."
+        />
+      </Card>
+    );
 
-          <TextArea
-            label="Ghi chú cho người chơi"
-            description="Hiện trên đầu bài cho mọi người xem — vd tone, capo, nhịp, đoạn cần chú ý."
-            value={form.note}
-            onChange={(v) => set("note", v)}
-            maxLength={2000}
-            rows={3}
-            placeholder="Tone Am · capo 2 · điệp khúc đánh mạnh hơn…"
-            width="100%"
-            isDisabled={!editable}
-          />
-
-          <div className="space-y-2">
-            <FieldLabel hint="Dạng chữ: cảm âm, hợp âm, tab. Ảnh: sheet hoặc bản chụp.">Loại nội dung</FieldLabel>
-            <Segmented
-              label="Loại nội dung"
-              value={form.kind}
-              onChange={(v) => set("kind", v)}
-              options={[
-                { value: "text", label: "Dạng chữ" },
-                { value: "sheet", label: "Ảnh / sheet" },
-              ]}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <FieldLabel>Chế độ mặc định</FieldLabel>
-              <Segmented
-                label="Chế độ mặc định"
-                value={form.mode}
-                onChange={(v) => set("mode", v)}
-                options={[
-                  { value: "scroll", label: "Cuộn" },
-                  { value: "pages", label: "Sách" },
-                ]}
-              />
-            </div>
-            <TextInput
-              label="Thời lượng"
-              description="phút:giây"
-              value={form.duration}
-              onChange={(v) => set("duration", v)}
-              placeholder="vd 3:40"
-              status={durationInvalid ? { type: "error", message: "Nhập dạng phút:giây, từ 0:05 đến 60:00." } : undefined}
-              width="100%"
-              isDisabled={!editable}
-            />
-            <TextInput
-              label="Nhịp độ (BPM)"
-              description="Cho máy đếm nhịp"
-              inputMode="numeric"
-              value={form.bpm}
-              onChange={(v) => set("bpm", v)}
-              placeholder="vd 96 (mặc định 80)"
-              status={bpmInvalid ? { type: "error", message: "Nhập số nguyên từ 20 đến 400." } : undefined}
-              width="100%"
-              isDisabled={!editable}
-            />
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                <Selector
-                  label="Tone gốc"
-                  options={KEY_ROOT_OPTIONS}
-                  value={form.keyRoot}
-                  onChange={(v) => set("keyRoot", v ?? "")}
-                  isDisabled={!editable}
-                />
-                <Selector
-                  label="Trưởng / thứ"
-                  options={[
-                    { value: "major", label: "Trưởng" },
-                    { value: "minor", label: "Thứ" },
-                  ]}
-                  value={form.keyMinor ? "minor" : "major"}
-                  onChange={(v) => set("keyMinor", v === "minor")}
-                  isDisabled={!editable || !form.keyRoot}
-                />
-              </div>
-              {guessedKey && (
-                <Button size="sm" label={`Đoán từ hợp âm: ${guessedKey}`} onClick={() => setForm((f) => ({ ...f, ...keyParts(guessedKey) }))} />
-              )}
-            </div>
-          </div>
-
-          <Slider
-            label="Cỡ chữ / phóng to mặc định"
-            min={0.6}
-            max={2.5}
-            step={0.05}
-            value={form.fontScale}
-            onChange={(v: number) => set("fontScale", v)}
-            formatValue={(v) => `${Math.round(v * 100)}%`}
-            valueDisplay="text"
-            width="100%"
-            isDisabled={!editable}
-          />
-
-          {form.kind === "text" && (
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-end justify-between gap-2">
-                <FieldLabel>Nội dung (cảm âm, hợp âm, tab…)</FieldLabel>
-                <span className="flex items-center gap-1 text-xs">
-                  <span className="mr-1 text-muted-foreground">Mẫu:</span>
-                  {(Object.keys(EXAMPLES) as (keyof typeof EXAMPLES)[]).map((k) => {
-                    const active = form.textContent === EXAMPLES[k];
-                    return (
-                      <ToggleButton
-                        key={k}
-                        size="sm"
-                        label={k}
-                        tooltip={`Điền mẫu ${k} vào ô nội dung`}
-                        isPressed={active}
-                        onPressedChange={() => {
-                          const current = form.textContent.trim();
-                          const isExample = Object.values(EXAMPLES).includes(form.textContent);
-                          if (current && !isExample && !window.confirm(`Thay nội dung đang nhập bằng mẫu “${k}”?`)) return;
-                          set("textContent", EXAMPLES[k]);
-                        }}
-                      >
-                        {k}
-                      </ToggleButton>
-                    );
-                  })}
-                </span>
-              </div>
-              <TextArea
-                label="Nội dung"
-                isLabelHidden
-                value={form.textContent}
-                onChange={(v) => set("textContent", v)}
-                rows={16}
-                hasSpellCheck={false}
-                controlClassName="font-mono text-sm leading-relaxed"
-                placeholder={"Dán bản nhạc dạng chữ, ví dụ cảm âm:\n" + SAMPLE + "\n\n(dòng trống = sang đoạn mới)"}
-                width="100%"
-                isDisabled={!editable}
-              />
-              <p className="text-xs text-muted-foreground">
-                <b>Cảm âm:</b> dòng lời rồi dòng nốt Do Re Mi… (thêm số cho quãng tám: Re2, D2). <b>Hợp âm:</b> dòng hợp âm
-                (Am C G7) đặt trên dòng lời, hoặc chèn ngay trong lời như [Am]Đường về. <b>Tab:</b> các dòng e|--0--|. Dòng
-                trống để ngắt đoạn — lật trang sẽ ưu tiên ngắt ở đây.
-              </p>
-            </div>
-          )}
-
-          {editable && (
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              width="100%"
-              icon={isNew && form.kind === "text" ? <Icon icon={Send} /> : undefined}
-              isLoading={saving}
-              isDisabled={!form.title.trim() || settingsInvalid || (isNew && form.kind === "text" && !form.textContent.trim())}
-              label={
-                saving
-                  ? isNew && form.kind === "text"
-                    ? "Đang gửi…"
-                    : "Đang lưu…"
-                  : isNew
-                    ? form.kind === "sheet"
-                      ? "Tiếp tục: tải ảnh lên"
-                      : "Gửi duyệt"
-                    : "Lưu thay đổi"
-              }
-            />
-          )}
-        </fieldset>
-
-        <div className="space-y-3">
-          <FieldLabel>Thẻ bài trên thư viện</FieldLabel>
-          <ul className="max-w-xs">
-            <SongCard preview song={{ ...draftSong, pageCount: pages.length, key: songKey }} />
-          </ul>
-          <p className="text-xs text-muted-foreground">
-            Hiện trong mục:{" "}
-            {form.instruments.length ? (
-              <b className="text-foreground">{form.instruments.map(instrumentLabel).join(", ")}</b>
-            ) : (
-              <>
-                <b className="text-foreground">Chưa phân loại</b> — chọn nhạc cụ để bài nằm đúng mục
-              </>
-            )}
-          </p>
-          {form.kind === "sheet" ? (
-            id ? (
-              <>
-                <FieldLabel>{`Ảnh theo thứ tự${editable ? " (kéo để sắp xếp)" : ""}`}</FieldLabel>
-                {editable ? (
-                  <ImageUploader songId={id} pages={pages} onChange={onPagesChange} />
-                ) : (
-                  <div className="grid grid-cols-3 gap-2">
-                    {pages.map((p) => (
-                      <img key={p.id} src={p.url} alt="" className="rounded border border-border bg-white" />
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : (
-              <Card variant="muted" padding={6}>
-                <EmptyState isCompact title="Chưa tải ảnh được" description="Tạo bài trước, sau đó tải ảnh lên tại đây." />
-              </Card>
-            )
-          ) : (
+  // --- tab: review status, feedback and the admin decision ---
+  const statusText =
+    song.data?.status === "draft"
+      ? "Bài chưa gửi duyệt — chỉ bạn và quản trị viên thấy. Xong thì bấm Gửi duyệt."
+      : song.data?.status === "pending"
+        ? "Đang chờ quản trị viên duyệt. Bạn vẫn có thể sửa trong lúc chờ."
+        : song.data?.status === "approved"
+          ? isAdmin
+            ? "Bài đang hiện trên thư viện công khai."
+            : "Bài đã được duyệt và đang hiện trên thư viện. Muốn sửa, hãy liên hệ quản trị viên."
+          : song.data?.status === "rejected"
+            ? "Bài bị từ chối. Sửa theo góp ý rồi Gửi duyệt lại."
+            : "";
+  const reviewTab = song.data && (
+    <VStack gap={4}>
+      <VStack gap={2}>
+        <HStack gap={2} vAlign="center">
+          <Text weight="semibold">Trạng thái</Text>
+          {song.data.status && <StatusBadge status={song.data.status} />}
+        </HStack>
+        <Text color="secondary">{statusText}</Text>
+        {song.data.owner && isAdmin && (
+          <Text type="supporting" color="secondary">
+            {`Người đăng: ${song.data.owner.name || song.data.owner.email} (${song.data.owner.email})`}
+          </Text>
+        )}
+      </VStack>
+      {song.data.reviewNote && song.data.status !== "approved" && (
+        <Banner status="error" title="Góp ý của quản trị viên" description={song.data.reviewNote} />
+      )}
+      {isAdmin && (
+        <>
+          <Divider />
+          <Heading level={3}>Duyệt bài</Heading>
+          {song.data.status !== "approved" ? (
             <>
-              <FieldLabel>Xem trước</FieldLabel>
-              <div className="dark max-h-[75vh] overflow-y-auto rounded-xl border border-border bg-stage-bg py-6 text-stage-fg" style={{ fontSize: `${form.fontScale}rem` }}>
-                {form.textContent.trim() ? (
-                  <TextNotation text={form.textContent} />
-                ) : (
-                  <p className="px-6 text-sm text-stage-lyric">Nhập nội dung để xem trước…</p>
-                )}
-              </div>
+              <TextArea
+                label="Lý do / góp ý"
+                description="Bắt buộc khi từ chối, để người đăng biết cần sửa gì."
+                value={reviewNote}
+                onChange={setReviewNote}
+                rows={3}
+                maxLength={1000}
+                width="100%"
+              />
+              <HStack gap={2} wrap="wrap">
+                <Button
+                  variant="primary"
+                  label="Duyệt & đăng lên thư viện"
+                  icon={<Icon icon={Check} />}
+                  isDisabled={busy}
+                  onClick={() => review("approve")}
+                />
+                <Button variant="destructive" label="Từ chối" icon={<Icon icon={X} />} isDisabled={busy} onClick={() => review("reject")} />
+              </HStack>
             </>
+          ) : (
+            <HStack>
+              <Button label="Gỡ khỏi thư viện" icon={<Icon icon={Undo2} />} isDisabled={busy} onClick={() => setConfirm("unpublish")} />
+            </HStack>
           )}
-        </div>
-      </form>
+        </>
+      )}
+    </VStack>
+  );
+
+  // --- live canvas: the library card plus the rendered song ---
+  const canvas = (
+    <VStack gap={6} maxWidth={720} width="100%" className="mx-auto">
+      <VStack gap={2}>
+        <FieldLabel>Thẻ bài trên thư viện</FieldLabel>
+        <VStack maxWidth={320} width="100%">
+          <SongCard preview song={{ ...draftSong, pageCount: pages.length, key: songKey }} />
+        </VStack>
+        <Text type="supporting" color="secondary">
+          {"Hiện trong mục: "}
+          <Text type="supporting" weight="semibold" color="primary">
+            {form.instruments.length ? form.instruments.map(instrumentLabel).join(", ") : "Chưa phân loại"}
+          </Text>
+          {form.instruments.length ? "" : " — chọn nhạc cụ để bài nằm đúng mục"}
+        </Text>
+      </VStack>
+      <VStack gap={2}>
+        <FieldLabel>{form.kind === "sheet" ? `Ảnh (${pages.length})` : "Bản nhạc"}</FieldLabel>
+        {form.kind === "sheet" ? (
+          pages.length ? (
+            <VStack gap={3}>
+              {pages.map((p, i) => (
+                <img key={p.id} src={p.url} alt={`Trang ${i + 1}`} className="w-full rounded-lg border border-border bg-white" />
+              ))}
+            </VStack>
+          ) : (
+            <Card variant="muted" padding={6}>
+              <EmptyState isCompact title="Chưa có ảnh" description="Tải ảnh lên ở tab Nội dung." />
+            </Card>
+          )
+        ) : (
+          // the stage keeps its own dark surface; font size follows the slider live
+          <div className="dark rounded-xl border border-border bg-stage-bg py-6 text-stage-fg" style={{ fontSize: `${form.fontScale}rem` }}>
+            {form.textContent.trim() ? (
+              <TextNotation text={form.textContent} />
+            ) : (
+              <p className="px-6 text-sm text-stage-lyric">Nhập nội dung ở tab Nội dung để xem trước…</p>
+            )}
+          </div>
+        )}
+      </VStack>
+    </VStack>
+  );
+
+  const activeTab = isNew && tab === "review" ? "info" : tab;
+  const tabBody = activeTab === "info" ? infoTab : activeTab === "content" ? contentTab : activeTab === "review" ? reviewTab : canvas;
+
+  const tabs = (
+    <VStack gap={0}>
+      <TabList layout="fill" value={activeTab} onChange={(v) => setTab(v as EditorTab)} hasDivider>
+        <Tab value="info" label="Thông tin" />
+        <Tab value="content" label="Nội dung" />
+        {!isNew && <Tab value="review" label="Duyệt" />}
+        {isMobile && <Tab value="preview" label="Xem" />}
+      </TabList>
+    </VStack>
+  );
+
+  // Enter in a field saves, like the old single form did
+  const panelBody = (
+    <form onSubmit={save} noValidate>
+      <Section variant="transparent" padding={4}>
+        {tabBody}
+      </Section>
+    </form>
+  );
+
+  return (
+    <>
+      <title>{isNew ? "Bài mới · Gang Muzik Studio" : `${form.title} · Gang Muzik Studio`}</title>
+      <Layout
+        height="fill"
+        header={header}
+        start={
+          isMobile ? undefined : (
+            <LayoutPanel hasDivider padding={0} width={400} label="Soạn bài">
+              {tabs}
+              {panelBody}
+            </LayoutPanel>
+          )
+        }
+        content={
+          isMobile ? (
+            <LayoutContent role="main" padding={0}>
+              {tabs}
+              {panelBody}
+            </LayoutContent>
+          ) : (
+            <LayoutContent role="main" padding={8} label="Xem trực tiếp">
+              {canvas}
+            </LayoutContent>
+          )
+        }
+      />
       <AlertDialog
         isOpen={confirm === "delete"}
         onOpenChange={(o) => !o && setConfirm(null)}
@@ -727,12 +903,12 @@ export function SongEditor() {
         createPortal(
           <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Xem trước bài">
             <title>{`Xem trước: ${draftSong.title}`}</title>
-            {/* persist=false: không dùng cài đặt cũ đã lưu trên máy, luôn theo form; không có nút lưu mặc định */}
+            {/* persist=false: ignore settings saved on this device, always follow the form; no "save defaults" button */}
             <Stage song={draftSong} persist={false} onBack={() => setPreviewing(false)} />
           </div>,
           document.body,
         )}
-    </div>
+    </>
   );
 }
 
@@ -741,14 +917,16 @@ function Segmented<T extends string>({
   onChange,
   options,
   label,
+  isDisabled,
 }: {
   value: T;
   onChange: (v: T) => void;
   options: { value: T; label: string }[];
   label: string;
+  isDisabled?: boolean;
 }) {
   return (
-    <SegmentedControl label={label} layout="fill" value={value} onChange={(v) => onChange(v as T)}>
+    <SegmentedControl label={label} layout="fill" value={value} onChange={(v) => onChange(v as T)} isDisabled={isDisabled}>
       {options.map((o) => (
         <SegmentedControlItem key={o.value} value={o.value} label={o.label} />
       ))}
