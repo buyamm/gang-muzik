@@ -21,8 +21,12 @@
           var root = document.documentElement;
           if (dark) root.classList.add("dark");
           root.setAttribute("data-theme", dark ? "dark" : "light");
-          root.setAttribute("data-astryx-theme", "gang");
-          document.querySelector('meta[name="theme-color"]').setAttribute("content", dark ? "#1b1b1b" : "#f1f1f1");
+          // keep in sync with APP_THEMES in src/theme/gangTheme.ts
+          var swatch = { neutral: ["#f1f1f1", "#1b1b1b"], matcha: ["#f0f0e0", "#12140e"] };
+          var p = "neutral";
+          try { var v = JSON.parse(localStorage.getItem("gm:palette")); if (swatch[v]) p = v; } catch (e) {}
+          root.setAttribute("data-astryx-theme", "gang-" + p);
+          document.querySelector('meta[name="theme-color"]').setAttribute("content", swatch[p][dark ? 1 : 0]);
         } catch (e) {}
       })();
     </script>

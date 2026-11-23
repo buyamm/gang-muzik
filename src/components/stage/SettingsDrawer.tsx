@@ -28,7 +28,7 @@ import { List, ListItem } from "@astryxdesign/core/List";
 import { Switch } from "@astryxdesign/core/Switch";
 import { Text } from "@astryxdesign/core/Text";
 import { Theme } from "@astryxdesign/core/theme";
-import { gangTheme } from "@/theme/gangTheme";
+import { useAppTheme } from "@/theme/AppTheme";
 import { readPref, writePref } from "@/lib/prefs";
 import { transposeBadge } from "@/lib/notation/transpose";
 import { cn } from "@/lib/utils";
@@ -181,12 +181,13 @@ export function SettingsDrawer({
     show();
   };
 
+  const appTheme = useAppTheme();
   const badge = transpose ? transposeBadge(transpose.value) : null;
   const { audio: stageAudio } = audio;
 
   return (
     // the drawer follows the Stage background, not the site theme
-    <Theme theme={gangTheme} mode={stageTheme}>
+    <Theme theme={appTheme} mode={stageTheme}>
       <Drawer isOpen={open} onOpenChange={onOpenChange} label="Cài đặt" width={400} experimental={{ isFullWidthOnMobile: true }}>
         <Layout
           header={

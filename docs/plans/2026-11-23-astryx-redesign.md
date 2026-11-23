@@ -15,6 +15,10 @@ review workflow) unchanged.
 - **Theme:** Astryx Neutral, extended as `gang` (`src/theme/gangTheme.ts`) only to swap fonts — Figtree has no
   glyphs for stacked Vietnamese diacritics, so body/headings use Be Vietnam Pro. Bricolage Grotesque dropped.
 - **Both sites** in one PR.
+- **Theme picker (added after review):** viewers choose Neutral or Matcha in the "Giao diện" popover (header
+  button), next to light / dark / system. Stored per browser in `gm:palette` via `src/lib/prefs.ts`; `APP_THEMES`
+  in `src/theme/gangTheme.ts` lists them, and the anti-flash script in both `index.html` sets `data-astryx-theme`
+  from it. Matcha's DM Sans / Playwrite also lack Vietnamese, so it gets the same Be Vietnam Pro override.
 
 ## Foundation
 
@@ -54,4 +58,4 @@ review workflow) unchanged.
 
 ## Known follow-ups
 
-- Bundle is larger (public JS ~1.4 MB min / Studio ~1.6 MB min): consider route-level code splitting.
+- Bundle is larger (public JS ~1.5 MB min / Studio ~1.7 MB min): consider route-level code splitting.

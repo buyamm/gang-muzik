@@ -1,4 +1,6 @@
 import { useCallback, useSyncExternalStore } from "react";
+import { readScalarPref, removePref, writePref } from "@/lib/prefs";
+import { DEFAULT_APP_THEME, isAppThemeId, type AppThemeId } from "@/theme/gangTheme";
 
 export type ThemePref = "light" | "dark" | "system";
 const KEY = "gm:theme";
@@ -26,7 +28,6 @@ function apply() {
   const r = resolve(current);
   // `.dark` drives app-owned music colors; Astryx's root <Theme> sets data-theme itself
   document.documentElement.classList.toggle("dark", r === "dark");
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", r === "dark" ? "#1b1b1b" : "#f1f1f1");
 }
 
 media?.addEventListener("change", () => {
@@ -63,4 +64,27 @@ export function useTheme() {
     listeners.forEach((l) => l());
   }, []);
   return { pref, resolved, setTheme };
+}
+
+// ---------- app palette (Astryx theme: Neutral / Matcha …), stored as JSON string in `gm:palette` ----------
+
+const PALETTE_KEY = "gm:palette";
+const paletteListeners = new Set<() => void>();
+let palette: AppThemeId = readScalarPref(PALETTE_KEY, DEFAULT_APP_THEME, isAppThemeId);
+
+function subscribePalette(l: () => void) {
+  paletteListeners.add(l);
+  return () => paletteListeners.delete(l);
+}
+
+/** which Astryx theme the site uses; the choice is kept per browser */
+export function usePalette() {
+  const id = useSyncExternalStore(subscribePalette, () => palette);
+  const setPalette = useCallback((next: AppThemeId) => {
+    palette = next;
+    if (next === DEFAULT_APP_THEME) removePref(PALETTE_KEY);
+    else writePref(PALETTE_KEY, next);
+    paletteListeners.forEach((l) => l());
+  }, []);
+  return { palette: id, setPalette };
 }
