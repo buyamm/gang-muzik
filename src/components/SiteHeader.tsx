@@ -1,6 +1,9 @@
-import { Link, NavLink } from "react-router";
+import { useLocation } from "react-router";
 import { AudioLines, Hand, LibraryBig, PenLine, type LucideIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { TopNav, TopNavHeading, TopNavItem } from "@astryxdesign/core/TopNav";
+import { Button } from "@astryxdesign/core/Button";
+import { HStack } from "@astryxdesign/core/HStack";
+import { Icon } from "@astryxdesign/core/Icon";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LogoMark } from "@/components/brand/Staff";
 import { STUDIO_URL } from "@/lib/links";
@@ -21,56 +24,48 @@ export const SITE_NAV: SiteNavItem[] = [
   { to: "/practice", label: "Luyện gam", icon: AudioLines },
 ];
 
+const isActive = (pathname: string, { to, end }: SiteNavItem) =>
+  end ? pathname === to : pathname === to || pathname.startsWith(`${to}/`);
+
 /**
- * Shared header of the public site: logo · nav · contribute · theme.
- * On phones the nav drops to its own horizontally scrollable row.
- * `className` styles the outer <header>, `containerClassName` the inner width container (default max-w-6xl).
+ * Shared header of the public site (Astryx TopNav): logo · sections · contribute · theme.
+ * On phones the section links drop to their own scrollable row under the bar.
+ * `containerClassName` sets the content width (default max-w-6xl).
  */
 export function SiteHeader({ className, containerClassName }: { className?: string; containerClassName?: string }) {
+  const { pathname } = useLocation();
+  const items = SITE_NAV.map((item) => (
+    <TopNavItem
+      key={item.to}
+      href={item.to}
+      label={item.label}
+      icon={<Icon icon={item.icon} />}
+      isSelected={isActive(pathname, item)}
+    />
+  ));
   return (
-    <header className={className}>
-      <div className={cn("mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-2 px-4 pt-4 sm:flex-nowrap sm:px-6", containerClassName)}>
-        <Link
-          to="/"
-          className="flex shrink-0 items-center gap-2 rounded-lg font-display text-base font-bold focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-        >
-          <LogoMark className="size-7" />
-          Gang Muzik
-        </Link>
-
-        <div className="ml-auto flex items-center sm:order-3 sm:ml-0">
-          <Button asChild variant="ghost" size="sm" title="Đăng nhập bằng Google để gửi bài của bạn">
-            <a href={STUDIO_URL}>
-              <PenLine /> <span className="hidden sm:inline">Đóng góp bài</span>
-              <span className="sr-only sm:hidden">Đóng góp bài</span>
-            </a>
-          </Button>
-          <ThemeToggle />
-        </div>
-
-        <nav
-          aria-label="Chính"
-          className="-mx-4 w-[calc(100%+2rem)] overflow-x-auto px-4 [scrollbar-width:none] sm:order-2 sm:mx-0 sm:ml-4 sm:w-auto sm:flex-1 sm:px-0"
-        >
-          <ul className="flex w-max gap-1">
-            {SITE_NAV.map(({ to, label, icon: Icon, end }) => (
-              <li key={to}>
-                <NavLink
-                  to={to}
-                  end={end}
-                  className={({ isActive }) =>
-                    cn(
-                      "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                      isActive ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                    )
-                  }
-                >
-                  <Icon className="size-4" aria-hidden />
-                  {label}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
+    <header className={cn("border-b border-border bg-card", className)}>
+      <div className={cn("mx-auto max-w-6xl px-2 sm:px-4", containerClassName)}>
+        <TopNav
+          label="Chính"
+          heading={<TopNavHeading logo={<LogoMark className="size-7" />} heading="Gang Muzik" headingHref="/" />}
+          startContent={<span className="hidden items-center gap-1 sm:flex">{items}</span>}
+          endContent={
+            <HStack gap={1} vAlign="center">
+              <Button
+                href={STUDIO_URL}
+                variant="ghost"
+                size="sm"
+                label="Đóng góp bài"
+                tooltip="Đăng nhập bằng Google để gửi bài của bạn"
+                icon={<Icon icon={PenLine} />}
+              />
+              <ThemeToggle />
+            </HStack>
+          }
+        />
+        <nav aria-label="Mục chính" className="-mx-2 flex gap-1 overflow-x-auto px-2 pb-2 [scrollbar-width:none] sm:hidden">
+          {items}
         </nav>
       </div>
     </header>

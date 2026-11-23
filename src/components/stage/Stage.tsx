@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowLeft,
@@ -13,11 +12,12 @@ import {
   Plus,
   RotateCcw,
 } from "lucide-react";
-import { toast } from "sonner";
 import type { Song, SongSettings, ViewMode } from "@shared/types";
-import { Button as AnimatedButton } from "@/components/animate-ui/components/buttons/button";
-import { SlidingNumber } from "@/components/animate-ui/primitives/texts/sliding-number";
-import { Button } from "@/components/ui/button";
+import { Button } from "@astryxdesign/core/Button";
+import { Icon } from "@astryxdesign/core/Icon";
+import { IconButton } from "@astryxdesign/core/IconButton";
+import { SegmentedControl, SegmentedControlItem } from "@astryxdesign/core/SegmentedControl";
+import { useToast } from "@astryxdesign/core/Toast";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { keyLabel, loadKeyMap, saveKeyMap, usePedalKeys, type KeyMap, type PedalAction } from "@/hooks/usePedalKeys";
 import { useTheme } from "@/hooks/useTheme";
@@ -179,9 +179,10 @@ export function Stage({
   const [fingerOpen, setFingerOpen] = useState(false);
   const [chartOpen, setChartOpen] = useState(false);
   const [chartHighlight, setChartHighlight] = useState<number | null>(null);
+  const showToast = useToast();
   const toggleFingering = () => {
     const next = { on: !fingeringPref.on, hinted: true };
-    if (next.on && !fingeringPref.hinted) toast("Chạm vào nốt để xem thế bấm");
+    if (next.on && !fingeringPref.hinted) showToast({ body: "Chạm vào nốt để xem thế bấm" });
     if (!next.on) {
       setFingerOpen(false);
       setChartOpen(false);
@@ -442,17 +443,14 @@ export function Stage({
       {/* ===== header (cố định, không tự ẩn) ===== */}
       {!barsHidden && (
         <header className="relative z-20 flex shrink-0 items-center gap-1 sm:gap-2 border-b border-stage-fg/10 bg-stage-bg px-2 pt-[max(env(safe-area-inset-top),0.5rem)] pb-2 sm:px-3">
-          {onBack ? (
-            <Button variant="ghost" size="icon" className="shrink-0 text-stage-fg hover:bg-stage-fg/10" aria-label="Quay lại" title="Quay lại" onClick={onBack}>
-              <ArrowLeft />
-            </Button>
-          ) : (
-            <Button asChild variant="ghost" size="icon" className="shrink-0 text-stage-fg hover:bg-stage-fg/10">
-              <Link to={backTo} aria-label="Quay lại" title="Quay lại">
-                <ArrowLeft />
-              </Link>
-            </Button>
-          )}
+          <IconButton
+            variant="ghost"
+            label="Quay lại"
+            tooltip="Quay lại"
+            icon={<Icon icon={ArrowLeft} />}
+            className="shrink-0"
+            {...(onBack ? { onClick: onBack } : { href: backTo })}
+          />
           <div className="min-w-0 flex-1">
             <h1 className="truncate font-display text-lg leading-tight font-bold sm:text-xl">{song.title}</h1>
             {(song.artist || songKeyLabel) && (
@@ -463,23 +461,10 @@ export function Stage({
               </p>
             )}
           </div>
-          <div className="flex shrink-0 rounded-full bg-stage-fg/8 p-1 text-sm font-medium" role="radiogroup" aria-label="Chế độ xem">
-            {(["scroll", "pages"] as const).map((m) => (
-              <button
-                key={m}
-                role="radio"
-                aria-checked={prefs.mode === m}
-                onClick={() => switchMode(m)}
-                title={m === "scroll" ? "Tự cuộn liên tục" : "Xem như quyển sách, lật trang"}
-                className={cn(
-                  "rounded-full px-2.5 py-1 transition-colors sm:px-3.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                  prefs.mode === m ? "bg-stage-fg text-stage-bg" : "text-stage-fg/70 hover:text-stage-fg",
-                )}
-              >
-                {m === "scroll" ? "Cuộn" : "Sách"}
-              </button>
-            ))}
-          </div>
+          <SegmentedControl label="Chế độ xem" size="sm" value={prefs.mode} onChange={(m) => switchMode(m as ViewMode)}>
+            <SegmentedControlItem value="scroll" label="Cuộn" />
+            <SegmentedControlItem value="pages" label="Sách" />
+          </SegmentedControl>
           <SettingsButton
             ref={settingsBtnRef}
             open={settingsOpen}
@@ -489,17 +474,14 @@ export function Stage({
             downbeat={audio.metro.running && audio.metro.beat === 0}
             fingeringOn={fingeringOn}
           />
-          <Button
+          <IconButton
             variant="ghost"
-            size="sm"
+            label="Ẩn thanh điều khiển"
+            tooltip="Ẩn thanh điều khiển để có thêm chỗ đọc"
+            icon={<Icon icon={EyeOff} />}
+            className="shrink-0"
             onClick={() => setBars(true)}
-            title="Ẩn thanh điều khiển để có thêm chỗ đọc"
-            aria-label="Ẩn thanh điều khiển"
-            className="shrink-0 gap-1.5 px-2 text-stage-fg hover:bg-stage-fg/10 hover:text-stage-fg sm:px-3"
-          >
-            <EyeOff />
-            <span className="hidden lg:inline">Ẩn thanh</span>
-          </Button>
+          />
         </header>
       )}
 
@@ -558,7 +540,18 @@ export function Stage({
               exit={{ opacity: 0 }}
               className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-stage-bg/60 backdrop-blur-sm"
             >
-              <SlidingNumber number={countdown} className="font-display text-[9rem] leading-none font-bold text-primary" />
+              <AnimatePresence mode="popLayout" initial={false}>
+                <motion.span
+                  key={countdown}
+                  initial={{ opacity: 0, y: 40 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -40 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 26 }}
+                  className="font-display text-[9rem] leading-none font-bold text-stage-fg tabular-nums"
+                >
+                  {countdown}
+                </motion.span>
+              </AnimatePresence>
             </motion.div>
           )}
         </AnimatePresence>
@@ -566,27 +559,25 @@ export function Stage({
         {/* khi đã ẩn thanh: luôn có nút nổi để hiện lại + nút chạy/dừng nhỏ */}
         {barsHidden && (
           <div className="absolute top-[max(env(safe-area-inset-top),0.75rem)] right-3 z-30 flex gap-2">
-            <button
-              type="button"
+            <IconButton
+              elevation="med"
+              label={playing ? "Dừng" : "Chạy"}
+              icon={<Icon icon={playing || countdown !== null ? Pause : Play} />}
               onClick={(e) => {
                 e.stopPropagation();
                 togglePlay();
               }}
-              aria-label={playing ? "Dừng" : "Chạy"}
-              className="flex size-10 items-center justify-center rounded-full bg-stage-fg/10 text-stage-fg backdrop-blur hover:bg-stage-fg/20 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-            >
-              {playing || countdown !== null ? <Pause className="size-4" /> : <Play className="size-4 translate-x-px" />}
-            </button>
-            <button
-              type="button"
+            />
+            <Button
+              variant="primary"
+              elevation="med"
+              label="Hiện điều khiển"
+              icon={<Icon icon={Eye} />}
               onClick={(e) => {
                 e.stopPropagation();
                 setBars(false);
               }}
-              className="flex h-10 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_6px_20px_-8px_var(--primary)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
-            >
-              <Eye className="size-4" /> Hiện điều khiển
-            </button>
+            />
           </div>
         )}
       </div>
@@ -596,16 +587,16 @@ export function Stage({
         <footer className="relative z-20 shrink-0 border-t border-stage-fg/10 bg-stage-bg px-3 pt-2.5 pb-[max(env(safe-area-inset-bottom),0.625rem)]">
           <div className="mx-auto flex max-w-4xl items-center gap-2 sm:gap-3">
             {/* thời lượng bài => tốc độ */}
-            <div className="flex items-center gap-1 rounded-full bg-stage-fg/8 p-1" title="Thời lượng cả bài — quyết định tốc độ cuộn / lật">
-              <IconBtn label="Nhanh hơn (bớt 5 giây)" onClick={() => adjustDuration(-5)} className="size-8 sm:size-9">
-                <Minus />
+            <div className="flex items-center gap-1 rounded-full border border-border p-1" title="Thời lượng cả bài — quyết định tốc độ cuộn / lật">
+              <IconBtn label="Nhanh hơn (bớt 5 giây)" onClick={() => adjustDuration(-5)} size="sm">
+                {Minus}
               </IconBtn>
               <div className="w-12 text-center leading-tight sm:w-14">
                 <div className="font-display text-lg leading-none font-bold tabular-nums">{formatDuration(prefs.durationSec)}</div>
                 <div className="mt-0.5 text-[11px] whitespace-nowrap text-stage-lyric">thời lượng</div>
               </div>
-              <IconBtn label="Chậm hơn (thêm 5 giây)" onClick={() => adjustDuration(5)} className="size-8 sm:size-9">
-                <Plus />
+              <IconBtn label="Chậm hơn (thêm 5 giây)" onClick={() => adjustDuration(5)} size="sm">
+                {Plus}
               </IconBtn>
             </div>
 
@@ -620,21 +611,23 @@ export function Stage({
               <IconBtn
                 label={isScroll ? "Tua lại một đoạn" : "Trang trước"}
                 onClick={() => (isScroll ? scrollBack() : goPrev())}
-                className="size-10 sm:size-11"
+                size="lg"
               >
-                {isScroll ? <RotateCcw /> : <ChevronLeft className="size-6" />}
+                {isScroll ? RotateCcw : ChevronLeft}
               </IconBtn>
-              <AnimatedButton
-                aria-label={playing ? "Dừng" : isScroll ? "Bắt đầu tự cuộn" : "Bắt đầu tự lật"}
-                title={playing ? "Dừng" : isScroll ? "Bắt đầu tự cuộn" : "Bắt đầu tự lật trang"}
+              <IconButton
+                variant="primary"
+                size="lg"
+                elevation="med"
+                label={playing ? "Dừng" : isScroll ? "Bắt đầu tự cuộn" : "Bắt đầu tự lật trang"}
+                tooltip={playing ? "Dừng" : isScroll ? "Bắt đầu tự cuộn" : "Bắt đầu tự lật trang"}
+                icon={<Icon icon={playing || countdown !== null ? Pause : Play} size="lg" />}
                 onClick={togglePlay}
-                className="size-14 rounded-full shadow-[0_6px_20px_-6px_var(--primary)] sm:size-16 [&_svg:not([class*='size-'])]:size-7"
-              >
-                {playing || countdown !== null ? <Pause /> : <Play className="translate-x-0.5" />}
-              </AnimatedButton>
+                className="size-14! rounded-full! sm:size-16!"
+              />
               {!isScroll && (
-                <IconBtn label="Trang sau" onClick={goNext} className="size-10 sm:size-11">
-                  <ChevronRight className="size-6" />
+                <IconBtn label="Trang sau" onClick={goNext} size="lg">
+                  {ChevronRight}
                 </IconBtn>
               )}
               </>
@@ -685,7 +678,6 @@ export function Stage({
       <SettingsDrawer
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
-        returnFocusRef={settingsBtnRef}
         stageTheme={stageTheme}
         onStageTheme={(t) => update({ theme: t })}
         transpose={
@@ -753,29 +745,25 @@ function IconBtn({
   label,
   onClick,
   children,
-  active,
-  className,
+  size = "md",
 }: {
   label: string;
   onClick: () => void;
-  children: React.ReactNode;
-  active?: boolean;
-  className?: string;
+  /** lucide icon component */
+  children: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  size?: "sm" | "md" | "lg";
 }) {
   return (
-    <Button
-      type="button"
+    <IconButton
       variant="ghost"
-      size="icon"
-      aria-label={label}
-      title={label}
+      size={size}
+      label={label}
+      tooltip={label}
+      icon={<Icon icon={children} />}
       onClick={(e) => {
         e.stopPropagation();
         onClick();
       }}
-      className={cn("text-stage-fg hover:bg-stage-fg/10 hover:text-stage-fg", active && "text-primary", className)}
-    >
-      {children}
-    </Button>
+    />
   );
 }

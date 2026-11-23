@@ -1,8 +1,16 @@
 import { useMemo } from "react";
 import { useSearchParams } from "react-router";
 import { Link2, TriangleAlert, Volume2, Wind } from "lucide-react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@astryxdesign/core/Badge";
+import { Banner } from "@astryxdesign/core/Banner";
+import { Button } from "@astryxdesign/core/Button";
+import { Card } from "@astryxdesign/core/Card";
+import { Heading } from "@astryxdesign/core/Heading";
+import { Icon } from "@astryxdesign/core/Icon";
+import { SegmentedControl, SegmentedControlItem } from "@astryxdesign/core/SegmentedControl";
+import { Text } from "@astryxdesign/core/Text";
+import { ToggleButton, ToggleButtonGroup } from "@astryxdesign/core/ToggleButton";
+import { useToast } from "@astryxdesign/core/Toast";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SaxFingeringDiagram, describeFingering } from "@/components/stage/SaxFingeringDiagram";
@@ -109,13 +117,14 @@ export function Fingering() {
   const concertAbs = semi + typeInfo.offset;
   const { cards, note } = optionsFor(instrument, semi);
 
+  const showToast = useToast();
   const copyLink = async () => {
     const url = `${location.origin}/fingering${fingeringSearch(state)}`;
     try {
       await navigator.clipboard.writeText(url);
-      toast.success("Đã sao chép liên kết");
+      showToast({ body: "Đã sao chép liên kết", uniqueID: "copy-link" });
     } catch {
-      toast(url);
+      showToast({ body: url, isAutoHide: false });
     }
   };
 
@@ -125,68 +134,56 @@ export function Fingering() {
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
 
         <div className="mb-6">
-          <h1 className="font-display text-3xl font-bold sm:text-4xl">Tra thế bấm</h1>
-          <p className="mt-1 max-w-2xl text-muted-foreground">
+          <Heading level={1}>Tra thế bấm</Heading>
+          <p className="mt-2 max-w-2xl text-muted-foreground">
             Chọn nhạc cụ và nốt để xem cách bấm chuẩn cùng mọi cách bấm phụ, kèm lúc nào nên dùng. Nốt viết theo cảm âm của nhạc cụ
             (đọc thẳng trên bản nhạc đã dịch giọng).
           </p>
         </div>
 
         {/* instrument + type */}
-        <section className="space-y-4 rounded-xl border bg-card p-4 sm:p-5" aria-label="Chọn nhạc cụ">
-          <div role="radiogroup" aria-label="Nhạc cụ" className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1 sm:inline-grid sm:w-auto">
-            {INSTRUMENTS.map((i) => {
-              const active = i.id === instrument;
-              return (
-                <button
-                  key={i.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  onClick={() => go({ instrument: i.id })}
-                  className={cn(
-                    "rounded-md px-4 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                    active ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  <span className="block text-sm font-semibold">{i.label}</span>
-                  <span className="block text-xs text-muted-foreground">{i.hint}</span>
-                </button>
-              );
-            })}
+        <Card padding={5}>
+        <section className="space-y-5" aria-label="Chọn nhạc cụ">
+          <div className="space-y-1.5">
+            <SegmentedControl label="Nhạc cụ" size="lg" value={instrument} onChange={(v) => go({ instrument: v as LearnInstrument })}>
+              {INSTRUMENTS.map((i) => (
+                <SegmentedControlItem key={i.id} value={i.id} label={i.label} />
+              ))}
+            </SegmentedControl>
+            <Text type="supporting" color="secondary" display="block">
+              {INSTRUMENTS.find((i) => i.id === instrument)?.hint}
+            </Text>
           </div>
 
-          <div>
-            <div className="mb-1.5 text-sm font-semibold">{instrument === "sax" ? "Loại kèn" : "Cây sáo"}</div>
-            <div role="radiogroup" aria-label={instrument === "sax" ? "Loại kèn" : "Cây sáo"} className="flex flex-wrap gap-1.5">
+          <div className="space-y-1.5">
+            <Text type="label" weight="semibold" display="block">
+              {instrument === "sax" ? "Loại kèn" : "Cây sáo"}
+            </Text>
+            <ToggleButtonGroup
+              label={instrument === "sax" ? "Loại kèn" : "Cây sáo"}
+              size="sm"
+              value={typeInfo.id}
+              onChange={(v) => typeof v === "string" && go({ type: v })}
+            >
               {types.map((t) => {
-                const active = t.id === typeInfo.id;
+                const text = instrument === "sax" ? `${t.label} (${t.key})` : t.label;
                 return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={active}
-                    onClick={() => go({ type: t.id })}
-                    className={cn(
-                      "rounded-full border px-3 py-1 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                      active ? "border-primary bg-primary text-primary-foreground" : "hover:border-foreground/40",
-                    )}
-                  >
-                    {instrument === "sax" ? `${t.label} (${t.key})` : t.label}
-                  </button>
+                  <ToggleButton key={t.id} value={t.id} label={text}>
+                    {text}
+                  </ToggleButton>
                 );
               })}
-            </div>
-            <p className="mt-1.5 text-xs text-muted-foreground">
+            </ToggleButtonGroup>
+            <Text type="supporting" color="secondary" display="block">
               {instrument === "sax"
                 ? "Thế bấm giống nhau cho mọi loại kèn; loại kèn chỉ đổi âm thanh thật (concert)."
                 : "Thế bấm giống nhau cho mọi cây sáo 6 lỗ; cây sáo chỉ đổi âm thanh thật. Bịt kín 6 lỗ là nốt Đô của sáo."}
-            </p>
+            </Text>
           </div>
 
           <NotePicker instrument={instrument} value={semi} onChange={(s) => go({ semi: s })} />
         </section>
+        </Card>
 
         {/* selected note */}
         <section className="mt-6" aria-live="polite">
@@ -201,20 +198,20 @@ export function Fingering() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" onClick={() => playTone(concertFrequency(instrument, typeInfo.id, semi), 1.4)}>
-                <Volume2 /> Nghe âm mẫu
-              </Button>
-              <Button type="button" variant="outline" onClick={copyLink}>
-                <Link2 /> Sao chép liên kết
-              </Button>
+              <Button
+                variant="primary"
+                label="Nghe âm mẫu"
+                icon={<Icon icon={Volume2} />}
+                onClick={() => playTone(concertFrequency(instrument, typeInfo.id, semi), 1.4)}
+              />
+              <Button label="Sao chép liên kết" icon={<Icon icon={Link2} />} onClick={copyLink} />
             </div>
           </div>
 
           {note && (
-            <p className="mb-4 flex items-start gap-2 rounded-md bg-amber-500/10 p-2 text-sm">
-              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-500" />
-              {note}
-            </p>
+            <div className="mb-4">
+              <Banner status="warning" title={note} icon={<Icon icon={TriangleAlert} />} />
+            </div>
           )}
 
           <div className={cn("grid gap-4", instrument === "sax" ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1 md:grid-cols-2")}>
@@ -234,22 +231,18 @@ export function Fingering() {
 
 function OptionView({ card, noteName }: { card: OptionCard; noteName: string }) {
   return (
-    <article
-      className={cn(
-        "flex flex-col rounded-xl border p-4",
-        card.primary ? "border-primary/50 bg-primary/5" : "bg-card",
-      )}
-    >
+    <Card padding={4} height="100%" elevation={card.primary ? "low" : "none"}>
+    <article className="flex h-full flex-col">
       <div className="mb-3 flex items-center gap-2">
-        <h2 className="font-display text-lg font-semibold">{card.label}</h2>
-        {card.primary && <span className="rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground">Chuẩn</span>}
+        <Heading level={3}>{card.label}</Heading>
+        {card.primary && <Badge variant="info" label="Chuẩn" />}
         {card.sao?.uncertain && (
-          <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-300" title="Chưa đối chiếu đủ nguồn — nên kiểm tra bằng máy lên dây">
-            Tham khảo
+          <span title="Chưa đối chiếu đủ nguồn — nên kiểm tra bằng máy lên dây">
+            <Badge variant="warning" label="Tham khảo" />
           </span>
         )}
       </div>
-      <div className="flex flex-1 items-center justify-center rounded-lg bg-muted/40 px-2 py-4 text-foreground">
+      <div className="flex flex-1 items-center justify-center rounded-lg bg-muted px-2 py-4 text-foreground">
         {card.sax && (
           <SaxFingeringDiagram keys={card.sax} height={280} accent label={`${noteName}, ${card.label}. ${describeFingering(card.sax)}`} />
         )}
@@ -272,6 +265,7 @@ function OptionView({ card, noteName }: { card: OptionCard; noteName: string }) 
       {card.sax && card.sax.length === 0 && <p className="mt-3 text-sm text-muted-foreground">Không bấm phím nào (thả hết ngón).</p>}
       {card.description && <p className="mt-2 text-sm text-muted-foreground">{card.description}</p>}
     </article>
+    </Card>
   );
 }
 
@@ -291,7 +285,9 @@ function NotePicker({ instrument, value, onChange }: { instrument: LearnInstrume
 
   return (
     <div>
-      <div className="mb-1.5 text-sm font-semibold">Nốt</div>
+      <Text type="label" weight="semibold" display="block">
+        <span className="mb-1.5 block">Nốt</span>
+      </Text>
       <div className="space-y-2" role="radiogroup" aria-label="Chọn nốt">
         {rows.map(([octave, notes]) => (
           <div key={octave} className="flex items-center gap-2">
@@ -314,8 +310,8 @@ function NotePicker({ instrument, value, onChange }: { instrument: LearnInstrume
                       active
                         ? "border-primary bg-primary text-primary-foreground"
                         : accidental
-                          ? "border-dashed bg-muted/50 text-muted-foreground hover:text-foreground"
-                          : cn("bg-background hover:border-foreground/40", NOTE_TEXT[n.note]),
+                          ? "border-dashed border-border bg-muted text-muted-foreground hover:text-foreground"
+                          : cn("border-border bg-background hover:bg-accent", NOTE_TEXT[n.note]),
                     )}
                   >
                     {name(n)}

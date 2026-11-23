@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useId, useRef, useState, type ReactNode, type RefObject } from "react";
+import { forwardRef, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import {
   BookOpen,
   ChevronDown,
@@ -19,15 +19,16 @@ import {
   Type,
   type LucideIcon,
 } from "lucide-react";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/animate-ui/components/radix/sheet";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import { Button } from "@astryxdesign/core/Button";
+import { Drawer, DrawerHeader } from "@astryxdesign/core/Drawer";
+import { Icon } from "@astryxdesign/core/Icon";
+import { IconButton } from "@astryxdesign/core/IconButton";
+import { Layout, LayoutContent } from "@astryxdesign/core/Layout";
+import { List, ListItem } from "@astryxdesign/core/List";
+import { Switch } from "@astryxdesign/core/Switch";
+import { Text } from "@astryxdesign/core/Text";
+import { Theme } from "@astryxdesign/core/theme";
+import { gangTheme } from "@/theme/gangTheme";
 import { readPref, writePref } from "@/lib/prefs";
 import { transposeBadge } from "@/lib/notation/transpose";
 import { cn } from "@/lib/utils";
@@ -87,39 +88,38 @@ export const SettingsButton = forwardRef<
   const status = [badge && `giọng ${badge}`, audioActive && "nhịp đang phát", fingeringOn && "thế bấm đang bật"].filter(Boolean);
   const label = status.length ? `Cài đặt (${status.join(", ")})` : "Cài đặt";
   return (
-    <Button
-      ref={ref}
-      type="button"
-      variant="ghost"
-      size="sm"
-      aria-label={label}
-      aria-haspopup="dialog"
-      aria-expanded={open}
-      title={`${label} · phím S`}
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick();
-      }}
-      className="shrink-0 gap-1.5 px-2 text-stage-fg hover:bg-stage-fg/10 hover:text-stage-fg sm:px-3"
-    >
-      <Settings2 />
-      <span className="hidden sm:inline">Cài đặt</span>
-      {badge && (
-        <span className="rounded-full bg-primary px-1.5 text-[10px] leading-4 font-bold whitespace-nowrap text-primary-foreground">{badge}</span>
-      )}
-      {fingeringOn && (
-        <span className="hidden items-center gap-0.5 rounded-full bg-stage-fg/10 px-1.5 text-[10px] leading-4 font-semibold sm:inline-flex">
-          <Hand className="size-3" />
-          Thế bấm
+    <span className="relative inline-flex shrink-0">
+      <Button
+        ref={ref}
+        variant="ghost"
+        label="Cài đặt"
+        aria-label={label}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        tooltip={`${label} · phím S`}
+        icon={<Icon icon={Settings2} />}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick();
+        }}
+      >
+        <span className="flex items-center gap-1.5">
+          <span className="hidden sm:inline">Cài đặt</span>
+          {badge && (
+            <span className="rounded-full bg-primary px-1.5 text-[10px] leading-4 font-bold whitespace-nowrap text-primary-foreground">{badge}</span>
+          )}
+          {fingeringOn && (
+            <span className="hidden items-center gap-0.5 rounded-full bg-muted px-1.5 text-[10px] leading-4 font-semibold sm:inline-flex">
+              <Hand className="size-3" />
+              Thế bấm
+            </span>
+          )}
+          {audioActive && (
+            <span aria-hidden className={cn("size-2 rounded-full bg-primary transition-transform duration-75", downbeat && "scale-150")} />
+          )}
         </span>
-      )}
-      {audioActive && (
-        <span
-          aria-hidden
-          className={cn("size-2 rounded-full bg-primary transition-transform duration-75", downbeat && "scale-150")}
-        />
-      )}
-    </Button>
+      </Button>
+    </span>
   );
 });
 
@@ -129,8 +129,6 @@ export interface SettingsDrawerProps {
   /** Stage background in use — the drawer follows it */
   stageTheme: "dark" | "light";
   onStageTheme: (t: "dark" | "light") => void;
-  /** where focus goes back when the drawer closes (the header button) */
-  returnFocusRef?: RefObject<HTMLElement | null>;
   /** transpose controls; omitted when the song has neither text notation nor a key */
   transpose?: Omit<TransposePanelProps, "className">;
   /** fingering lookup switch; omitted when the song has no cảm âm notes */
@@ -156,7 +154,6 @@ export function SettingsDrawer({
   onOpenChange,
   stageTheme,
   onStageTheme,
-  returnFocusRef,
   transpose,
   fingering,
   fontScale,
@@ -178,10 +175,8 @@ export function SettingsDrawer({
       return next;
     });
 
-  // opening another dialog from the drawer: let that dialog own focus instead of the header button
-  const handoff = useRef(false);
+  // opening another dialog from the drawer: close the drawer first so that dialog owns focus
   const openDialog = (show: () => void) => {
-    handoff.current = true;
     onOpenChange(false);
     show();
   };
@@ -190,37 +185,25 @@ export function SettingsDrawer({
   const { audio: stageAudio } = audio;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        transition={{ type: "spring", stiffness: 320, damping: 34 }}
-        className={cn(
-          "w-[min(92vw,400px)] gap-0 bg-background text-foreground",
-          stageTheme === "dark" && "dark",
-        )}
-        onCloseAutoFocus={(e) => {
-          if (handoff.current) {
-            handoff.current = false;
-            e.preventDefault();
-            return;
+    // the drawer follows the Stage background, not the site theme
+    <Theme theme={gangTheme} mode={stageTheme}>
+      <Drawer isOpen={open} onOpenChange={onOpenChange} label="Cài đặt" width={400} experimental={{ isFullWidthOnMobile: true }}>
+        <Layout
+          header={
+        <DrawerHeader
+          title="Cài đặt"
+          subtitle={
+            <>
+              Bấm <kbd className="rounded border border-border bg-muted px-1 font-mono text-[10px]">S</kbd> để mở / đóng nhanh
+            </>
           }
-          if (returnFocusRef?.current) {
-            e.preventDefault();
-            returnFocusRef.current.focus();
+          onOpenChange={onOpenChange}
+          hasDivider
+        />
           }
-        }}
-      >
-        <SheetHeader className="gap-0.5 border-b px-5 pt-[max(env(safe-area-inset-top),1rem)] pb-3">
-          <SheetTitle className="flex items-center gap-2 font-display text-lg">
-            <Settings2 className="size-5 text-primary" />
-            Cài đặt
-          </SheetTitle>
-          <SheetDescription className="text-xs">
-            Bấm <kbd className="rounded border bg-muted px-1 font-mono text-[10px]">S</kbd> để mở / đóng nhanh
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-4 pt-4 pb-[max(env(safe-area-inset-bottom),1.5rem)] [scrollbar-width:thin]">
+          content={
+        <LayoutContent>
+        <div className="space-y-6 pb-[env(safe-area-inset-bottom)]">
           {(transpose || fingering) && (
             <Section title="Nhạc cụ">
               {transpose && (
@@ -249,16 +232,12 @@ export function SettingsDrawer({
 
           <Section title="Hiển thị">
             <Row icon={Type} label="Cỡ chữ" description="Phóng to / thu nhỏ bản nhạc">
-              <div className="flex items-center gap-1 rounded-lg bg-muted p-0.5">
-                <Button type="button" variant="ghost" size="icon" className="size-8" aria-label="Thu nhỏ" onClick={onZoomOut} disabled={fontScale <= 0.6}>
-                  <Minus />
-                </Button>
+              <div className="flex items-center gap-0.5 rounded-lg border border-border p-0.5">
+                <IconButton variant="ghost" size="sm" label="Thu nhỏ" icon={<Icon icon={Minus} />} onClick={onZoomOut} isDisabled={fontScale <= 0.6} />
                 <span className="w-11 text-center text-sm font-semibold tabular-nums" aria-live="polite">
                   {Math.round(fontScale * 100)}%
                 </span>
-                <Button type="button" variant="ghost" size="icon" className="size-8" aria-label="Phóng to" onClick={onZoomIn} disabled={fontScale >= 3}>
-                  <Plus />
-                </Button>
+                <IconButton variant="ghost" size="sm" label="Phóng to" icon={<Icon icon={Plus} />} onClick={onZoomIn} isDisabled={fontScale >= 3} />
               </div>
             </Row>
             {colored && (
@@ -338,8 +317,11 @@ export function SettingsDrawer({
             )}
           </Section>
         </div>
-      </SheetContent>
-    </Sheet>
+        </LayoutContent>
+          }
+        />
+      </Drawer>
+    </Theme>
   );
 }
 
@@ -349,10 +331,14 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   const id = useId();
   return (
     <section aria-labelledby={id} className="space-y-2">
-      <h3 id={id} className="px-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
-        {title}
-      </h3>
-      <div className="divide-y overflow-hidden rounded-xl border bg-card">{children}</div>
+      <Text type="supporting" color="secondary" weight="semibold" id={id} display="block">
+        <span className="px-1 tracking-wider uppercase">{title}</span>
+      </Text>
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
+        <List hasDividers density="balanced">
+          {children}
+        </List>
+      </div>
     </section>
   );
 }
@@ -362,7 +348,7 @@ function Chip({ active, children }: { active?: boolean; children: ReactNode }) {
     <span
       className={cn(
         "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap",
-        active ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground",
+        active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
       )}
     >
       {children}
@@ -370,30 +356,20 @@ function Chip({ active, children }: { active?: boolean; children: ReactNode }) {
   );
 }
 
-function RowText({ icon: Icon, label, description, labelId }: { icon: LucideIcon; label: string; description: string; labelId?: string }) {
+function RowIcon({ icon }: { icon: LucideIcon }) {
   return (
-    <>
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground/80">
-        <Icon className="size-4" />
-      </span>
-      <span className="min-w-0 flex-1 text-left">
-        <span id={labelId} className="block text-sm leading-tight font-medium">
-          {label}
-        </span>
-        <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">{description}</span>
-      </span>
-    </>
+    <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground/80">
+      <Icon icon={icon} size="sm" />
+    </span>
   );
 }
 
+/** full-text description (ListItem cuts plain strings to one line) */
+const desc = (text: string) => <span className="block text-xs leading-snug text-muted-foreground">{text}</span>;
+
 /** icon + label + description, with a control on the right */
 function Row({ icon, label, description, children }: { icon: LucideIcon; label: string; description: string; children: ReactNode }) {
-  return (
-    <div className="flex items-center gap-3 px-3 py-3">
-      <RowText icon={icon} label={label} description={description} />
-      {children}
-    </div>
-  );
+  return <ListItem startContent={<RowIcon icon={icon} />} label={label} description={desc(description)} endContent={children} />;
 }
 
 function SwitchRow({
@@ -409,12 +385,15 @@ function SwitchRow({
   checked: boolean;
   onCheckedChange: (v: boolean) => void;
 }) {
-  const id = useId();
+  const ref = useRef<HTMLInputElement>(null);
   return (
-    <label htmlFor={id} className="flex cursor-pointer items-center gap-3 px-3 py-3 transition-colors hover:bg-muted/50">
-      <RowText icon={icon} label={label} description={description} />
-      <Switch id={id} checked={checked} onCheckedChange={onCheckedChange} />
-    </label>
+    <ListItem
+      startContent={<RowIcon icon={icon} />}
+      label={label}
+      description={desc(description)}
+      interactiveRef={ref}
+      endContent={<Switch ref={ref} label={label} isLabelHidden value={checked} onChange={(v) => onCheckedChange(v)} />}
+    />
   );
 }
 
@@ -432,27 +411,28 @@ function ActionRow({
   onClick: () => void;
 }) {
   return (
-    <button
-      type="button"
+    <ListItem
+      startContent={<RowIcon icon={icon} />}
+      label={label}
+      description={desc(description)}
       onClick={onClick}
-      className="flex w-full items-center gap-3 px-3 py-3 transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
-    >
-      <RowText icon={icon} label={label} description={description} />
-      {trailing}
-      <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-    </button>
+      endContent={
+        <span className="flex items-center gap-2">
+          {trailing}
+          <Icon icon={ChevronRight} size="sm" color="secondary" />
+        </span>
+      }
+    />
   );
 }
 
 /** a row whose controls always show underneath */
 function Block({ icon, label, description, children }: { icon: LucideIcon; label: string; description: string; children: ReactNode }) {
   return (
-    <div className="px-3 py-3">
-      <div className="flex items-center gap-3">
-        <RowText icon={icon} label={label} description={description} />
-      </div>
-      <div className="mt-3">{children}</div>
-    </div>
+    <>
+      <ListItem startContent={<RowIcon icon={icon} />} label={label} description={desc(description)} />
+      <div className="px-3 pb-4">{children}</div>
+    </>
   );
 }
 
@@ -476,23 +456,26 @@ function Disclosure({
 }) {
   const panelId = useId();
   return (
-    <div>
-      <button
-        type="button"
+    <>
+      <ListItem
+        startContent={<RowIcon icon={icon} />}
+        label={label}
+        description={desc(description)}
+        onClick={onToggle}
         aria-expanded={open}
         aria-controls={panelId}
-        onClick={onToggle}
-        className="flex w-full items-center gap-3 px-3 py-3 transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
-      >
-        <RowText icon={icon} label={label} description={description} />
-        {summary}
-        <ChevronDown className={cn("size-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} />
-      </button>
+        endContent={
+          <span className="flex items-center gap-2">
+            {summary}
+            <Icon icon={ChevronDown} size="sm" color="secondary" className={cn("transition-transform", open && "rotate-180")} />
+          </span>
+        }
+      />
       {open && (
-        <div id={panelId} className="border-t border-dashed px-3 pt-3 pb-4">
+        <div id={panelId} className="border-t border-dashed border-border px-3 pt-3 pb-4">
           {children}
         </div>
       )}
-    </div>
+    </>
   );
 }

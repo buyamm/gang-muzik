@@ -24,8 +24,9 @@ let current = readPref();
 
 function apply() {
   const r = resolve(current);
+  // `.dark` drives app-owned music colors; Astryx's root <Theme> sets data-theme itself
   document.documentElement.classList.toggle("dark", r === "dark");
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", r === "dark" ? "#1a1613" : "#faf6ee");
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", r === "dark" ? "#1b1b1b" : "#f1f1f1");
 }
 
 media?.addEventListener("change", () => {

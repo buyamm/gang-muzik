@@ -1,23 +1,32 @@
-import { BookOpen, LayoutGrid } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Children, isValidElement, type ReactNode } from "react";
+import { LayoutGrid } from "lucide-react";
+import { Icon } from "@astryxdesign/core/Icon";
+import { ToggleButton } from "@astryxdesign/core/ToggleButton";
 import { cn } from "@/lib/utils";
 import type { ColumnsPref, TurnBy } from "./BookView";
 
 const COLUMN_OPTIONS: ColumnsPref[] = ["auto", 1, 2, 3, 4, "all"];
 
-export function Choice({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+/** plain text of a node tree, for accessible labels */
+function textOf(node: ReactNode): string {
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(textOf).join("");
+  if (isValidElement<{ children?: ReactNode }>(node)) return Children.toArray(node.props.children).map(textOf).join(" ");
+  return "";
+}
+
+/** one option of a pressed-button group (Astryx ToggleButton) */
+export function Choice({ active, onClick, children, label }: { active: boolean; onClick: () => void; children: ReactNode; label?: string }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        "flex-1 rounded-md px-2 py-1.5 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-        active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground",
-      )}
+    <ToggleButton
+      size="sm"
+      label={label ?? textOf(children).replace(/\s+/g, " ").trim()}
+      isPressed={active}
+      onPressedChange={() => onClick()}
+      className="w-full min-w-0 flex-1"
     >
       {children}
-    </button>
+    </ToggleButton>
   );
 }
 
@@ -52,7 +61,7 @@ export function BookLayoutPanel({ columns, autoCols, turnBy, onColumns, onTurnBy
         </div>
         <Choice active={fitAll} onClick={() => onColumns(fitAll ? "auto" : "all")}>
           <span className="flex items-center justify-center gap-1.5">
-            <LayoutGrid className="size-4" /> Tất cả trên 1 màn hình
+            <Icon icon={LayoutGrid} size="sm" /> Tất cả trên 1 màn hình
           </span>
         </Choice>
         {fitAll && (
@@ -81,31 +90,5 @@ export function BookLayoutPanel({ columns, autoCols, turnBy, onColumns, onTurnBy
         </p>
       </div>
     </div>
-  );
-}
-
-/** book layout settings: pages per screen + how a turn moves (popover trigger) */
-export function BookSettings({
-  onOpenChange,
-  ...panel
-}: Omit<BookLayoutPanelProps, "className"> & {
-  onOpenChange?: (open: boolean) => void;
-}) {
-  return (
-    <Popover onOpenChange={onOpenChange}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          onClick={(e) => e.stopPropagation()}
-          className="flex items-center gap-1.5 rounded-md bg-stage-fg/10 px-2 py-1 text-xs font-medium whitespace-nowrap hover:bg-stage-fg/20"
-        >
-          <BookOpen className="size-3.5" />
-          Kiểu sách
-        </button>
-      </PopoverTrigger>
-      <PopoverContent side="top" align="end" className="w-80" onClick={(e) => e.stopPropagation()}>
-        <BookLayoutPanel {...panel} />
-      </PopoverContent>
-    </Popover>
   );
 }

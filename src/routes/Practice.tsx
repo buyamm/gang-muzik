@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pause, Play } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Banner } from "@astryxdesign/core/Banner";
+import { Button } from "@astryxdesign/core/Button";
+import { Card } from "@astryxdesign/core/Card";
+import { Collapsible } from "@astryxdesign/core/Collapsible";
+import { Heading } from "@astryxdesign/core/Heading";
+import { Icon } from "@astryxdesign/core/Icon";
+import { Text } from "@astryxdesign/core/Text";
 import { SiteHeader } from "@/components/SiteHeader";
 import { LongToneDisplay } from "@/components/practice/LongToneDisplay";
 import { NoteChips } from "@/components/practice/NoteChips";
@@ -155,10 +161,8 @@ export function Practice() {
       <SiteHeader containerClassName="max-w-3xl" />
 
       <main className="mx-auto max-w-3xl space-y-6 px-4 pt-4 sm:px-6">
-        <h1 className="font-display text-2xl font-bold sm:text-3xl">Luyện tập cùng gam</h1>
-        {!isAudioSupported() && (
-          <p className="rounded-md bg-destructive/10 p-2 text-sm text-destructive">Trình duyệt này không hỗ trợ phát âm thanh.</p>
-        )}
+        <Heading level={1}>Luyện tập cùng gam</Heading>
+        {!isAudioSupported() && <Banner status="error" title="Trình duyệt này không hỗ trợ phát âm thanh." />}
 
         <Segmented
           label="Chế độ luyện"
@@ -168,14 +172,14 @@ export function Practice() {
             { value: "longtone", label: "Nốt dài" },
           ]}
           onChange={(mode) => set({ mode })}
-          className="rounded-lg bg-muted p-1 [&>button]:min-h-10"
         />
 
         {/* ===== main display ===== */}
-        <section className="rounded-2xl border bg-card p-4 sm:p-6" aria-label="Bài tập">
-          <div className="mb-4 text-center">
-            <div className="font-display text-2xl font-bold">{title}</div>
-            <div className="text-sm text-muted-foreground">
+        <Card padding={6}>
+        <section aria-label="Bài tập">
+          <div className="mb-4 flex flex-col items-center text-center">
+            <Heading level={2}>{title}</Heading>
+            <Text type="supporting" color="secondary">
               {horn.semitones !== 0 ? (
                 <>
                   Concert: {noteText(concert)} ({letterText(concert)}) ·{" "}
@@ -186,7 +190,7 @@ export function Practice() {
               {s.mode === "scale"
                 ? `${s.bpm} BPM · ${s.notesPerBeat} nốt/phách`
                 : `${s.bpm} BPM · giữ ${s.hold}, nghỉ ${s.rest} phách`}
-            </div>
+            </Text>
           </div>
 
           {s.mode === "longtone" ? (
@@ -217,6 +221,7 @@ export function Practice() {
             Phím Space hoặc pedal để bắt đầu / dừng · ← → đổi chủ âm
           </p>
         </section>
+        </Card>
 
         {/* ===== settings ===== */}
         <section className="space-y-5" aria-label="Cài đặt bài tập">
@@ -320,7 +325,8 @@ export function Practice() {
             </div>
           )}
 
-          <div className="space-y-3 rounded-xl border p-3">
+          <Card padding={4}>
+          <div className="space-y-4">
             <ToggleRow label="Đếm vào 1 ô nhịp" hint={`${BEATS_PER_BAR} tiếng click trước khi bắt đầu`} checked={s.countIn} onChange={(countIn) => set({ countIn })} />
             <ToggleRow label="Nốt tham chiếu" hint="Phát cao độ chuẩn của từng nốt" checked={s.refTone} onChange={(refTone) => set({ refTone })} />
             <ToggleRow
@@ -330,10 +336,11 @@ export function Practice() {
               onChange={(v) => set({ drone: v })}
             />
           </div>
+          </Card>
 
-          <details className="group rounded-xl border p-3">
-            <summary className="cursor-pointer text-sm font-semibold select-none">Giọng kèn & âm lượng</summary>
-            <div className="mt-4 space-y-5">
+          <Card padding={4}>
+          <Collapsible trigger="Giọng kèn & âm lượng" defaultIsOpen={false}>
+            <div className="space-y-5 pt-4">
               <InstrumentPicker value={transpose} onChange={setTranspose} />
               <div className="space-y-3">
                 <VolumeRow label="Tiếng nhịp" value={audio.metroVolume} onChange={(v) => setAudio({ metroVolume: v })} />
@@ -341,12 +348,13 @@ export function Practice() {
                 <VolumeRow label="Drone" value={audio.droneVolume} onChange={(v) => setAudio({ droneVolume: v })} />
               </div>
             </div>
-          </details>
+          </Collapsible>
+          </Card>
         </section>
       </main>
 
       {/* start button pinned to the bottom on phones */}
-      <div className="fixed inset-x-0 bottom-0 z-10 border-t bg-background/90 p-3 backdrop-blur-md sm:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-background/90 p-3 backdrop-blur-md sm:hidden">
         <StartButton running={runner.running} onClick={toggle} />
       </div>
     </div>
@@ -355,9 +363,16 @@ export function Practice() {
 
 function StartButton({ running, onClick }: { running: boolean; onClick: () => void }) {
   return (
-    <Button type="button" size="lg" onClick={onClick} className="h-12 w-full gap-2 rounded-full text-base sm:w-56" variant={running ? "secondary" : "default"}>
-      {running ? <Pause /> : <Play />} {running ? "Dừng" : "Bắt đầu"}
-    </Button>
+    <div className="w-full sm:w-56">
+      <Button
+        size="lg"
+        width="100%"
+        variant={running ? "secondary" : "primary"}
+        label={running ? "Dừng" : "Bắt đầu"}
+        icon={<Icon icon={running ? Pause : Play} />}
+        onClick={onClick}
+      />
+    </div>
   );
 }
 

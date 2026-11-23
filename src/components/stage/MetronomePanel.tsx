@@ -1,22 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Hand, Metronome as MetronomeIcon, Minus, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
+import { Banner } from "@astryxdesign/core/Banner";
+import { Button } from "@astryxdesign/core/Button";
+import { Divider } from "@astryxdesign/core/Divider";
+import { ToggleButton } from "@astryxdesign/core/ToggleButton";
+import { BpmControl, ToggleRow, VolumeRow } from "@/components/practice/PracticeControls";
+import { Choice } from "./BookSettings";
 import { useDrone } from "@/hooks/useDrone";
 import { useMetronome } from "@/hooks/useMetronome";
-import {
-  BPM_MAX,
-  BPM_MIN,
-  clampBpm,
-  isAudioSupported,
-  NOTE_NAMES,
-  noteToFrequency,
-  playClick,
-  pushTap,
-  tapTempo,
-} from "@/lib/audio/engine";
+import { clampBpm, isAudioSupported, NOTE_NAMES, noteToFrequency, playClick } from "@/lib/audio/engine";
 import { semitoneToNote, type Spelling } from "@/lib/notation/transpose";
 import { readPref, writePref } from "@/lib/prefs";
 import { cn } from "@/lib/utils";
@@ -97,48 +88,6 @@ export function useStageAudio({
 
 export type StageAudio = ReturnType<typeof useStageAudio>;
 
-function Choice({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        "flex-1 rounded-md px-2 py-1.5 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-        active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
-function BpmInput({ bpm, onCommit }: { bpm: number; onCommit: (v: number) => void }) {
-  const [text, setText] = useState(String(bpm));
-  useEffect(() => setText(String(bpm)), [bpm]);
-  const commit = () => {
-    const n = Number(text);
-    if (Number.isFinite(n) && text.trim()) onCommit(n);
-    else setText(String(bpm));
-  };
-  return (
-    <input
-      type="number"
-      inputMode="numeric"
-      min={BPM_MIN}
-      max={BPM_MAX}
-      value={text}
-      aria-label="Nhịp độ (BPM)"
-      onChange={(e) => setText(e.target.value)}
-      onBlur={commit}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") commit();
-      }}
-      className="h-9 w-16 rounded-md border bg-transparent text-center font-display text-lg font-bold tabular-nums [appearance:textfield] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-    />
-  );
-}
-
 /** the player's transposing instrument, to show the drone note as written for it */
 export interface HornInfo {
   /** name inside a sentence, e.g. "kèn alto" */
@@ -161,15 +110,6 @@ export interface MetronomeControlsProps {
 /** metronome + drone controls without a trigger (popover body, settings drawer) */
 export function MetronomeControls({ audio, horn, tonicPc, className }: MetronomeControlsProps) {
   const { bpm, beatsPerBar, metro, drone, prefs, setAudio } = audio;
-  const [taps, setTaps] = useState<number[]>([]);
-  const tapped = taps.length >= 2;
-
-  const onTap = () => {
-    const next = pushTap(taps, performance.now());
-    setTaps(next);
-    const t = tapTempo(next);
-    if (t !== null) audio.setBpm(t);
-  };
 
   const droneNote = NOTE_NAMES[prefs.droneNote] ?? NOTE_NAMES[0];
   // the drone note as written for the player's horn (concert pc + semitones)
@@ -177,40 +117,18 @@ export function MetronomeControls({ audio, horn, tonicPc, className }: Metronome
 
   return (
     <div className={cn("space-y-5", className)}>
-      {!audio.supported && (
-        <p className="rounded-md bg-destructive/10 p-2 text-xs text-destructive">Trình duyệt này không hỗ trợ phát âm thanh.</p>
-      )}
+      {!audio.supported && <Banner status="error" title="Trình duyệt này không hỗ trợ phát âm thanh." />}
 
       {/* ===== máy đếm nhịp ===== */}
       <section className="space-y-3" aria-label="Máy đếm nhịp">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <div className="text-sm font-semibold">Máy đếm nhịp</div>
-            <div className="text-xs text-muted-foreground">Nhịp độ lưu riêng cho bài này</div>
-          </div>
-          <Switch checked={metro.running} onCheckedChange={(v) => (v ? metro.start() : metro.stop())} aria-label="Bật máy đếm nhịp" />
-        </div>
+        <ToggleRow
+          label="Máy đếm nhịp"
+          hint="Nhịp độ lưu riêng cho bài này"
+          checked={metro.running}
+          onChange={(v) => (v ? metro.start() : metro.stop())}
+        />
 
-        <div className="flex items-center gap-1.5">
-          <Button type="button" variant="outline" size="icon" className="size-9" aria-label="Chậm hơn" title="Chậm hơn (−1)" onClick={() => audio.setBpm(bpm - 1)}>
-            <Minus />
-          </Button>
-          <BpmInput bpm={bpm} onCommit={audio.setBpm} />
-          <Button type="button" variant="outline" size="icon" className="size-9" aria-label="Nhanh hơn" title="Nhanh hơn (+1)" onClick={() => audio.setBpm(bpm + 1)}>
-            <Plus />
-          </Button>
-          <span className="text-xs text-muted-foreground">BPM</span>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            className="ml-auto gap-1.5"
-            onClick={onTap}
-            title="Gõ liên tục theo nhịp bài để đo BPM"
-          >
-            <Hand /> {tapped ? "Gõ tiếp" : "Gõ nhịp"}
-          </Button>
-        </div>
+        <BpmControl bpm={bpm} onChange={audio.setBpm} />
 
         <div className="space-y-1.5">
           <div className="text-xs text-muted-foreground">Số phách mỗi ô nhịp</div>
@@ -239,49 +157,40 @@ export function MetronomeControls({ audio, horn, tonicPc, className }: Metronome
 
         <VolumeRow label="Âm lượng tiếng nhịp" value={prefs.metroVolume} onChange={(v) => setAudio({ metroVolume: v })} />
 
-        <label className="flex items-center justify-between gap-2 text-sm">
-          <span>
-            Đếm vào
-            <span className="block text-xs text-muted-foreground">Kêu “tách” mỗi giây lúc đếm ngược trước khi chạy</span>
-          </span>
-          <Switch checked={prefs.countIn} onCheckedChange={(v) => setAudio({ countIn: v })} />
-        </label>
+        <ToggleRow
+          label="Đếm vào"
+          hint="Kêu “tách” mỗi giây lúc đếm ngược trước khi chạy"
+          checked={prefs.countIn}
+          onChange={(v) => setAudio({ countIn: v })}
+        />
       </section>
 
-      <div className="h-px bg-border" />
+      <Divider />
 
       {/* ===== drone ===== */}
       <section className="space-y-3" aria-label="Nốt nền">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <div className="text-sm font-semibold">Nốt nền (drone)</div>
-            <div className="text-xs text-muted-foreground">
-              Đang chọn: {droneNote.name} ({droneNote.letter}
-              {prefs.droneOctave})
-            </div>
-          </div>
-          <Switch checked={drone.running} onCheckedChange={(v) => (v ? drone.start() : drone.stop())} aria-label="Bật nốt nền" />
-        </div>
+        <ToggleRow
+          label="Nốt nền (drone)"
+          hint={`Đang chọn: ${droneNote.name} (${droneNote.letter}${prefs.droneOctave})`}
+          checked={drone.running}
+          onChange={(v) => (v ? drone.start() : drone.stop())}
+        />
 
         <div className="grid grid-cols-6 gap-1">
           {NOTE_NAMES.map((n) => (
-            <button
+            <ToggleButton
               key={n.pc}
-              type="button"
-              aria-pressed={prefs.droneNote === n.pc}
-              onClick={() => setAudio({ droneNote: n.pc })}
-              className={cn(
-                "flex flex-col items-center rounded-md py-1 leading-tight transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                prefs.droneNote === n.pc
-                  ? "bg-primary text-primary-foreground"
-                  : n.name.includes("#")
-                    ? "bg-muted/60 text-muted-foreground hover:text-foreground"
-                    : "bg-muted text-foreground hover:bg-muted/70",
-              )}
+              size="lg"
+              label={`${n.name} (${n.letter})`}
+              isPressed={prefs.droneNote === n.pc}
+              onPressedChange={() => setAudio({ droneNote: n.pc })}
+              className="w-full min-w-0 px-0!"
             >
-              <span className="text-xs font-semibold">{n.name}</span>
-              <span className="text-[10px] opacity-70">{n.letter}</span>
-            </button>
+              <span className="flex flex-col items-center leading-tight">
+                <span className="text-xs font-semibold">{n.name}</span>
+                <span className="text-[10px] opacity-70">{n.letter}</span>
+              </span>
+            </ToggleButton>
           ))}
         </div>
 
@@ -309,76 +218,14 @@ export function MetronomeControls({ audio, horn, tonicPc, className }: Metronome
         )}
         {tonicPc !== undefined && NOTE_NAMES[tonicPc] && (
           <Button
-            type="button"
-            variant="outline"
             size="sm"
-            className="w-full"
-            disabled={prefs.droneNote === tonicPc}
+            width="100%"
+            label={`Chủ âm của bài: ${NOTE_NAMES[tonicPc].name} (${NOTE_NAMES[tonicPc].letter})`}
+            isDisabled={prefs.droneNote === tonicPc}
             onClick={() => setAudio({ droneNote: tonicPc })}
-          >
-            Chủ âm của bài: {NOTE_NAMES[tonicPc].name} ({NOTE_NAMES[tonicPc].letter})
-          </Button>
+          />
         )}
       </section>
-    </div>
-  );
-}
-
-/** "Nhịp & drone" button + control popover */
-export function MetronomePanel({
-  onOpenChange,
-  ...controls
-}: Omit<MetronomeControlsProps, "className"> & {
-  onOpenChange?: (open: boolean) => void;
-}) {
-  const { audio } = controls;
-  const label = audio.active ? "Nhịp & drone (đang phát)" : "Nhịp & drone";
-
-  return (
-    <Popover onOpenChange={onOpenChange}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          aria-label={label}
-          title={label}
-          onClick={(e) => e.stopPropagation()}
-          className={cn("relative text-stage-fg hover:bg-stage-fg/10 hover:text-stage-fg", audio.active && "text-primary")}
-        >
-          <MetronomeIcon />
-          {audio.active && (
-            <span
-              aria-hidden
-              className={cn(
-                "absolute top-1.5 right-1.5 size-2 rounded-full bg-primary transition-transform duration-75",
-                audio.metro.running && audio.metro.beat === 0 && "scale-150",
-              )}
-            />
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        side="top"
-        align="end"
-        collisionPadding={8}
-        className="max-h-[min(80vh,40rem)] w-80 overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <MetronomeControls {...controls} />
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-function VolumeRow({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
-  return (
-    <div className="space-y-1.5">
-      <div className="flex justify-between text-xs text-muted-foreground">
-        <span>{label}</span>
-        <span className="tabular-nums">{Math.round(value * 100)}%</span>
-      </div>
-      <Slider min={0} max={1} step={0.05} value={[value]} onValueChange={([v]) => onChange(v)} aria-label={label} />
     </div>
   );
 }
